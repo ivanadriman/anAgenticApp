@@ -115,12 +115,12 @@
         </div>
         <div>
           <label for="maxTurnsSelect" class="block text-xs font-medium text-slate-300 mb-1">
-            Max Iteration Turns:
+            Iteration Mode:
           </label>
           <select id="maxTurnsSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500">
-            <option value="1">1 Turn (Draft + Review)</option>
-            <option value="2" selected>2 Turns (Draft &rarr; Critique &rarr; Revise)</option>
-            <option value="3">3 Turns (High Polish)</option>
+            <option value="1">1 Turn (Single Draft)</option>
+            <option value="2">2 Turns (Draft &rarr; Critique &rarr; Revise)</option>
+            <option value="3" selected>3 Turns (Full Multi-Round Polish)</option>
           </select>
         </div>
         <div>
@@ -129,13 +129,18 @@
           </label>
           <input 
             id="targetScoreInput" 
-            type="number" 
-            min="5" 
-            max="10" 
-            step="0.1" 
-            value="8.5" 
+            type="text" 
+            inputmode="decimal"
+            value="9.5" 
+            placeholder="e.g. 9.5 or 9,5"
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500"
           />
+        </div>
+        <div class="flex items-center gap-2 mb-2 sm:mb-0">
+          <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
+            <input type="checkbox" id="forceAllTurnsCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
+            <span>Force all turns (don't stop early on approval)</span>
+          </label>
         </div>
         <div class="flex items-end">
           <button 
@@ -420,8 +425,14 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       }
 
       const selectedModel = modelSelect.value || "gemini-3.8-flash";
-      const maxTurns = parseInt(maxTurnsSelect.value, 10) || 2;
-      const targetScore = parseFloat(targetScoreInput.value) || 8.5;
+      const maxTurns = parseInt(maxTurnsSelect.value, 10) || 3;
+      
+      // Parse decimal safely (supporting European "8,5" and standard "8.5")
+      const rawScoreStr = (targetScoreInput.value || "9.5").trim().replace(",", ".");
+      let targetScore = parseFloat(rawScoreStr);
+      if (isNaN(targetScore)) targetScore = 9.5;
+
+      const forceAllTurns = document.getElementById("forceAllTurnsCheck")?.checked || false;
 
       // Reset UI
       outputContainer.innerHTML = "";
@@ -451,14 +462,18 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel);
           renderCriticCard(turn, latestCritique, targetScore);
 
-          // Check approval condition
-          if (latestCritique.score >= targetScore) {
-            statusText.textContent = `Approved! Critic score ${latestCritique.score.toFixed(1)} reached target ${targetScore}.`;
+          const isApproved = latestCritique.score >= targetScore;
+
+          // Check whether to stop early or continue
+          if (isApproved && !forceAllTurns) {
+            statusText.textContent = `Approved! Critic score ${latestCritique.score.toFixed(1)} reached target ${targetScore.toFixed(1)}.`;
             renderFinalApprovedCard(currentDraft, latestCritique.score, turn);
             break;
           } else if (turn === maxTurns) {
-            statusText.textContent = `Completed maximum iterations (${maxTurns}).`;
+            statusText.textContent = `Completed all ${maxTurns} iterations (Final score: ${latestCritique.score.toFixed(1)}).`;
             renderFinalApprovedCard(currentDraft, latestCritique.score, turn);
+          } else if (isApproved && forceAllTurns) {
+            statusText.textContent = `Turn ${turn} scored ${latestCritique.score.toFixed(1)} (>= ${targetScore.toFixed(1)}), continuing next turn (Force mode active)...`;
           }
         }
       } catch (err) {
