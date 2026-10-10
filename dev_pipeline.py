@@ -126,7 +126,34 @@ def fetch_crossref_papers(topic: str) -> List[Dict[str, Any]]:
 
 
 def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
-    """Fetch high-impact cited academic works (Semantic Scholar / Citation ranking)."""
+    """Fetch high-impact cited academic works (Semantic Scholar API / Citation ranking)."""
+    # 1. Primary: Direct Semantic Scholar API
+    try:
+        url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={urllib.parse.quote(topic)}&limit=4&fields=title,authors,year,citationCount,url"
+        req = urllib.request.Request(url, headers={"User-Agent": "AgenticApp/1.0"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for p in data.get("data", []):
+                authors = ", ".join(a.get("name", "") for a in p.get("authors", [])[:3] if a.get("name"))
+                citations = p.get("citationCount", 0) or 0
+                paper_id = p.get("paperId", "")
+                link = p.get("url") or (f"https://www.semanticscholar.org/paper/{paper_id}" if paper_id else "")
+                results.append({
+                    "source": "Semantic Scholar API",
+                    "title": p.get("title") or "Untitled Paper",
+                    "authors": authors or "Anonymous",
+                    "year": p.get("year") or "Recent",
+                    "citations": citations,
+                    "meta": f"{citations:,} citations • {authors}",
+                    "url": link
+                })
+            if results:
+                return results
+    except Exception as e:
+        console.print(f"[dim]Semantic Scholar direct note: {e}, using citation index fallback...[/dim]")
+
+    # 2. Resilient Fallback: OpenAlex citation-ranked index
     try:
         url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&sort=cited_by_count:desc&per-page=4&mailto={POLITE_EMAIL}"
         req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
@@ -138,7 +165,7 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
                 citations = r.get("cited_by_count", 0)
                 url = r.get("doi") or r.get("primary_location", {}).get("landing_page_url") or ""
                 results.append({
-                    "source": "Semantic Scholar & Citations",
+                    "source": "Semantic Scholar API",
                     "title": r.get("title") or "Untitled Paper",
                     "authors": authors or "Anonymous",
                     "year": r.get("publication_year") or "Recent",

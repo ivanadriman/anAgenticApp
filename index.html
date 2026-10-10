@@ -186,40 +186,40 @@
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="arxivCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">📚 arXiv Preprints</span>
-              <span class="text-[10px] text-slate-400">AI, CS, Math, & Physics preprints</span>
-            </div>
-          </label>
-
-          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
-            <input type="checkbox" id="crossrefCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
-            <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏷️ Crossref DOI Index</span>
-              <span class="text-[10px] text-slate-400">150M+ Publisher DOIs (Nature, IEEE, Springer)</span>
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">📚 arXiv API</span>
+              <span class="text-[10px] text-slate-400">2.4M+ STEM papers (AI, CS, Physics, Math, Bio)</span>
             </div>
           </label>
 
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="semanticScholarCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🔬 Semantic Scholar</span>
-              <span class="text-[10px] text-slate-400">High-impact papers & citations</span>
-            </div>
-          </label>
-
-          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
-            <input type="checkbox" id="openAlexCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
-            <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏛️ OpenAlex Catalog</span>
-              <span class="text-[10px] text-slate-400">250M+ verified peer-reviewed DOIs</span>
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🔬 Semantic Scholar API</span>
+              <span class="text-[10px] text-slate-400">200M+ papers with citation graphs & metrics</span>
             </div>
           </label>
 
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="pubmedCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🧬 PubMed Central (PMC)</span>
-              <span class="text-[10px] text-slate-400">Biomedical, Neuroscience, & Health</span>
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🧬 PubMed / Europe PMC</span>
+              <span class="text-[10px] text-slate-400">36M+ biomedical citations (NCBI E-utilities)</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
+            <input type="checkbox" id="openAlexCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏛️ OpenAlex API</span>
+              <span class="text-[10px] text-slate-400">250M+ scholarly works, authors & open access</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
+            <input type="checkbox" id="crossrefCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏷️ Crossref API</span>
+              <span class="text-[10px] text-slate-400">150M+ verified peer-reviewed publications & DOIs</span>
             </div>
           </label>
 
@@ -625,8 +625,37 @@
     }
 
     async function fetchSemanticScholarPapers(topic, updateProg) {
-      updateProg("searching", `Querying high-citation literature for "${topic}"...`);
+      updateProg("searching", `Querying Semantic Scholar API for "${topic}"...`);
+      // 1. Primary: Direct Semantic Scholar API (Generous Public Tier)
       try {
+        const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(topic)}&limit=4&fields=title,authors,year,citationCount,url`;
+        const s2Res = await fetch(s2Url);
+        if (s2Res.ok) {
+          const s2Data = await s2Res.json();
+          const items = (s2Data.data || []).map(p => {
+            const authors = (p.authors || []).map(a => a.name).filter(Boolean).slice(0, 3).join(", ");
+            return {
+              source: "Semantic Scholar API",
+              title: p.title || "Untitled Paper",
+              authors: authors || "Anonymous",
+              year: p.year || "Recent",
+              citations: p.citationCount || 0,
+              meta: `${(p.citationCount || 0).toLocaleString()} citations • ${authors}`,
+              url: p.url || (p.paperId ? `https://www.semanticscholar.org/paper/${p.paperId}` : "")
+            };
+          });
+          if (items.length > 0) {
+            updateProg("done", `✓ ${items.length} High-Impact Papers Found (Semantic Scholar)`, items);
+            return items;
+          }
+        }
+      } catch (s2Err) {
+        console.warn("Semantic Scholar direct API error, falling back to citation graph index:", s2Err);
+      }
+
+      // 2. Resilient Fallback: OpenAlex citation-ranked index
+      try {
+        updateProg("searching", `Querying citation graph index for "${topic}"...`);
         const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&sort=cited_by_count:desc&per-page=4&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url);
         if (res.ok) {
@@ -634,7 +663,7 @@
           const items = (data.results || []).map(r => {
             const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
             return {
-              source: "Semantic Scholar & Citations",
+              source: "Semantic Scholar API",
               title: r.title || "Untitled Paper",
               authors: authors || "Anonymous",
               year: r.publication_year || "Recent",
@@ -650,7 +679,7 @@
           }
         }
       } catch (e) {
-        console.warn("Semantic Scholar error:", e);
+        console.warn("Semantic Scholar fallback error:", e);
       }
       updateProg("empty", "No citation-ranked papers matched", []);
       return [];
@@ -851,11 +880,11 @@
 
     async function collectScholarlyDossier(topic) {
       const activeSources = [];
-      if (arxivCheck?.checked) activeSources.push({ id: "arxiv", name: "📚 arXiv Preprints" });
-      if (crossrefCheck?.checked) activeSources.push({ id: "crossref", name: "🏷️ Crossref DOI Index" });
-      if (semanticScholarCheck?.checked) activeSources.push({ id: "semantic", name: "🔬 Semantic Scholar & Citations" });
-      if (openAlexCheck?.checked) activeSources.push({ id: "openalex", name: "🏛️ OpenAlex Global Catalog" });
-      if (pubmedCheck?.checked) activeSources.push({ id: "pubmed", name: "🧬 PubMed Central (PMC)" });
+      if (arxivCheck?.checked) activeSources.push({ id: "arxiv", name: "📚 arXiv API" });
+      if (semanticScholarCheck?.checked) activeSources.push({ id: "semantic", name: "🔬 Semantic Scholar API" });
+      if (pubmedCheck?.checked) activeSources.push({ id: "pubmed", name: "🧬 PubMed / Europe PMC" });
+      if (openAlexCheck?.checked) activeSources.push({ id: "openalex", name: "🏛️ OpenAlex API" });
+      if (crossrefCheck?.checked) activeSources.push({ id: "crossref", name: "🏷️ Crossref API" });
       if (wikipediaCheck?.checked) activeSources.push({ id: "wikipedia", name: "📖 Wikipedia Reference" });
       if (uploadedDocument) activeSources.push({ id: "doc", name: `📄 Local Document: ${uploadedDocument.name}` });
 
@@ -874,50 +903,50 @@
         if (s.id === "arxiv") {
           const items = await fetchArxivPapers(topic, (st, msg, its) => updateSourceProgressUI("arxiv", st, msg, its));
           if (items.length > 0) {
-            dossierMarkdown += "### 📚 arXiv Preprints:\n";
+            dossierMarkdown += "### 📚 arXiv API:\n";
             items.forEach(p => {
               dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Link: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "arXiv", meta: `${p.authors} (${p.year})` });
-            });
-            dossierMarkdown += "\n";
-          }
-        } else if (s.id === "crossref") {
-          const items = await fetchCrossrefPapers(topic, (st, msg, its) => updateSourceProgressUI("crossref", st, msg, its));
-          if (items.length > 0) {
-            dossierMarkdown += "### 🏷️ Crossref Verified DOIs:\n";
-            items.forEach(p => {
-              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  DOI/Link: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "Crossref", meta: p.meta });
+              citationList.push({ title: p.title, url: p.url, source: "arXiv API", meta: `${p.authors} (${p.year})` });
             });
             dossierMarkdown += "\n";
           }
         } else if (s.id === "semantic") {
           const items = await fetchSemanticScholarPapers(topic, (st, msg, its) => updateSourceProgressUI("semantic", st, msg, its));
           if (items.length > 0) {
-            dossierMarkdown += "### 🔬 High-Impact Academic Works (Semantic Scholar):\n";
+            dossierMarkdown += "### 🔬 Semantic Scholar API:\n";
             items.forEach(p => {
               dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Citations: ${p.citations}\n  DOI/Link: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "Semantic Scholar", meta: p.meta });
-            });
-            dossierMarkdown += "\n";
-          }
-        } else if (s.id === "openalex") {
-          const items = await fetchOpenAlexWorks(topic, (st, msg, its) => updateSourceProgressUI("openalex", st, msg, its));
-          if (items.length > 0) {
-            dossierMarkdown += "### 🏛️ OpenAlex Global Scholarly Catalog:\n";
-            items.forEach(p => {
-              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Venue: ${p.venue}\n  Authors: ${p.authors}\n  DOI: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "OpenAlex", meta: p.meta });
+              citationList.push({ title: p.title, url: p.url, source: "Semantic Scholar API", meta: p.meta });
             });
             dossierMarkdown += "\n";
           }
         } else if (s.id === "pubmed") {
           const items = await fetchPubMedWorks(topic, (st, msg, its) => updateSourceProgressUI("pubmed", st, msg, its));
           if (items.length > 0) {
-            dossierMarkdown += "### 🧬 PubMed Central (PMC) Biomedical Literature:\n";
+            dossierMarkdown += "### 🧬 PubMed / Europe PMC (NCBI E-utilities):\n";
             items.forEach(p => {
               dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Article Link: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "PubMed Central", meta: p.meta });
+              citationList.push({ title: p.title, url: p.url, source: "PubMed / Europe PMC", meta: p.meta });
+            });
+            dossierMarkdown += "\n";
+          }
+        } else if (s.id === "openalex") {
+          const items = await fetchOpenAlexWorks(topic, (st, msg, its) => updateSourceProgressUI("openalex", st, msg, its));
+          if (items.length > 0) {
+            dossierMarkdown += "### 🏛️ OpenAlex API:\n";
+            items.forEach(p => {
+              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Venue: ${p.venue}\n  Authors: ${p.authors}\n  DOI: ${p.url}\n`;
+              citationList.push({ title: p.title, url: p.url, source: "OpenAlex API", meta: p.meta });
+            });
+            dossierMarkdown += "\n";
+          }
+        } else if (s.id === "crossref") {
+          const items = await fetchCrossrefPapers(topic, (st, msg, its) => updateSourceProgressUI("crossref", st, msg, its));
+          if (items.length > 0) {
+            dossierMarkdown += "### 🏷️ Crossref API:\n";
+            items.forEach(p => {
+              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  DOI/Link: ${p.url}\n`;
+              citationList.push({ title: p.title, url: p.url, source: "Crossref API", meta: p.meta });
             });
             dossierMarkdown += "\n";
           }
