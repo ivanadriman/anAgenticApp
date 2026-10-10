@@ -47,19 +47,23 @@ def run_browser_tests():
         print(f"Stored key in localStorage matches API_KEY: {bool(stored_key and stored_key == API_KEY)}")
 
         # Test Case 2: Select Model and Options
-        print("\n--- Test Case 2: Setting Parameters & Force Mode ---")
-        page.select_option("#modelSelect", "gemini-3.8-flash")
+        print("\n--- Test Case 2: Setting Parameters & Toggles ---", flush=True)
+        page.select_option("#modelSelect", "gemini-3.5-flash-lite")
         page.select_option("#maxTurnsSelect", "2")
-        page.locator("#targetScoreInput").fill("9.6")
+        page.locator("#targetScoreInput").fill("9.2")
         
         # Check Force All Turns
         force_box = page.locator("#forceAllTurnsCheck")
         force_box.check()
-        print(f"Force all turns checked: {force_box.is_checked()}")
+        print(f"Force all turns checked: {force_box.is_checked()}", flush=True)
+
+        # Check Live Web Search toggle
+        search_box = page.locator("#webSearchCheck")
+        print(f"Live Web Search toggle present: {search_box.count() > 0}", flush=True)
 
         # Test Topic
         topic_box = page.locator("#topicInput")
-        topic_box.fill("Explain how the Event Loop works in Node.js with a visual analogy")
+        topic_box.fill("Explain how the Event Loop works in modern JavaScript runtimes")
 
         page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "02_configured_form.png"))
 
