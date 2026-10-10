@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gemini Agentic Studio - Writer & Critic Pipeline</title>
+  <!-- Tailwind CSS CDN for modern responsive UI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Marked.js for rendering markdown output -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    .markdown-body h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; color: #f8fafc; }
+    .markdown-body h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #38bdf8; }
+    .markdown-body h3 { font-size: 1.1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.25rem; color: #94a3b8; }
+    .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+    .markdown-body ul, .markdown-body ol { margin-left: 1.5rem; margin-bottom: 0.75rem; list-style-type: disc; }
+    .markdown-body ol { list-style-type: decimal; }
+    .markdown-body li { margin-bottom: 0.25rem; }
+    .markdown-body hr { border-color: #334155; margin: 1.5rem 0; }
+    .markdown-body code { background: #1e293b; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.875rem; color: #f472b6; }
+    .markdown-body pre { background: #0f172a; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+    .markdown-body pre code { background: transparent; padding: 0; color: #e2e8f0; }
+    .markdown-body blockquote { border-left: 3px solid #38bdf8; padding-left: 1rem; color: #94a3b8; font-style: italic; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-xl shadow-lg shadow-cyan-500/20">
+          🤖
+        </div>
+        <div>
+          <h1 class="text-lg font-bold bg-gradient-to-r from-cyan-400 to-indigo-300 bg-clip-text text-transparent">
+            Gemini Agentic Studio
+          </h1>
+          <p class="text-xs text-slate-400">Two-Agent Autonomous "Writer & Critic" Pipeline</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/60 w-fit">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Model: <strong>gemini-2.5-flash</strong> / <strong>gemini-1.5-flash</strong></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 py-8 flex-1 w-full space-y-6">
+
+    <!-- Config / Key Banner -->
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex-1">
+          <label for="apiKeyInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+            🔑 Google Gemini API Key (Stored locally in your browser only)
+          </label>
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <input 
+                id="apiKeyInput" 
+                type="password" 
+                placeholder="AIzaSy... or paste your Gemini API key" 
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
+              />
+              <button 
+                id="toggleKeyVisibility" 
+                type="button" 
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-200"
+              >
+                Show
+              </button>
+            </div>
+            <button 
+              id="saveKeyBtn" 
+              class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 transition"
+            >
+              Save Key
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1.5">
+            🔒 Your key is stored in your browser's <code class="text-cyan-400">localStorage</code> and never sent to any server except directly to Google's API.
+            Need a free key? Get one at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline">Google AI Studio</a>.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls Form -->
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
+      <div>
+        <label for="topicInput" class="block text-sm font-semibold text-slate-200 mb-2">
+          Target Topic or Goal:
+        </label>
+        <textarea 
+          id="topicInput" 
+          rows="3" 
+          placeholder="e.g., Explain microservices vs monoliths for junior developers with real-world tradeoffs"
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition resize-none"
+        >Explain how Agentic AI architectures work to software engineers with a concrete example</textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label for="maxTurnsSelect" class="block text-xs font-medium text-slate-300 mb-1">
+            Max Iteration Turns:
+          </label>
+          <select id="maxTurnsSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500">
+            <option value="1">1 Turn (Draft + Review)</option>
+            <option value="2" selected>2 Turns (Draft &rarr; Critique &rarr; Revise)</option>
+            <option value="3">3 Turns (High Polish)</option>
+          </select>
+        </div>
+        <div>
+          <label for="targetScoreInput" class="block text-xs font-medium text-slate-300 mb-1">
+            Approval Target Score (out of 10):
+          </label>
+          <input 
+            id="targetScoreInput" 
+            type="number" 
+            min="5" 
+            max="10" 
+            step="0.1" 
+            value="8.5" 
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500"
+          />
+        </div>
+        <div class="flex items-end">
+          <button 
+            id="startPipelineBtn" 
+            class="w-full py-2.5 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition flex items-center justify-center gap-2"
+          >
+            <span id="startBtnIcon">🚀</span>
+            <span id="startBtnText">Run Agentic Pipeline</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Execution Status Bar -->
+    <div id="statusCard" class="hidden bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div id="statusSpinner" class="w-5 h-5 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+        <div id="statusText" class="text-sm font-medium text-slate-200">Initializing pipeline...</div>
+      </div>
+      <div id="stepCounter" class="text-xs text-slate-400 font-mono">Turn 1 / 2</div>
+    </div>
+
+    <!-- Agent Stream Cards Container -->
+    <div id="outputContainer" class="space-y-6"></div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>Autonomous Agentic App Demo &bull; Powered by Google Gemini API</p>
+      <p>100% Client-side on GitHub Pages &bull; No API keys stored on servers</p>
+    </div>
+  </footer>
+
+  <!-- App Script -->
+  <script>
+    // State
+    const STORAGE_KEY = "GEMINI_USER_API_KEY";
+    const apiKeyInput = document.getElementById("apiKeyInput");
+    const saveKeyBtn = document.getElementById("saveKeyBtn");
+    const toggleKeyVisibility = document.getElementById("toggleKeyVisibility");
+    const topicInput = document.getElementById("topicInput");
+    const maxTurnsSelect = document.getElementById("maxTurnsSelect");
+    const targetScoreInput = document.getElementById("targetScoreInput");
+    const startPipelineBtn = document.getElementById("startPipelineBtn");
+    const startBtnText = document.getElementById("startBtnText");
+    const statusCard = document.getElementById("statusCard");
+    const statusText = document.getElementById("statusText");
+    const statusSpinner = document.getElementById("statusSpinner");
+    const stepCounter = document.getElementById("stepCounter");
+    const outputContainer = document.getElementById("outputContainer");
+
+    // Load stored key if any
+    const savedKey = localStorage.getItem(STORAGE_KEY);
+    if (savedKey) {
+      apiKeyInput.value = savedKey;
+    }
+
+    // Toggle key visibility
+    toggleKeyVisibility.addEventListener("click", () => {
+      if (apiKeyInput.type === "password") {
+        apiKeyInput.type = "text";
+        toggleKeyVisibility.textContent = "Hide";
+      } else {
+        apiKeyInput.type = "password";
+        toggleKeyVisibility.textContent = "Show";
+      }
+    });
+
+    // Save key manually
+    saveKeyBtn.addEventListener("click", () => {
+      const key = apiKeyInput.value.trim();
+      if (key) {
+        localStorage.setItem(STORAGE_KEY, key);
+        alert("API Key saved to browser local storage!");
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+        alert("API Key removed.");
+      }
+    });
+
+    // Helper: Call Gemini REST API directly from browser
+    async function callGemini(apiKey, systemInstruction, prompt) {
+      // Models supported in standard v1beta REST endpoint: gemini-2.5-flash / gemini-1.5-flash
+      const model = "gemini-2.5-flash";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const payload = {
+        system_instruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+        }
+      };
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error?.message || `Gemini API error (Status ${res.status})`);
+      }
+
+      const data = await res.json();
+      const candidate = data.candidates?.[0];
+      const text = candidate?.content?.parts?.[0]?.text || "";
+      return text;
+    }
+
+    // Agent Functions
+    async function runWriterDraft(apiKey, topic) {
+      const sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
+      const prompt = `Topic/Goal: ${topic}\nPlease write Draft 1.`;
+      return await callGemini(apiKey, sys, prompt);
+    }
+
+    async function runCriticReview(apiKey, topic, draft, turn) {
+      const sys = `You are a meticulous Senior Editor and Critic Agent. 
+Evaluate drafts strictly on clarity, depth, coherence, tone, and practical examples.
+Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.
+You MUST respond ONLY with valid JSON conforming to this schema:
+{
+  "score": float (1.0 to 10.0),
+  "status": "APPROVED" | "NEEDS_REVISION",
+  "strengths": ["string", ...],
+  "weaknesses": ["string", ...],
+  "actionable_revisions": ["string", ...]
+}`;
+
+      const prompt = `Goal: ${topic}\nIteration Turn: ${turn}\n\nDraft to review:\n\"\"\"\n${draft}\n\"\"\"\n\nReturn ONLY the JSON object.`;
+      const raw = await callGemini(apiKey, sys, prompt);
+
+      let clean = raw.trim();
+      if (clean.startsWith("```")) {
+        clean = clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+      }
+      return JSON.parse(clean);
+    }
+
+    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn) {
+      const sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
+      const prompt = `Original Topic: ${topic}\n\nPrevious Draft (Draft ${turn}):\n\"\"\"\n${prevDraft}\n\"\"\"\n\nCritic Score: ${critique.score}/10\nWeaknesses:\n${critique.weaknesses.map(w => `- ${w}`).join("\n")}\n\nRequired Improvements:\n${critique.actionable_revisions.map(r => `- ${r}`).join("\n")}\n\nPlease write Draft ${turn + 1} addressing all feedback.`;
+      return await callGemini(apiKey, sys, prompt);
+    }
+
+    // UI Render Helpers
+    function renderWriterCard(turn, draftText) {
+      const card = document.createElement("div");
+      card.className = "bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 shadow-xl transition";
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+            <span class="font-bold text-emerald-400 text-sm">Writer Agent &bull; Draft ${turn}</span>
+          </div>
+          <span class="text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-2.5 py-0.5 rounded-full font-mono">Completed</span>
+        </div>
+        <div class="markdown-body text-slate-200 text-sm">
+          ${marked.parse(draftText)}
+        </div>
+      `;
+      outputContainer.appendChild(card);
+    }
+
+    function renderCriticCard(turn, critique, targetScore) {
+      const isApproved = critique.score >= targetScore;
+      const card = document.createElement("div");
+      card.className = `bg-slate-900 border ${isApproved ? "border-cyan-500/50" : "border-amber-500/40"} rounded-2xl p-6 shadow-xl transition`;
+      
+      const strengthsList = (critique.strengths || []).map(s => `<li>${s}</li>`).join("");
+      const weaknessesList = (critique.weaknesses || []).map(w => `<li>${w}</li>`).join("");
+      const actionsList = (critique.actionable_revisions || []).map(a => `<li>${a}</li>`).join("");
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full ${isApproved ? "bg-cyan-400" : "bg-amber-400"}"></span>
+            <span class="font-bold ${isApproved ? "text-cyan-400" : "text-amber-400"} text-sm">Critic Agent &bull; Review ${turn}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${isApproved ? "bg-cyan-950 text-cyan-300 border border-cyan-800" : "bg-amber-950 text-amber-300 border border-amber-800"}">
+              Score: ${critique.score.toFixed(1)} / 10.0
+            </span>
+            <span class="text-xs font-mono px-2 py-0.5 rounded ${isApproved ? "bg-emerald-900/60 text-emerald-300" : "bg-rose-900/60 text-rose-300"}">
+              ${isApproved ? "APPROVED" : "NEEDS REVISION"}
+            </span>
+          </div>
+        </div>
+        <div class="space-y-3 text-xs">
+          <div>
+            <h4 class="font-semibold text-emerald-400 uppercase tracking-wide mb-1">Strengths:</h4>
+            <ul class="list-disc pl-5 text-slate-300 space-y-1">${strengthsList}</ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-rose-400 uppercase tracking-wide mb-1">Weaknesses:</h4>
+            <ul class="list-disc pl-5 text-slate-300 space-y-1">${weaknessesList}</ul>
+          </div>
+          <div>
+            <h4 class="font-semibold text-amber-400 uppercase tracking-wide mb-1">Actionable Revisions:</h4>
+            <ul class="list-decimal pl-5 text-slate-300 space-y-1">${actionsList}</ul>
+          </div>
+        </div>
+      `;
+      outputContainer.appendChild(card);
+    }
+
+    function renderFinalApprovedCard(finalDraft, score, turns) {
+      const card = document.createElement("div");
+      card.className = "bg-gradient-to-b from-cyan-950/40 to-slate-900 border-2 border-cyan-400/80 rounded-2xl p-6 shadow-2xl transition";
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-4 border-b border-cyan-800/60 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🏆</span>
+            <span class="font-bold text-cyan-300 text-base">Final Polish Approved</span>
+          </div>
+          <button id="copyArtifactBtn" class="text-xs bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 border border-cyan-700 px-3 py-1.5 rounded-lg transition">
+            📋 Copy Markdown
+          </button>
+        </div>
+        <div class="text-xs text-slate-400 mb-4 flex gap-4">
+          <span>Final Score: <strong class="text-emerald-400 font-mono">${score.toFixed(1)}/10</strong></span>
+          <span>Completed in: <strong class="text-slate-200 font-mono">${turns} turn(s)</strong></span>
+        </div>
+        <div class="markdown-body text-slate-100 text-sm">
+          ${marked.parse(finalDraft)}
+        </div>
+      `;
+      outputContainer.prepend(card);
+
+      const copyBtn = card.querySelector("#copyArtifactBtn");
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(finalDraft).then(() => {
+          copyBtn.textContent = "✓ Copied!";
+          setTimeout(() => copyBtn.textContent = "📋 Copy Markdown", 2000);
+        });
+      });
+    }
+
+    // Main Orchestration Loop
+    startPipelineBtn.addEventListener("click", async () => {
+      const apiKey = apiKeyInput.value.trim();
+      if (!apiKey) {
+        alert("Please enter a Google Gemini API Key first!");
+        apiKeyInput.focus();
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY, apiKey);
+
+      const topic = topicInput.value.trim();
+      if (!topic) {
+        alert("Please provide a topic or prompt.");
+        topicInput.focus();
+        return;
+      }
+
+      const maxTurns = parseInt(maxTurnsSelect.value, 10) || 2;
+      const targetScore = parseFloat(targetScoreInput.value) || 8.5;
+
+      // Reset UI
+      outputContainer.innerHTML = "";
+      statusCard.classList.remove("hidden");
+      startPipelineBtn.disabled = true;
+      startPipelineBtn.classList.add("opacity-50", "cursor-not-allowed");
+      startBtnText.textContent = "Agents Working...";
+
+      let currentDraft = "";
+      let latestCritique = null;
+
+      try {
+        for (let turn = 1; turn <= maxTurns; turn++) {
+          stepCounter.textContent = `Turn ${turn} of ${maxTurns}`;
+
+          // Step 1: Writer
+          statusText.textContent = `Turn ${turn}: Writer Agent is composing...`;
+          if (turn === 1) {
+            currentDraft = await runWriterDraft(apiKey, topic);
+          } else {
+            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1);
+          }
+          renderWriterCard(turn, currentDraft);
+
+          // Step 2: Critic
+          statusText.textContent = `Turn ${turn}: Critic Agent is evaluating...`;
+          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn);
+          renderCriticCard(turn, latestCritique, targetScore);
+
+          // Check approval condition
+          if (latestCritique.score >= targetScore) {
+            statusText.textContent = `Approved! Critic score ${latestCritique.score.toFixed(1)} reached target ${targetScore}.`;
+            renderFinalApprovedCard(currentDraft, latestCritique.score, turn);
+            break;
+          } else if (turn === maxTurns) {
+            statusText.textContent = `Completed maximum iterations (${maxTurns}).`;
+            renderFinalApprovedCard(currentDraft, latestCritique.score, turn);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        alert(`Pipeline Error: ${err.message}`);
+        statusText.textContent = `Error: ${err.message}`;
+      } finally {
+        statusSpinner.classList.add("hidden");
+        startPipelineBtn.disabled = false;
+        startPipelineBtn.classList.remove("opacity-50", "cursor-not-allowed");
+        startBtnText.textContent = "Run Agentic Pipeline";
+      }
+    });
+  </script>
+</body>
+</html>
