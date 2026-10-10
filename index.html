@@ -182,12 +182,20 @@
           <span class="text-[11px] text-slate-400">Independent academic literature & encyclopedic sources &bull; Free & Uncapped</span>
         </div>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="arxivCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
               <span class="font-semibold text-slate-100 flex items-center gap-1.5">📚 arXiv Preprints</span>
               <span class="text-[10px] text-slate-400">AI, CS, Math, & Physics preprints</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
+            <input type="checkbox" id="crossrefCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏷️ Crossref DOI Index</span>
+              <span class="text-[10px] text-slate-400">150M+ Publisher DOIs (Nature, IEEE, Springer)</span>
             </div>
           </label>
 
@@ -204,6 +212,14 @@
             <div class="flex flex-col">
               <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏛️ OpenAlex Catalog</span>
               <span class="text-[10px] text-slate-400">250M+ verified peer-reviewed DOIs</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
+            <input type="checkbox" id="pubmedCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🧬 PubMed Central (PMC)</span>
+              <span class="text-[10px] text-slate-400">Biomedical, Neuroscience, & Health</span>
             </div>
           </label>
 
@@ -292,8 +308,10 @@
 
     // Scholarly & Reference Grounding Elements
     const arxivCheck = document.getElementById("arxivCheck");
+    const crossrefCheck = document.getElementById("crossrefCheck");
     const semanticScholarCheck = document.getElementById("semanticScholarCheck");
     const openAlexCheck = document.getElementById("openAlexCheck");
+    const pubmedCheck = document.getElementById("pubmedCheck");
     const wikipediaCheck = document.getElementById("wikipediaCheck");
     const docFileInput = document.getElementById("docFileInput");
     const uploadDocBtn = document.getElementById("uploadDocBtn");
@@ -507,166 +525,424 @@
       clearDocBtn.classList.add("hidden");
     });
 
-    // Scholarly Research Fetchers
-    async function fetchArxivPapers(topic) {
+    const POLITE_EMAIL = "agenticapp.research@gmail.com";
+
+    // Scholarly Research Fetchers with Live Progress Callbacks & Resilient Fallbacks
+    async function fetchArxivPapers(topic, updateProg) {
+      updateProg("searching", `Querying open preprints for "${topic}"...`);
       try {
-        // Query OpenAlex filtered specifically by arXiv repository (source ID s4306400194) for full CORS support
-        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&filter=primary_location.source.id:s4306400194&per-page=3`;
+        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&filter=primary_location.source.id:s4306400194&per-page=4&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url);
-        if (!res.ok) return [];
-        const data = await res.json();
-        return (data.results || []).map(r => {
-          const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
-          const arxivId = r.ids?.arxiv || "";
-          const landingUrl = r.primary_location?.landing_page_url || (arxivId ? `https://arxiv.org/abs/${arxivId}` : r.doi || "");
-          return {
-            source: "arXiv Preprints",
-            title: r.title || "Untitled arXiv Preprint",
-            authors: authors || "Anonymous",
-            year: r.publication_year || "Recent",
-            url: landingUrl
-          };
-        });
-      } catch (e) {
-        console.warn("arXiv fetch failed:", e);
-        return [];
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data.results || []).map(r => {
+            const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
+            const arxivId = r.ids?.arxiv || "";
+            const landingUrl = r.primary_location?.landing_page_url || (arxivId ? `https://arxiv.org/abs/${arxivId}` : r.doi || "");
+            return {
+              source: "arXiv Preprints",
+              title: r.title || "Untitled arXiv Preprint",
+              authors: authors || "Anonymous",
+              year: r.publication_year || "Recent",
+              url: landingUrl
+            };
+          });
+
+          if (items.length > 0) {
+            updateProg("done", `✓ ${items.length} Preprints Found`, items);
+            return items;
+          }
+        }
+      } catch (err) {
+        console.warn("arXiv via OpenAlex error, attempting Crossref fallback:", err);
       }
+
+      // Resilient Fallback: Crossref preprint index
+      try {
+        updateProg("searching", `Querying Crossref preprint index for "${topic}"...`);
+        const fbUrl = `https://api.crossref.org/works?query=${encodeURIComponent(topic + " arxiv")}&rows=3&mailto=${POLITE_EMAIL}`;
+        const fbRes = await fetch(fbUrl);
+        if (fbRes.ok) {
+          const fbData = await fbRes.json();
+          const fbItems = (fbData.message?.items || []).map(it => {
+            const authors = (it.author || []).map(a => `${a.given || ""} ${a.family || ""}`.trim()).filter(Boolean).slice(0, 3).join(", ");
+            const title = (it.title || ["Untitled Paper"])[0];
+            const doi = it.DOI || "";
+            return {
+              source: "arXiv Preprints (Crossref)",
+              title: title,
+              authors: authors || "Anonymous",
+              year: it.created?.["date-parts"]?.[0]?.[0] || "Recent",
+              url: doi ? `https://doi.org/${doi}` : ""
+            };
+          });
+          if (fbItems.length > 0) {
+            updateProg("done", `✓ ${fbItems.length} Preprints Found (Crossref Index)`, fbItems);
+            return fbItems;
+          }
+        }
+      } catch (e) {
+        console.warn("arXiv fallback error:", e);
+      }
+
+      updateProg("empty", "No preprints matched query", []);
+      return [];
     }
 
-    async function fetchSemanticScholarPapers(topic) {
+    async function fetchCrossrefPapers(topic, updateProg) {
+      updateProg("searching", `Querying Crossref 150M+ DOI index for "${topic}"...`);
       try {
-        // Query OpenAlex sorted by citation count for high-impact academic works
-        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&sort=cited_by_count:desc&per-page=3`;
+        const url = `https://api.crossref.org/works?query=${encodeURIComponent(topic)}&rows=4&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url);
-        if (!res.ok) return [];
-        const data = await res.json();
-        return (data.results || []).map(r => {
-          const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
-          return {
-            source: "Semantic Scholar & Citation Index",
-            title: r.title || "Untitled Paper",
-            authors: authors || "Anonymous",
-            year: r.publication_year || "Recent",
-            citations: r.cited_by_count || 0,
-            url: r.doi || r.primary_location?.landing_page_url || ""
-          };
-        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data.message?.items || []).map(it => {
+            const authors = (it.author || []).map(a => `${a.given || ""} ${a.family || ""}`.trim()).filter(Boolean).slice(0, 3).join(", ");
+            const title = (it.title || ["Untitled Paper"])[0];
+            const doi = it.DOI || "";
+            const publisher = it.publisher || "Scholarly Publisher";
+            const year = it.created?.["date-parts"]?.[0]?.[0] || "Recent";
+            return {
+              source: "Crossref DOI Index",
+              title: title,
+              authors: authors || "Anonymous",
+              year: year,
+              meta: `${publisher} • DOI: ${doi}`,
+              url: doi ? `https://doi.org/${doi}` : ""
+            };
+          });
+
+          if (items.length > 0) {
+            updateProg("done", `✓ ${items.length} Peer-Reviewed DOIs Found`, items);
+            return items;
+          }
+        }
       } catch (e) {
-        console.warn("Semantic Scholar fetch failed:", e);
-        return [];
+        console.warn("Crossref error:", e);
       }
+      updateProg("empty", "No Crossref DOIs matched", []);
+      return [];
     }
 
-    async function fetchOpenAlexWorks(topic) {
+    async function fetchSemanticScholarPapers(topic, updateProg) {
+      updateProg("searching", `Querying high-citation literature for "${topic}"...`);
       try {
-        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&per-page=3`;
+        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&sort=cited_by_count:desc&per-page=4&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url);
-        if (!res.ok) return [];
-        const data = await res.json();
-        return (data.results || []).map(r => {
-          const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
-          const venue = r.primary_location?.source?.display_name || "Academic Venue";
-          return {
-            source: "OpenAlex Global Catalog",
-            title: r.title || "Untitled Paper",
-            authors: authors || "Anonymous",
-            year: r.publication_year || "Recent",
-            venue: venue,
-            url: r.doi || r.primary_location?.landing_page_url || ""
-          };
-        });
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data.results || []).map(r => {
+            const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
+            return {
+              source: "Semantic Scholar & Citations",
+              title: r.title || "Untitled Paper",
+              authors: authors || "Anonymous",
+              year: r.publication_year || "Recent",
+              citations: r.cited_by_count || 0,
+              meta: `${(r.cited_by_count || 0).toLocaleString()} citations • ${authors}`,
+              url: r.doi || r.primary_location?.landing_page_url || ""
+            };
+          });
+
+          if (items.length > 0) {
+            updateProg("done", `✓ ${items.length} High-Impact Papers Found`, items);
+            return items;
+          }
+        }
       } catch (e) {
-        console.warn("OpenAlex fetch failed:", e);
-        return [];
+        console.warn("Semantic Scholar error:", e);
       }
+      updateProg("empty", "No citation-ranked papers matched", []);
+      return [];
     }
 
-    async function fetchWikipediaSummary(topic) {
+    async function fetchOpenAlexWorks(topic, updateProg) {
+      updateProg("searching", `Querying OpenAlex 250M+ catalog for "${topic}"...`);
+      try {
+        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&per-page=4&mailto=${POLITE_EMAIL}`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          const items = (data.results || []).map(r => {
+            const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
+            const venue = r.primary_location?.source?.display_name || "Academic Journal";
+            return {
+              source: "OpenAlex Global Catalog",
+              title: r.title || "Untitled Paper",
+              authors: authors || "Anonymous",
+              year: r.publication_year || "Recent",
+              venue: venue,
+              meta: `${venue} (${r.publication_year || "Recent"}) • ${authors}`,
+              url: r.doi || r.primary_location?.landing_page_url || ""
+            };
+          });
+
+          if (items.length > 0) {
+            updateProg("done", `✓ ${items.length} Scholarly Records Found`, items);
+            return items;
+          }
+        }
+      } catch (e) {
+        console.warn("OpenAlex error:", e);
+      }
+      updateProg("empty", "No OpenAlex works matched", []);
+      return [];
+    }
+
+    async function fetchPubMedWorks(topic, updateProg) {
+      updateProg("searching", `Querying NCBI PubMed Central for "${topic}"...`);
+      try {
+        const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pmc&term=${encodeURIComponent(topic)}&retmode=json&retmax=4`;
+        const res = await fetch(searchUrl);
+        if (res.ok) {
+          const data = await res.json();
+          const ids = data.esearchresult?.idlist || [];
+          if (ids.length > 0) {
+            const sumUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pmc&id=${ids.join(",")}&retmode=json`;
+            const sumRes = await fetch(sumUrl);
+            if (sumRes.ok) {
+              const sumData = await sumRes.json();
+              const items = ids.map(id => {
+                const doc = sumData.result?.[id] || {};
+                const authors = (doc.authors || []).map(a => a.name).slice(0, 3).join(", ") || "Researchers";
+                const title = (doc.title || "Untitled Study").replace(/<\/?[^>]+(>|$)/g, "");
+                return {
+                  source: "PubMed Central (PMC)",
+                  title: title,
+                  authors: authors,
+                  year: doc.pubdate ? doc.pubdate.split(" ")[0] : "Recent",
+                  meta: `${doc.source || "PMC"} • ${authors}`,
+                  url: `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${id}/`
+                };
+              });
+              updateProg("done", `✓ ${items.length} Biomedical Articles Found`, items);
+              return items;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("PubMed error:", e);
+      }
+      updateProg("empty", "No PMC articles matched", []);
+      return [];
+    }
+
+    async function fetchWikipediaSummary(topic, updateProg) {
+      updateProg("searching", `Searching Wikipedia encyclopedia for "${topic}"...`);
       try {
         const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(topic)}&format=json&origin=*`;
         const sRes = await fetch(searchUrl);
-        if (!sRes.ok) return null;
-        const sData = await sRes.json();
-        const topHit = sData.query?.search?.[0];
-        if (!topHit) return null;
-
-        const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topHit.title.replace(/ /g, "_"))}`;
-        const sumRes = await fetch(summaryUrl);
-        if (!sumRes.ok) return null;
-        const sumData = await sumRes.json();
-        return {
-          source: "Wikipedia",
-          title: sumData.title,
-          extract: sumData.extract,
-          url: sumData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topHit.title)}`
-        };
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          const topHit = sData.query?.search?.[0];
+          if (topHit) {
+            const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topHit.title.replace(/ /g, "_"))}`;
+            const sumRes = await fetch(summaryUrl);
+            if (sumRes.ok) {
+              const sumData = await sumRes.json();
+              const item = {
+                source: "Wikipedia",
+                title: sumData.title,
+                extract: sumData.extract,
+                meta: "Encyclopedic Reference Overview",
+                url: sumData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topHit.title)}`
+              };
+              updateProg("done", `✓ Overview Found: "${sumData.title}"`, [item]);
+              return item;
+            }
+          }
+        }
       } catch (e) {
-        console.warn("Wikipedia fetch failed:", e);
-        return null;
+        console.warn("Wikipedia error:", e);
+      }
+      updateProg("empty", "No Wikipedia articles matched", []);
+      return null;
+    }
+
+    // Live Progression Tracker Card UI Builders
+    function initResearchProgressCard(activeSources, topic) {
+      const card = document.createElement("div");
+      card.id = "liveResearchProgressCard";
+      card.className = "bg-slate-900 border border-cyan-500/50 rounded-2xl p-5 shadow-2xl transition space-y-4";
+      
+      const rowsHtml = activeSources.map(s => `
+        <div id="prog-row-${s.id}" class="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 transition">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span id="prog-dot-${s.id}" class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+              <span class="font-bold text-xs text-slate-100">${s.name}</span>
+            </div>
+            <span id="prog-badge-${s.id}" class="text-[10px] font-mono px-2.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/80">
+              ⏳ Searching...
+            </span>
+          </div>
+          <div id="prog-msg-${s.id}" class="text-[11px] text-slate-400">
+            Initializing connection...
+          </div>
+          <div id="prog-list-${s.id}" class="mt-2.5 pt-2 border-t border-slate-800/60 hidden space-y-1.5"></div>
+        </div>
+      `).join("");
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xl">🔍</span>
+            <div>
+              <div class="font-bold text-cyan-300 text-sm">Live Research & Literature Grounding Progress</div>
+              <div class="text-[10px] text-slate-400">Querying scholarly databases &bull; Real-time lookup progression</div>
+            </div>
+          </div>
+          <span id="researchProgressCounter" class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded-full font-mono font-medium">
+            0 / ${activeSources.length} Completed
+          </span>
+        </div>
+        <div class="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 flex items-center justify-between">
+          <span>Search query: <strong class="text-cyan-300 font-mono">"${topic}"</strong></span>
+          <span class="text-[10px] text-slate-400 font-mono">${activeSources.length} sources enabled</span>
+        </div>
+        <div class="space-y-2.5">
+          ${rowsHtml}
+        </div>
+      `;
+
+      outputContainer.appendChild(card);
+      return card;
+    }
+
+    function updateSourceProgressUI(sourceId, status, message, items = []) {
+      const dot = document.getElementById(`prog-dot-${sourceId}`);
+      const badge = document.getElementById(`prog-badge-${sourceId}`);
+      const msg = document.getElementById(`prog-msg-${sourceId}`);
+      const list = document.getElementById(`prog-list-${sourceId}`);
+      if (!badge || !msg) return;
+
+      if (status === "searching") {
+        if (dot) { dot.className = "w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"; }
+        badge.className = "text-[10px] font-mono px-2.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/80";
+        badge.textContent = "⏳ Searching...";
+        msg.textContent = message;
+      } else if (status === "done") {
+        if (dot) { dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400"; }
+        badge.className = "text-[10px] font-mono px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/80";
+        badge.textContent = message;
+        msg.textContent = `Found ${items.length} relevant record(s):`;
+
+        if (list && items.length > 0) {
+          list.classList.remove("hidden");
+          list.innerHTML = items.map(it => `
+            <div class="flex items-start justify-between gap-2 text-xs bg-slate-900/60 p-2 rounded-lg border border-slate-800/60">
+              <div class="flex-1 min-w-0">
+                <div class="font-medium text-slate-200 truncate">
+                  ${it.url ? `<a href="${it.url}" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline">📄 ${it.title}</a>` : `📄 ${it.title}`}
+                </div>
+                <div class="text-[10px] text-slate-400 mt-0.5 truncate">${it.meta || it.authors || ""}</div>
+              </div>
+              ${it.url ? `<a href="${it.url}" target="_blank" rel="noopener noreferrer" class="text-[10px] text-slate-400 hover:text-cyan-300 whitespace-nowrap">🔗 Open</a>` : ""}
+            </div>
+          `).join("");
+        }
+      } else if (status === "empty") {
+        if (dot) { dot.className = "w-2.5 h-2.5 rounded-full bg-slate-500"; }
+        badge.className = "text-[10px] font-mono px-2.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700";
+        badge.textContent = "✕ None found";
+        msg.textContent = message;
       }
     }
 
     async function collectScholarlyDossier(topic) {
-      const promises = [];
+      const activeSources = [];
+      if (arxivCheck?.checked) activeSources.push({ id: "arxiv", name: "📚 arXiv Preprints" });
+      if (crossrefCheck?.checked) activeSources.push({ id: "crossref", name: "🏷️ Crossref DOI Index" });
+      if (semanticScholarCheck?.checked) activeSources.push({ id: "semantic", name: "🔬 Semantic Scholar & Citations" });
+      if (openAlexCheck?.checked) activeSources.push({ id: "openalex", name: "🏛️ OpenAlex Global Catalog" });
+      if (pubmedCheck?.checked) activeSources.push({ id: "pubmed", name: "🧬 PubMed Central (PMC)" });
+      if (wikipediaCheck?.checked) activeSources.push({ id: "wikipedia", name: "📖 Wikipedia Reference" });
+      if (uploadedDocument) activeSources.push({ id: "doc", name: `📄 Local Document: ${uploadedDocument.name}` });
 
-      if (arxivCheck.checked) {
-        promises.push(fetchArxivPapers(topic).then(res => ({ type: "arxiv", items: res })));
-      }
-      if (semanticScholarCheck.checked) {
-        promises.push(fetchSemanticScholarPapers(topic).then(res => ({ type: "semantic", items: res })));
-      }
-      if (openAlexCheck.checked) {
-        promises.push(fetchOpenAlexWorks(topic).then(res => ({ type: "openalex", items: res })));
-      }
-      if (wikipediaCheck.checked) {
-        promises.push(fetchWikipediaSummary(topic).then(res => ({ type: "wikipedia", item: res })));
-      }
+      if (activeSources.length === 0) return null;
 
-      if (promises.length === 0 && !uploadedDocument) {
-        return null;
-      }
+      // Render the live progressive lookup card
+      initResearchProgressCard(activeSources, topic);
+      const counterEl = document.getElementById("researchProgressCounter");
 
-      const results = await Promise.all(promises);
-      let dossierMarkdown = "## VERIFIED SCHOLARLY RESEARCH & REFERENCE DOSSIER\n\n";
+      let completedCount = 0;
       const citationList = [];
+      let dossierMarkdown = "## VERIFIED SCHOLARLY RESEARCH & REFERENCE DOSSIER\n\n";
 
-      for (const res of results) {
-        if (res.type === "arxiv" && res.items?.length > 0) {
-          dossierMarkdown += "### 📚 arXiv Preprints:\n";
-          res.items.forEach(p => {
-            dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Link: ${p.url}\n`;
-            citationList.push({ title: p.title, url: p.url, source: "arXiv", meta: `${p.authors} (${p.year})` });
-          });
-          dossierMarkdown += "\n";
+      // Execute sources with small stagger (120ms) to ensure smooth polite rate-limiting
+      for (const s of activeSources) {
+        if (s.id === "arxiv") {
+          const items = await fetchArxivPapers(topic, (st, msg, its) => updateSourceProgressUI("arxiv", st, msg, its));
+          if (items.length > 0) {
+            dossierMarkdown += "### 📚 arXiv Preprints:\n";
+            items.forEach(p => {
+              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Link: ${p.url}\n`;
+              citationList.push({ title: p.title, url: p.url, source: "arXiv", meta: `${p.authors} (${p.year})` });
+            });
+            dossierMarkdown += "\n";
+          }
+        } else if (s.id === "crossref") {
+          const items = await fetchCrossrefPapers(topic, (st, msg, its) => updateSourceProgressUI("crossref", st, msg, its));
+          if (items.length > 0) {
+            dossierMarkdown += "### 🏷️ Crossref Verified DOIs:\n";
+            items.forEach(p => {
+              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  DOI/Link: ${p.url}\n`;
+              citationList.push({ title: p.title, url: p.url, source: "Crossref", meta: p.meta });
+            });
+            dossierMarkdown += "\n";
+          }
+        } else if (s.id === "semantic") {
+          const items = await fetchSemanticScholarPapers(topic, (st, msg, its) => updateSourceProgressUI("semantic", st, msg, its));
+          if (items.length > 0) {
+            dossierMarkdown += "### 🔬 High-Impact Academic Works (Semantic Scholar):\n";
+            items.forEach(p => {
+              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Citations: ${p.citations}\n  DOI/Link: ${p.url}\n`;
+              citationList.push({ title: p.title, url: p.url, source: "Semantic Scholar", meta: p.meta });
+            });
+            dossierMarkdown += "\n";
+          }
+        } else if (s.id === "openalex") {
+          const items = await fetchOpenAlexWorks(topic, (st, msg, its) => updateSourceProgressUI("openalex", st, msg, its));
+          if (items.length > 0) {
+            dossierMarkdown += "### 🏛️ OpenAlex Global Scholarly Catalog:\n";
+            items.forEach(p => {
+              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Venue: ${p.venue}\n  Authors: ${p.authors}\n  DOI: ${p.url}\n`;
+              citationList.push({ title: p.title, url: p.url, source: "OpenAlex", meta: p.meta });
+            });
+            dossierMarkdown += "\n";
+          }
+        } else if (s.id === "pubmed") {
+          const items = await fetchPubMedWorks(topic, (st, msg, its) => updateSourceProgressUI("pubmed", st, msg, its));
+          if (items.length > 0) {
+            dossierMarkdown += "### 🧬 PubMed Central (PMC) Biomedical Literature:\n";
+            items.forEach(p => {
+              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Article Link: ${p.url}\n`;
+              citationList.push({ title: p.title, url: p.url, source: "PubMed Central", meta: p.meta });
+            });
+            dossierMarkdown += "\n";
+          }
+        } else if (s.id === "wikipedia") {
+          const item = await fetchWikipediaSummary(topic, (st, msg, its) => updateSourceProgressUI("wikipedia", st, msg, its));
+          if (item) {
+            dossierMarkdown += `### 📖 Wikipedia Reference Overview (${item.title}):\n${item.extract}\nReference URL: ${item.url}\n\n`;
+            citationList.push({ title: item.title, url: item.url, source: "Wikipedia", meta: "Encyclopedic Overview" });
+          }
+        } else if (s.id === "doc" && uploadedDocument) {
+          updateSourceProgressUI("doc", "done", `✓ Processed (${uploadedDocument.charCount.toLocaleString()} chars)`, [{ title: uploadedDocument.name, url: "#", meta: "Local PDF/Document" }]);
+          dossierMarkdown += `### 📄 User-Uploaded Document (${uploadedDocument.name}):\n\"\"\"\n${uploadedDocument.text.slice(0, 6000)}\n\"\"\"\n\n`;
+          citationList.push({ title: uploadedDocument.name, url: "#", source: "Local Document", meta: `${uploadedDocument.charCount.toLocaleString()} characters` });
         }
-        if (res.type === "semantic" && res.items?.length > 0) {
-          dossierMarkdown += "### 🔬 High-Impact Academic Works (Semantic Scholar):\n";
-          res.items.forEach(p => {
-            dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Citations: ${p.citations}\n  DOI/Link: ${p.url}\n`;
-            citationList.push({ title: p.title, url: p.url, source: "Semantic Scholar", meta: `${p.citations.toLocaleString()} citations • ${p.authors}` });
-          });
-          dossierMarkdown += "\n";
+
+        completedCount++;
+        if (counterEl) {
+          counterEl.textContent = `${completedCount} / ${activeSources.length} Completed`;
         }
-        if (res.type === "openalex" && res.items?.length > 0) {
-          dossierMarkdown += "### 🏛️ OpenAlex Global Scholarly Catalog:\n";
-          res.items.forEach(p => {
-            dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Venue: ${p.venue}\n  Authors: ${p.authors}\n  DOI: ${p.url}\n`;
-            citationList.push({ title: p.title, url: p.url, source: "OpenAlex", meta: `${p.venue} (${p.year})` });
-          });
-          dossierMarkdown += "\n";
-        }
-        if (res.type === "wikipedia" && res.item) {
-          dossierMarkdown += `### 📖 Wikipedia Reference Overview (${res.item.title}):\n`;
-          dossierMarkdown += `${res.item.extract}\nReference URL: ${res.item.url}\n\n`;
-          citationList.push({ title: res.item.title, url: res.item.url, source: "Wikipedia", meta: "Encyclopedic Overview" });
-        }
+        await new Promise(r => setTimeout(r, 120));
       }
 
-      if (uploadedDocument) {
-        dossierMarkdown += `### 📄 User-Uploaded Document (${uploadedDocument.name}):\n`;
-        const docExcerpt = uploadedDocument.text.slice(0, 6000);
-        dossierMarkdown += `\"\"\"\n${docExcerpt}\n\"\"\"\n\n`;
-        citationList.push({ title: uploadedDocument.name, url: "#", source: "Local Document", meta: `${uploadedDocument.charCount.toLocaleString()} characters` });
+      if (counterEl) {
+        counterEl.textContent = `✓ All ${activeSources.length} Sources Gathered (${citationList.length} references)`;
+        counterEl.className = "text-xs bg-emerald-950 text-emerald-300 border border-emerald-800 px-3 py-1 rounded-full font-mono font-medium";
       }
 
       if (citationList.length === 0) return null;
@@ -982,7 +1258,13 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 
       try {
         // Step 0: Collect Academic & Reference Grounding Dossier if any source selected
-        const anyScholarly = arxivCheck.checked || semanticScholarCheck.checked || openAlexCheck.checked || wikipediaCheck.checked || uploadedDocument;
+        const anyScholarly = (arxivCheck && arxivCheck.checked) || 
+                             (crossrefCheck && crossrefCheck.checked) || 
+                             (semanticScholarCheck && semanticScholarCheck.checked) || 
+                             (openAlexCheck && openAlexCheck.checked) || 
+                             (pubmedCheck && pubmedCheck.checked) || 
+                             (wikipediaCheck && wikipediaCheck.checked) || 
+                             uploadedDocument;
         if (anyScholarly) {
           statusText.textContent = "Querying verified academic repositories & literature...";
           scholarlyDossier = await collectScholarlyDossier(topic);

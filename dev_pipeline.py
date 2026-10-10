@@ -1,7 +1,7 @@
 """
 Two-Agent Writer & Critic Pipeline Prototype.
 Demonstrates iterative multi-agent collaboration using Gemini models with
-multi-source academic and scholarly grounding (arXiv, Semantic Scholar, OpenAlex, Wikipedia, PDF/Docs).
+multi-source academic and scholarly grounding (arXiv, Crossref, Semantic Scholar, OpenAlex, PubMed, Wikipedia, PDF/Docs).
 """
 
 import os
@@ -36,6 +36,8 @@ DEFAULT_MODEL = "gemini-3.5-flash-lite"
 console = Console(force_terminal=True, legacy_windows=False)
 client = genai.Client(api_key=API_KEY)
 
+POLITE_EMAIL = "agenticapp.research@gmail.com"
+
 
 class CritiqueResult(BaseModel):
     score: float = Field(description="Rating from 1.0 to 10.0")
@@ -50,10 +52,10 @@ class CritiqueResult(BaseModel):
 # ==============================================================================
 
 def fetch_arxiv_papers(topic: str) -> List[Dict[str, Any]]:
-    """Fetch arXiv preprints via OpenAlex arXiv index (s4306400194)."""
+    """Fetch arXiv preprints via OpenAlex arXiv index with polite pool & fallback."""
     try:
-        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&filter=primary_location.source.id:s4306400194&per-page=3"
-        req = urllib.request.Request(url, headers={"User-Agent": "AgenticStudio/1.0 (mailto:dev@agentic.ai)"})
+        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&filter=primary_location.source.id:s4306400194&per-page=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             results = []
@@ -68,17 +70,66 @@ def fetch_arxiv_papers(topic: str) -> List[Dict[str, Any]]:
                     "year": r.get("publication_year") or "Recent",
                     "url": landing_url
                 })
+            if results:
+                return results
+    except Exception as e:
+        console.print(f"[dim]arXiv primary index note: {e}, checking Crossref...[/dim]")
+
+    # Fallback via Crossref
+    try:
+        fb_url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic + ' arxiv')}&rows=3&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(fb_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for it in data.get("message", {}).get("items", []):
+                authors = ", ".join(f"{a.get('given','')} {a.get('family','')}".strip() for a in it.get("author", [])[:3])
+                doi = it.get("DOI", "")
+                results.append({
+                    "source": "arXiv Preprints (Crossref)",
+                    "title": (it.get("title") or ["Untitled Paper"])[0],
+                    "authors": authors or "Anonymous",
+                    "year": it.get("created", {}).get("date-parts", [[ "Recent" ]])[0][0],
+                    "url": f"https://doi.org/{doi}" if doi else ""
+                })
             return results
     except Exception as e:
         console.print(f"[yellow]Warning: arXiv fetch failed: {e}[/yellow]")
         return []
 
 
-def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
-    """Fetch high-impact cited academic works (Semantic Scholar / OpenAlex citation index)."""
+def fetch_crossref_papers(topic: str) -> List[Dict[str, Any]]:
+    """Fetch publisher peer-reviewed literature via Crossref 150M+ DOI index."""
     try:
-        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&sort=cited_by_count:desc&per-page=3"
-        req = urllib.request.Request(url, headers={"User-Agent": "AgenticStudio/1.0 (mailto:dev@agentic.ai)"})
+        url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic)}&rows=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for it in data.get("message", {}).get("items", []):
+                authors = ", ".join(f"{a.get('given','')} {a.get('family','')}".strip() for a in it.get("author", [])[:3])
+                doi = it.get("DOI", "")
+                publisher = it.get("publisher", "Publisher")
+                year = it.get("created", {}).get("date-parts", [[ "Recent" ]])[0][0]
+                results.append({
+                    "source": "Crossref DOI Index",
+                    "title": (it.get("title") or ["Untitled Paper"])[0],
+                    "authors": authors or "Anonymous",
+                    "year": year,
+                    "meta": f"{publisher} • DOI: {doi}",
+                    "url": f"https://doi.org/{doi}" if doi else ""
+                })
+            return results
+    except Exception as e:
+        console.print(f"[yellow]Warning: Crossref fetch failed: {e}[/yellow]")
+        return []
+
+
+def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
+    """Fetch high-impact cited academic works (Semantic Scholar / Citation ranking)."""
+    try:
+        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&sort=cited_by_count:desc&per-page=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             results = []
@@ -92,6 +143,7 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
                     "authors": authors or "Anonymous",
                     "year": r.get("publication_year") or "Recent",
                     "citations": citations,
+                    "meta": f"{citations:,} citations • {authors}",
                     "url": url
                 })
             return results
@@ -103,8 +155,8 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
 def fetch_openalex_works(topic: str) -> List[Dict[str, Any]]:
     """Fetch global peer-reviewed scholarly catalog works."""
     try:
-        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&per-page=3"
-        req = urllib.request.Request(url, headers={"User-Agent": "AgenticStudio/1.0 (mailto:dev@agentic.ai)"})
+        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&per-page=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
         with urllib.request.urlopen(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             results = []
@@ -117,6 +169,7 @@ def fetch_openalex_works(topic: str) -> List[Dict[str, Any]]:
                     "authors": authors or "Anonymous",
                     "year": r.get("publication_year") or "Recent",
                     "venue": venue,
+                    "meta": f"{venue} ({r.get('publication_year', 'Recent')}) • {authors}",
                     "url": r.get("doi") or r.get("primary_location", {}).get("landing_page_url") or ""
                 })
             return results
@@ -125,12 +178,47 @@ def fetch_openalex_works(topic: str) -> List[Dict[str, Any]]:
         return []
 
 
+def fetch_pubmed_works(topic: str) -> List[Dict[str, Any]]:
+    """Fetch biomedical and life sciences papers via NCBI PubMed Central."""
+    try:
+        search_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pmc&term={urllib.parse.quote(topic)}&retmode=json&retmax=4"
+        req = urllib.request.Request(search_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            ids = data.get("esearchresult", {}).get("idlist", [])
+            if not ids:
+                return []
+
+            sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pmc&id={','.join(ids)}&retmode=json"
+            req2 = urllib.request.Request(sum_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+            with urllib.request.urlopen(req2, timeout=10) as resp2:
+                data2 = json.loads(resp2.read().decode())
+                results = []
+                for uid in ids:
+                    doc = data2.get("result", {}).get(uid, {})
+                    title = re.sub(r"<[^>]+>", "", doc.get("title", "Untitled Study"))
+                    authors = ", ".join(a.get("name", "") for a in doc.get("authors", [])[:3] if a.get("name"))
+                    pubdate = doc.get("pubdate", "Recent").split(" ")[0]
+                    source = doc.get("source", "PMC")
+                    results.append({
+                        "source": "PubMed Central (PMC)",
+                        "title": title,
+                        "authors": authors or "Researchers",
+                        "year": pubdate,
+                        "meta": f"{source} • {authors}",
+                        "url": f"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC{uid}/"
+                    })
+                return results
+    except Exception as e:
+        console.print(f"[yellow]Warning: PubMed fetch failed: {e}[/yellow]")
+        return []
+
+
 def fetch_wikipedia_summary(topic: str) -> Optional[Dict[str, Any]]:
     """Fetch Wikipedia encyclopedic summary for reference."""
     try:
-        # Search for title
         search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(topic)}&format=json"
-        req1 = urllib.request.Request(search_url, headers={"User-Agent": "AgenticStudio/1.0 (mailto:dev@agentic.ai)"})
+        req1 = urllib.request.Request(search_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
         with urllib.request.urlopen(req1, timeout=10) as resp1:
             data1 = json.loads(resp1.read().decode())
             hits = data1.get("query", {}).get("search", [])
@@ -138,16 +226,16 @@ def fetch_wikipedia_summary(topic: str) -> Optional[Dict[str, Any]]:
                 return None
             title = hits[0].get("title", "")
 
-        # Fetch summary
         slug = urllib.parse.quote(title.replace(" ", "_"))
         sum_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{slug}"
-        req2 = urllib.request.Request(sum_url, headers={"User-Agent": "AgenticStudio/1.0 (mailto:dev@agentic.ai)"})
+        req2 = urllib.request.Request(sum_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
         with urllib.request.urlopen(req2, timeout=10) as resp2:
             data2 = json.loads(resp2.read().decode())
             return {
                 "source": "Wikipedia",
                 "title": data2.get("title", title),
                 "extract": data2.get("extract", ""),
+                "meta": "Encyclopedic Reference Overview",
                 "url": data2.get("content_urls", {}).get("desktop", {}).get("page") or f"https://en.wikipedia.org/wiki/{slug}"
             }
     except Exception as e:
@@ -178,51 +266,98 @@ def load_document(doc_path: str) -> Tuple[str, str]:
             return filename, f.read()
 
 
-def build_scholarly_dossier(topic: str, use_arxiv: bool, use_semantic: bool, use_openalex: bool, use_wiki: bool, doc_path: Optional[str]) -> Tuple[str, List[Dict[str, Any]]]:
-    """Compile all active grounding sources into a structured dossier and citation list."""
+def build_scholarly_dossier(
+    topic: str,
+    use_arxiv: bool,
+    use_crossref: bool,
+    use_semantic: bool,
+    use_openalex: bool,
+    use_pubmed: bool,
+    use_wiki: bool,
+    doc_path: Optional[str]
+) -> Tuple[str, List[Dict[str, Any]]]:
+    """Compile all active grounding sources with live progression logging."""
     citations = []
     sections = []
 
     if use_arxiv:
-        console.print("[cyan]🔍 Fetching arXiv preprints...[/cyan]")
+        console.print("[cyan]🔍 [arXiv] Fetching preprints...[/cyan]")
         papers = fetch_arxiv_papers(topic)
         if papers:
+            console.print(f"[green]  ✓ [arXiv] Found {len(papers)} preprints[/green]")
             p_text = "### 📚 arXiv Preprints:\n"
             for p in papers:
                 p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
                 citations.append({"source": "arXiv", "title": p["title"], "url": p["url"], "meta": f"{p['authors']} ({p['year']})"})
             sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [arXiv] No preprints found[/dim]")
+
+    if use_crossref:
+        console.print("[cyan]🔍 [Crossref] Querying 150M+ verified DOI index...[/cyan]")
+        papers = fetch_crossref_papers(topic)
+        if papers:
+            console.print(f"[green]  ✓ [Crossref] Found {len(papers)} publisher DOIs[/green]")
+            p_text = "### 🏷️ Crossref Verified DOIs:\n"
+            for p in papers:
+                p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  DOI: {p['url']}\n"
+                citations.append({"source": "Crossref", "title": p["title"], "url": p["url"], "meta": p["meta"]})
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [Crossref] No records found[/dim]")
 
     if use_semantic:
-        console.print("[cyan]🔍 Fetching Semantic Scholar high-citation works...[/cyan]")
+        console.print("[cyan]🔍 [Semantic Scholar] Fetching high-impact citation rankings...[/cyan]")
         papers = fetch_semantic_scholar_papers(topic)
         if papers:
+            console.print(f"[green]  ✓ [Semantic Scholar] Found {len(papers)} high-impact papers[/green]")
             p_text = "### 🔬 High-Impact Academic Works (Semantic Scholar):\n"
             for p in papers:
                 p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Citations: {p['citations']:,}\n  DOI/Link: {p['url']}\n"
-                citations.append({"source": "Semantic Scholar", "title": p["title"], "url": p["url"], "meta": f"{p['citations']:,} citations • {p['authors']}"})
+                citations.append({"source": "Semantic Scholar", "title": p["title"], "url": p["url"], "meta": p["meta"]})
             sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [Semantic Scholar] No records found[/dim]")
 
     if use_openalex:
-        console.print("[cyan]🔍 Fetching OpenAlex global catalog works...[/cyan]")
+        console.print("[cyan]🔍 [OpenAlex] Fetching global catalog works...[/cyan]")
         works = fetch_openalex_works(topic)
         if works:
+            console.print(f"[green]  ✓ [OpenAlex] Found {len(works)} peer-reviewed works[/green]")
             p_text = "### 🏛️ OpenAlex Global Scholarly Catalog:\n"
             for p in works:
                 p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Venue: {p['venue']}\n  Authors: {p['authors']}\n  DOI: {p['url']}\n"
-                citations.append({"source": "OpenAlex", "title": p["title"], "url": p["url"], "meta": f"{p['venue']} ({p['year']})"})
+                citations.append({"source": "OpenAlex", "title": p["title"], "url": p["url"], "meta": p["meta"]})
             sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [OpenAlex] No records found[/dim]")
+
+    if use_pubmed:
+        console.print("[cyan]🔍 [PubMed] Querying NCBI PubMed Central...[/cyan]")
+        works = fetch_pubmed_works(topic)
+        if works:
+            console.print(f"[green]  ✓ [PubMed] Found {len(works)} biomedical articles[/green]")
+            p_text = "### 🧬 PubMed Central (PMC) Biomedical Literature:\n"
+            for p in works:
+                p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Article Link: {p['url']}\n"
+                citations.append({"source": "PubMed Central", "title": p["title"], "url": p["url"], "meta": p["meta"]})
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [PubMed] No records found[/dim]")
 
     if use_wiki:
-        console.print("[cyan]🔍 Fetching Wikipedia encyclopedic reference...[/cyan]")
+        console.print("[cyan]🔍 [Wikipedia] Fetching encyclopedic reference summary...[/cyan]")
         w = fetch_wikipedia_summary(topic)
         if w:
+            console.print(f"[green]  ✓ [Wikipedia] Found overview for '{w['title']}'[/green]")
             w_text = f"### 📖 Wikipedia Reference Overview ({w['title']}):\n{w['extract']}\nReference URL: {w['url']}\n"
             sections.append(w_text)
             citations.append({"source": "Wikipedia", "title": w["title"], "url": w["url"], "meta": "Encyclopedic Overview"})
+        else:
+            console.print("[dim]  ✕ [Wikipedia] No summary found[/dim]")
 
     if doc_path:
-        console.print(f"[cyan]🔍 Loading document: {doc_path}...[/cyan]")
+        console.print(f"[cyan]🔍 [Document] Loading local document: {doc_path}...[/cyan]")
         doc_name, doc_content = load_document(doc_path)
         excerpt = doc_content[:6000]
         d_text = f"### 📄 User-Supplied Document ({doc_name}):\n\"\"\"\n{excerpt}\n\"\"\"\n"
@@ -382,8 +517,10 @@ def orchestrate_pipeline(
     web_search: bool = False,
     thinking_level: str = "medium",
     use_arxiv: bool = False,
+    use_crossref: bool = False,
     use_semantic: bool = False,
     use_openalex: bool = False,
+    use_pubmed: bool = False,
     use_wiki: bool = False,
     doc_path: Optional[str] = None
 ) -> dict:
@@ -400,17 +537,19 @@ def orchestrate_pipeline(
     dossier_text, citations = build_scholarly_dossier(
         topic,
         use_arxiv=use_arxiv,
+        use_crossref=use_crossref,
         use_semantic=use_semantic,
         use_openalex=use_openalex,
+        use_pubmed=use_pubmed,
         use_wiki=use_wiki,
         doc_path=doc_path
     )
 
     if citations:
         table = Table(title="Verified Academic & Reference Sources Loaded", border_style="cyan")
-        table.add_column("Source", style="bold magenta", width=16)
+        table.add_column("Source", style="bold magenta", width=18)
         table.add_column("Title / Document", style="white")
-        table.add_column("Details", style="dim", width=30)
+        table.add_column("Details", style="dim", width=34)
         for c in citations:
             table.add_row(c["source"], c["title"], c["meta"])
         console.print(table)
@@ -498,13 +637,15 @@ def orchestrate_pipeline(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Two-Agent Writer & Critic pipeline with Academic Grounding")
-    parser.add_argument("--topic", type=str, default="Explain how Agentic AI architectures work to software engineers with a concrete example", help="Prompt or topic for content")
+    parser.add_argument("--topic", type=str, default="Speech perception", help="Prompt or topic for content")
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL, choices=["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview", "gemini-flash-latest"], help="Gemini model to use")
     parser.add_argument("--thinking-level", type=str, default="medium", choices=["low", "medium", "high"], help="Thinking depth: low, medium, or high")
     parser.add_argument("--web-search", action="store_true", help="Enable Google Search grounding for research")
     parser.add_argument("--arxiv", action="store_true", help="Ground in arXiv preprints")
+    parser.add_argument("--crossref", action="store_true", help="Ground in Crossref 150M+ DOI index")
     parser.add_argument("--semantic-scholar", action="store_true", help="Ground in Semantic Scholar high-impact works")
     parser.add_argument("--openalex", action="store_true", help="Ground in OpenAlex global catalog works")
+    parser.add_argument("--pubmed", action="store_true", help="Ground in NCBI PubMed Central articles")
     parser.add_argument("--wikipedia", action="store_true", help="Ground in Wikipedia encyclopedic summary")
     parser.add_argument("--doc", type=str, default=None, help="Path to local PDF or text document to ground in")
     parser.add_argument("--max-turns", type=int, default=2, help="Maximum number of refinement iterations")
@@ -519,8 +660,10 @@ if __name__ == "__main__":
         web_search=args.web_search,
         thinking_level=args.thinking_level,
         use_arxiv=args.arxiv,
+        use_crossref=args.crossref,
         use_semantic=args.semantic_scholar,
         use_openalex=args.openalex,
+        use_pubmed=args.pubmed,
         use_wiki=args.wikipedia,
         doc_path=args.doc
     )
