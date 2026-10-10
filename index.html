@@ -161,8 +161,9 @@
           </label>
           <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
             <input type="checkbox" id="webSearchCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
-            <span>🌐 Google Web Search</span>
+            <span id="webSearchLabel">🌐 Google Web Search</span>
           </label>
+          <span id="searchQuotaBadge" class="text-[10px] text-slate-400 pl-6 hidden"></span>
         </div>
       </div>
       <div class="pt-2">
@@ -281,6 +282,37 @@
           exhaustedGroup.appendChild(opt);
         });
         modelSelect.appendChild(exhaustedGroup);
+      }
+
+      // Also probe Google Search tool availability on first available model
+      const searchBadge = document.getElementById("searchQuotaBadge");
+      const searchBox = document.getElementById("webSearchCheck");
+      if (availableModels.length > 0) {
+        try {
+          const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${availableModels[0].id}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+          const sRes = await fetch(testUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: "ping" }] }],
+              tools: [{ google_search: {} }]
+            })
+          });
+          if (sRes.status === 429) {
+            searchBox.checked = false;
+            searchBox.disabled = true;
+            searchBadge.classList.remove("hidden");
+            searchBadge.textContent = "⚠️ Search quota reached (uncheck to run pure LLM)";
+            searchBadge.className = "text-[10px] text-amber-400 pl-6 block font-medium";
+          } else {
+            searchBox.disabled = false;
+            searchBadge.classList.remove("hidden");
+            searchBadge.textContent = "✓ Search quota available";
+            searchBadge.className = "text-[10px] text-emerald-400 pl-6 block";
+          }
+        } catch (e) {
+          console.warn("Search quota probe error:", e);
+        }
       }
 
       if (availableModels.length > 0) {
@@ -610,8 +642,12 @@ You MUST respond ONLY with valid JSON conforming to this schema:
         }
       } catch (err) {
         console.error(err);
-        alert(`Pipeline Error: ${err.message}`);
-        statusText.textContent = `Error: ${err.message}`;
+        let userMsg = err.message;
+        if (userMsg.includes("quota") || userMsg.includes("429")) {
+          userMsg += "\n\n💡 Tip: If 'Google Web Search' is checked, uncheck it to use standard model reasoning. Google imposes a separate quota on web search grounding.";
+        }
+        alert(`Pipeline Error: ${userMsg}`);
+        statusText.textContent = `Error: ${userMsg}`;
       } finally {
         statusSpinner.classList.add("hidden");
         startPipelineBtn.disabled = false;
