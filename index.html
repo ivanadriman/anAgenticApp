@@ -36,15 +36,27 @@
           🤖
         </div>
         <div>
-          <h1 class="text-lg font-bold bg-gradient-to-r from-cyan-400 to-indigo-300 bg-clip-text text-transparent">
+          <h1 data-i18n="headerTitle" class="text-lg font-bold bg-gradient-to-r from-cyan-400 to-indigo-300 bg-clip-text text-transparent">
             Gemini Agentic Studio
           </h1>
-          <p class="text-xs text-slate-400">Two-Agent Autonomous "Writer & Critic" Pipeline</p>
+          <p data-i18n="headerSubtitle" class="text-xs text-slate-400">Two-Agent Autonomous "Writer & Critic" Pipeline</p>
         </div>
       </div>
-      <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/60 w-fit">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Powered by: <strong>Gemini 3.8 Flash</strong></span>
+      <div class="flex items-center gap-3">
+        <!-- Language Switch: English / Indonesian -->
+        <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800 shadow-inner">
+          <button id="langEnBtn" type="button" class="px-2.5 py-1 text-xs rounded-lg font-semibold transition bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">
+            🇬🇧 EN
+          </button>
+          <button id="langIdBtn" type="button" class="px-2.5 py-1 text-xs rounded-lg font-semibold transition text-slate-400 hover:text-slate-200">
+            🇮🇩 ID
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/60 w-fit">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span data-i18n-html="headerPowered">Powered by: <strong>Gemini 3.8 Flash</strong></span>
+        </div>
       </div>
     </div>
   </header>
@@ -56,7 +68,7 @@
     <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div class="flex-1">
-          <label for="apiKeyInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+          <label for="apiKeyInput" data-i18n="apiKeyLabel" class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
             🔑 Google Gemini API Key (Stored locally in your browser only)
           </label>
           <div class="flex items-center gap-2">
@@ -64,12 +76,14 @@
               <input 
                 id="apiKeyInput" 
                 type="password" 
+                data-i18n-placeholder="apiKeyPlaceholder"
                 placeholder="AIzaSy... or paste your Gemini API key" 
                 class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
               />
               <button 
                 id="toggleKeyVisibility" 
                 type="button" 
+                data-i18n="toggleKeyVisibility"
                 class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-200"
               >
                 Show
@@ -77,12 +91,13 @@
             </div>
             <button 
               id="saveKeyBtn" 
+              data-i18n="saveKeyBtn"
               class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs font-medium text-slate-200 transition"
             >
               Save Key
             </button>
           </div>
-          <p class="text-[11px] text-slate-400 mt-1.5">
+          <p id="apiKeyNote" data-i18n-html="apiKeyNote" class="text-[11px] text-slate-400 mt-1.5">
             🔒 Your key is stored in your browser's <code class="text-cyan-400">localStorage</code> and never sent to any server except directly to Google's API.
             Need a free key? Get one at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:underline">Google AI Studio</a>.
           </p>
@@ -93,12 +108,13 @@
     <!-- Controls Form -->
     <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-5">
       <div>
-        <label for="topicInput" class="block text-sm font-semibold text-slate-200 mb-2">
+        <label for="topicInput" data-i18n="topicLabel" class="block text-sm font-semibold text-slate-200 mb-2">
           Target Topic or Goal:
         </label>
         <textarea 
           id="topicInput" 
           rows="3" 
+          data-i18n-placeholder="topicPlaceholder"
           placeholder="e.g., Explain microservices vs monoliths for junior developers with real-world tradeoffs"
           class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition resize-none"
         >Explain how Agentic AI architectures work to software engineers with a concrete example</textarea>
@@ -107,10 +123,10 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div>
           <div class="flex items-center justify-between mb-1">
-            <label for="modelSelect" class="block text-xs font-medium text-slate-300">
+            <label for="modelSelect" data-i18n="modelLabel" class="block text-xs font-medium text-slate-300">
               Gemini Model:
             </label>
-            <button id="checkQuotaBtn" type="button" class="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium underline">
+            <button id="checkQuotaBtn" data-i18n="checkQuotaBtn" type="button" class="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium underline">
               🔄 Check Quota
             </button>
           </div>
@@ -125,27 +141,27 @@
           <div id="quotaStatusText" class="text-[11px] text-slate-400 mt-1">Ready</div>
         </div>
         <div>
-          <label for="thinkingLevelSelect" class="block text-xs font-medium text-slate-300 mb-1">
+          <label for="thinkingLevelSelect" data-i18n="thinkingLabel" class="block text-xs font-medium text-slate-300 mb-1">
             🧠 Thinking Mode:
           </label>
           <select id="thinkingLevelSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500">
-            <option value="low">Low (Fast Response)</option>
-            <option value="medium" selected>Medium (Balanced Reasoning)</option>
-            <option value="high">High (Deep Strategic Reasoning)</option>
+            <option value="low" id="optThinkingLow">Low (Fast Response)</option>
+            <option value="medium" id="optThinkingMed" selected>Medium (Balanced Reasoning)</option>
+            <option value="high" id="optThinkingHigh">High (Deep Strategic Reasoning)</option>
           </select>
         </div>
         <div>
-          <label for="maxTurnsSelect" class="block text-xs font-medium text-slate-300 mb-1">
+          <label for="maxTurnsSelect" data-i18n="iterationLabel" class="block text-xs font-medium text-slate-300 mb-1">
             Iteration Mode:
           </label>
           <select id="maxTurnsSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500">
-            <option value="1">1 Turn (Single Draft)</option>
-            <option value="2">2 Turns (Draft &rarr; Critique &rarr; Revise)</option>
-            <option value="3" selected>3 Turns (Full Multi-Round Polish)</option>
+            <option value="1" id="optTurn1">1 Turn (Single Draft)</option>
+            <option value="2" id="optTurn2">2 Turns (Draft &rarr; Critique &rarr; Revise)</option>
+            <option value="3" id="optTurn3" selected>3 Turns (Full Multi-Round Polish)</option>
           </select>
         </div>
         <div>
-          <label for="targetScoreInput" class="block text-xs font-medium text-slate-300 mb-1">
+          <label for="targetScoreInput" data-i18n="targetScoreLabel" class="block text-xs font-medium text-slate-300 mb-1">
             Approval Target Score (1-10):
           </label>
           <input 
@@ -160,11 +176,11 @@
         <div class="flex flex-col gap-2 justify-center">
           <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
             <input type="checkbox" id="forceAllTurnsCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
-            <span>Force all turns</span>
+            <span data-i18n="forceTurnsLabel">Force all turns</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
             <input type="checkbox" id="webSearchCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
-            <span id="webSearchLabel">🌐 Google Web Search</span>
+            <span id="webSearchLabel" data-i18n="webSearchLabel">🌐 Google Web Search</span>
           </label>
           <span id="searchQuotaBadge" class="text-[10px] text-slate-400 pl-6 hidden"></span>
         </div>
@@ -175,59 +191,59 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3">
           <div class="flex items-center gap-2">
             <span class="text-sm">📚</span>
-            <label class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+            <label data-i18n="groundingHeaderTitle" class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
               Scholarly & Reference Grounding Sources
             </label>
           </div>
-          <span class="text-[11px] text-slate-400">Independent academic literature & encyclopedic sources &bull; Free & Uncapped</span>
+          <span data-i18n="groundingHeaderSub" class="text-[11px] text-slate-400">Independent academic literature & encyclopedic sources &bull; Free & Uncapped</span>
         </div>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="arxivCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">📚 arXiv API</span>
-              <span class="text-[10px] text-slate-400">2.4M+ STEM papers (AI, CS, Physics, Math, Bio)</span>
+              <span data-i18n="arxivTitle" class="font-semibold text-slate-100 flex items-center gap-1.5">📚 arXiv API</span>
+              <span data-i18n="arxivSub" class="text-[10px] text-slate-400">2.4M+ STEM papers (AI, CS, Physics, Math, Bio)</span>
             </div>
           </label>
 
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="semanticScholarCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🔬 Semantic Scholar API</span>
-              <span class="text-[10px] text-slate-400">200M+ papers with citation graphs & metrics</span>
+              <span data-i18n="semanticTitle" class="font-semibold text-slate-100 flex items-center gap-1.5">🔬 Semantic Scholar API</span>
+              <span data-i18n="semanticSub" class="text-[10px] text-slate-400">200M+ papers with citation graphs & metrics</span>
             </div>
           </label>
 
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="pubmedCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🧬 PubMed / Europe PMC</span>
-              <span class="text-[10px] text-slate-400">36M+ biomedical citations (NCBI E-utilities)</span>
+              <span data-i18n="pubmedTitle" class="font-semibold text-slate-100 flex items-center gap-1.5">🧬 PubMed / Europe PMC</span>
+              <span data-i18n="pubmedSub" class="text-[10px] text-slate-400">36M+ biomedical citations (NCBI E-utilities)</span>
             </div>
           </label>
 
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="openAlexCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏛️ OpenAlex API</span>
-              <span class="text-[10px] text-slate-400">250M+ scholarly works, authors & open access</span>
+              <span data-i18n="openAlexTitle" class="font-semibold text-slate-100 flex items-center gap-1.5">🏛️ OpenAlex API</span>
+              <span data-i18n="openAlexSub" class="text-[10px] text-slate-400">250M+ scholarly works, authors & open access</span>
             </div>
           </label>
 
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="crossrefCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏷️ Crossref API</span>
-              <span class="text-[10px] text-slate-400">150M+ verified peer-reviewed publications & DOIs</span>
+              <span data-i18n="crossrefTitle" class="font-semibold text-slate-100 flex items-center gap-1.5">🏷️ Crossref API</span>
+              <span data-i18n="crossrefSub" class="text-[10px] text-slate-400">150M+ verified peer-reviewed publications & DOIs</span>
             </div>
           </label>
 
           <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
             <input type="checkbox" id="wikipediaCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
             <div class="flex flex-col">
-              <span class="font-semibold text-slate-100 flex items-center gap-1.5">📖 Wikipedia Reference</span>
-              <span class="text-[10px] text-slate-400">Curated encyclopedic summaries</span>
+              <span data-i18n="wikipediaTitle" class="font-semibold text-slate-100 flex items-center gap-1.5">📖 Wikipedia Reference</span>
+              <span data-i18n="wikipediaSub" class="text-[10px] text-slate-400">Curated encyclopedic summaries</span>
             </div>
           </label>
         </div>
@@ -239,16 +255,16 @@
               📄
             </div>
             <div>
-              <div class="text-xs font-semibold text-slate-200">Ground on Local Document / PDF</div>
-              <div class="text-[10px] text-slate-400">Client-side text parsing with PDF.js &bull; 100% private, zero uploads to external servers</div>
+              <div data-i18n="docUploadTitle" class="text-xs font-semibold text-slate-200">Ground on Local Document / PDF</div>
+              <div data-i18n="docUploadSub" class="text-[10px] text-slate-400">Client-side text parsing with PDF.js &bull; 100% private, zero uploads to external servers</div>
             </div>
           </div>
           <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
             <input type="file" id="docFileInput" accept=".pdf,.txt,.md,.json" class="hidden" />
-            <button type="button" id="uploadDocBtn" class="text-xs px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg transition font-medium">
+            <button type="button" id="uploadDocBtn" data-i18n="uploadDocBtn" class="text-xs px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg transition font-medium">
               📁 Choose File
             </button>
-            <span id="docFileStatus" class="text-xs text-slate-400 truncate max-w-[180px]">No document selected</span>
+            <span id="docFileStatus" data-i18n="docFileStatus" class="text-xs text-slate-400 truncate max-w-[180px]">No document selected</span>
             <button type="button" id="clearDocBtn" class="text-xs text-rose-400 hover:text-rose-300 px-1 hidden" title="Remove document">✕</button>
           </div>
         </div>
@@ -260,7 +276,7 @@
           class="w-full py-3 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition flex items-center justify-center gap-2"
         >
           <span id="startBtnIcon">🚀</span>
-          <span id="startBtnText">Run Agentic Pipeline</span>
+          <span id="startBtnText" data-i18n="startBtnText">Run Agentic Pipeline</span>
         </button>
       </div>
     </div>
@@ -282,15 +298,173 @@
   <!-- Footer -->
   <footer class="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500">
     <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <p>Autonomous Agentic App Demo &bull; Powered by Google Gemini API</p>
-      <p>100% Client-side on GitHub Pages &bull; No API keys stored on servers</p>
+      <p data-i18n="footerText1">Autonomous Agentic App Demo &bull; Powered by Google Gemini API</p>
+      <p data-i18n="footerText2">100% Client-side on GitHub Pages &bull; No API keys stored on servers</p>
     </div>
   </footer>
 
   <!-- App Script -->
   <script>
-    // State
+    // State & i18n
     const STORAGE_KEY = "GEMINI_USER_API_KEY";
+    const LANG_STORAGE_KEY = "GEMINI_APP_LANG";
+    let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || "en";
+    const langEnBtn = document.getElementById("langEnBtn");
+    const langIdBtn = document.getElementById("langIdBtn");
+
+    const I18N = {
+      en: {
+        headerTitle: "Gemini Agentic Studio",
+        headerSubtitle: "Two-Agent Autonomous \"Writer & Critic\" Pipeline",
+        headerPowered: "Powered by: <strong>Gemini 3.8 Flash</strong>",
+        apiKeyLabel: "🔑 Google Gemini API Key (Stored locally in your browser only)",
+        apiKeyPlaceholder: "AIzaSy... or paste your Gemini API key",
+        toggleKeyVisibility: "Show",
+        saveKeyBtn: "Save Key",
+        apiKeyNote: "🔒 Your key is stored in your browser's <code class=\"text-cyan-400\">localStorage</code> and never sent to any server except directly to Google's API. Need a free key? Get one at <a href=\"https://aistudio.google.com/app/apikey\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-cyan-400 hover:underline\">Google AI Studio</a>.",
+        topicLabel: "Target Topic or Goal:",
+        topicPlaceholder: "e.g., Explain microservices vs monoliths for junior developers with real-world tradeoffs",
+        defaultTopic: "Explain how Agentic AI architectures work to software engineers with a concrete example",
+        modelLabel: "Gemini Model:",
+        checkQuotaBtn: "🔄 Check Quota",
+        quotaReady: "Ready",
+        thinkingLabel: "🧠 Thinking Mode:",
+        optThinkingLow: "Low (Fast Response)",
+        optThinkingMed: "Medium (Balanced Reasoning)",
+        optThinkingHigh: "High (Deep Strategic Reasoning)",
+        iterationLabel: "Iteration Mode:",
+        optTurn1: "1 Turn (Single Draft)",
+        optTurn2: "2 Turns (Draft → Critique → Revise)",
+        optTurn3: "3 Turns (Full Multi-Round Polish)",
+        targetScoreLabel: "Approval Target Score (1-10):",
+        forceTurnsLabel: "Force all turns",
+        webSearchLabel: "🌐 Google Web Search",
+        groundingHeaderTitle: "Scholarly & Reference Grounding Sources",
+        groundingHeaderSub: "Independent academic literature & encyclopedic sources • Free & Uncapped",
+        arxivTitle: "📚 arXiv API",
+        arxivSub: "2.4M+ STEM papers (AI, CS, Physics, Math, Bio)",
+        semanticTitle: "🔬 Semantic Scholar API",
+        semanticSub: "200M+ papers with citation graphs & metrics",
+        pubmedTitle: "🧬 PubMed / Europe PMC",
+        pubmedSub: "36M+ biomedical citations (NCBI E-utilities)",
+        openAlexTitle: "🏛️ OpenAlex API",
+        openAlexSub: "250M+ scholarly works, authors & open access",
+        crossrefTitle: "🏷️ Crossref API",
+        crossrefSub: "150M+ verified peer-reviewed publications & DOIs",
+        wikipediaTitle: "📖 Wikipedia Reference",
+        wikipediaSub: "Curated encyclopedic summaries",
+        docUploadTitle: "Ground on Local Document / PDF",
+        docUploadSub: "Client-side text parsing with PDF.js • 100% private, zero uploads to external servers",
+        uploadDocBtn: "📁 Choose File",
+        docFileStatus: "No document selected",
+        startBtnText: "Run Agentic Pipeline",
+        footerText1: "Autonomous Agentic App Demo • Powered by Google Gemini API",
+        footerText2: "100% Client-side on GitHub Pages • No API keys stored on servers"
+      },
+      id: {
+        headerTitle: "Gemini Agentic Studio",
+        headerSubtitle: "Pipeline Otonom Dua Agen \"Penulis & Pengkritik\"",
+        headerPowered: "Didukung oleh: <strong>Gemini 3.8 Flash</strong>",
+        apiKeyLabel: "🔑 Kunci API Google Gemini (Hanya tersimpan secara lokal di peramban Anda)",
+        apiKeyPlaceholder: "AIzaSy... atau tempel kunci API Gemini Anda",
+        toggleKeyVisibility: "Lihat",
+        saveKeyBtn: "Simpan Kunci",
+        apiKeyNote: "🔒 Kunci Anda tersimpan di <code class=\"text-cyan-400\">localStorage</code> peramban dan tidak pernah dikirim ke server manapun kecuali langsung ke API Google. Perlu kunci gratis? Dapatkan di <a href=\"https://aistudio.google.com/app/apikey\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"text-cyan-400 hover:underline\">Google AI Studio</a>.",
+        topicLabel: "Topik atau Tujuan Target:",
+        topicPlaceholder: "contoh: Jelaskan persepsi wicara dan mekanisme pemrosesan auditori pada otak manusia",
+        defaultTopic: "Jelaskan bagaimana arsitektur Agentic AI bekerja kepada software engineer dengan contoh konkret",
+        modelLabel: "Model Gemini:",
+        checkQuotaBtn: "🔄 Cek Kuota",
+        quotaReady: "Siap",
+        thinkingLabel: "🧠 Mode Berpikir (Thinking Mode):",
+        optThinkingLow: "Rendah (Respon Cepat)",
+        optThinkingMed: "Sedang (Penalaran Seimbang)",
+        optThinkingHigh: "Tinggi (Penalaran Strategis Mendalam)",
+        iterationLabel: "Mode Iterasi:",
+        optTurn1: "1 Putaran (Draf Tunggal)",
+        optTurn2: "2 Putaran (Draf → Kritik → Revisi)",
+        optTurn3: "3 Putaran (Penyempurnaan Multi-Putaran Penuh)",
+        targetScoreLabel: "Target Skor Persetujuan (1-10):",
+        forceTurnsLabel: "Jalankan semua putaran",
+        webSearchLabel: "🌐 Pencarian Web Google",
+        groundingHeaderTitle: "Sumber Rujukan Ilmiah & Akademis",
+        groundingHeaderSub: "Literatur akademis independen & sumber ensiklopedia • Gratis & Tanpa Batas",
+        arxivTitle: "📚 arXiv API",
+        arxivSub: "2.4M+ Makalah STEM (AI, Ilmu Komputer, Fisika, Matematika, Biologi)",
+        semanticTitle: "🔬 Semantic Scholar API",
+        semanticSub: "200M+ Makalah dengan grafik sitasi & metrik dampak",
+        pubmedTitle: "🧬 PubMed / Europe PMC",
+        pubmedSub: "36M+ Sitasi biomedis & kesehatan (NCBI E-utilities)",
+        openAlexTitle: "🏛️ OpenAlex API",
+        openAlexSub: "250M+ Karya ilmiah global, penulis & akses terbuka",
+        crossrefTitle: "🏷️ Crossref API",
+        crossrefSub: "150M+ Publikasi peer-review & DOI penerbit terverifikasi",
+        wikipediaTitle: "📖 Wikipedia Reference",
+        wikipediaSub: "Ringkasan ensiklopedia terkurasi (ID & Global)",
+        docUploadTitle: "Rujukan Dokumen / PDF Lokal",
+        docUploadSub: "Ekstraksi teks di peramban dengan PDF.js • 100% privat tanpa unggah ke server",
+        uploadDocBtn: "📁 Pilih Berkas",
+        docFileStatus: "Belum ada berkas dipilih",
+        startBtnText: "Jalankan Pipeline Agen",
+        footerText1: "Demo Aplikasi Agen Otonom • Didukung oleh Google Gemini API",
+        footerText2: "100% Sisi Klien di GitHub Pages • Tidak ada kunci API yang disimpan di server"
+      }
+    };
+
+    function applyLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem(LANG_STORAGE_KEY, lang);
+      const t = I18N[lang] || I18N.en;
+
+      if (lang === "id") {
+        langIdBtn.className = "px-2.5 py-1 text-xs rounded-lg font-semibold transition bg-cyan-500/20 text-cyan-400 border border-cyan-500/40";
+        langEnBtn.className = "px-2.5 py-1 text-xs rounded-lg font-semibold transition text-slate-400 hover:text-slate-200 border border-transparent";
+      } else {
+        langEnBtn.className = "px-2.5 py-1 text-xs rounded-lg font-semibold transition bg-cyan-500/20 text-cyan-400 border border-cyan-500/40";
+        langIdBtn.className = "px-2.5 py-1 text-xs rounded-lg font-semibold transition text-slate-400 hover:text-slate-200 border border-transparent";
+      }
+
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (t[key]) el.textContent = t[key];
+      });
+
+      document.querySelectorAll("[data-i18n-html]").forEach(el => {
+        const key = el.getAttribute("data-i18n-html");
+        if (t[key]) el.innerHTML = t[key];
+      });
+
+      document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+        const key = el.getAttribute("data-i18n-placeholder");
+        if (t[key]) el.placeholder = t[key];
+      });
+
+      const optLow = document.getElementById("optThinkingLow");
+      const optMed = document.getElementById("optThinkingMed");
+      const optHigh = document.getElementById("optThinkingHigh");
+      if (optLow) optLow.textContent = t.optThinkingLow;
+      if (optMed) optMed.textContent = t.optThinkingMed;
+      if (optHigh) optHigh.textContent = t.optThinkingHigh;
+
+      const optT1 = document.getElementById("optTurn1");
+      const optT2 = document.getElementById("optTurn2");
+      const optT3 = document.getElementById("optTurn3");
+      if (optT1) optT1.textContent = t.optTurn1;
+      if (optT2) optT2.textContent = t.optTurn2;
+      if (optT3) optT3.textContent = t.optTurn3;
+
+      if (topicInput.value === I18N.en.defaultTopic || topicInput.value === I18N.id.defaultTopic) {
+        topicInput.value = t.defaultTopic;
+      }
+
+      if (quotaStatusText.textContent === "Ready" || quotaStatusText.textContent === "Siap") {
+        quotaStatusText.textContent = t.quotaReady;
+      }
+    }
+
+    langEnBtn.addEventListener("click", () => applyLanguage("en"));
+    langIdBtn.addEventListener("click", () => applyLanguage("id"));
+
     const apiKeyInput = document.getElementById("apiKeyInput");
     const saveKeyBtn = document.getElementById("saveKeyBtn");
     const toggleKeyVisibility = document.getElementById("toggleKeyVisibility");
@@ -527,9 +701,96 @@
 
     const POLITE_EMAIL = "agenticapp.research@gmail.com";
 
+    // Multilingual Scientific Query Formulation
+    // When a query is in Indonesian (or any non-English language), we automatically
+    // derive English scientific keywords for international STEM repositories (arXiv, PubMed, Semantic Scholar, Crossref, OpenAlex)
+    // while keeping the native query for regional sources (Indonesian Wikipedia, regional OpenAlex/Crossref indexes).
+    async function resolveMultilingualQueries(rawTopic, apiKey, model) {
+      if (apiKey) {
+        try {
+          const prompt = `Task: Academic Query Formulation for global multi-database research (arXiv, PubMed, Semantic Scholar, Crossref, OpenAlex, Wikipedia).
+User topic: "${rawTopic}"
+
+Instructions:
+1. "global_stem": Generate 2 to 4 concise, high-impact English scientific/academic keywords that best match this topic across global research literature. If the input is in Indonesian or any other language, translate the core scientific concepts accurately to English STEM terminology (e.g., "persepsi wicara" -> "speech perception auditory processing", "dampak AI medis" -> "artificial intelligence medical diagnosis healthcare").
+2. "regional": The original topic in its original language, cleaned up for native regional encyclopedias.
+3. "is_indonesian": true if the input contains Indonesian words or Indonesian language was detected, false otherwise.
+
+Respond ONLY with valid JSON:
+{"global_stem": "...", "regional": "...", "is_indonesian": true/false}`;
+
+          const res = await callGemini(apiKey, "You are a multilingual scientific query translator. Output JSON only.", prompt, model, false, "low");
+          const clean = res.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+          const parsed = JSON.parse(clean);
+          if (parsed.global_stem) {
+            return {
+              global: parsed.global_stem.trim(),
+              regional: (parsed.regional || rawTopic).trim(),
+              isIndonesian: Boolean(parsed.is_indonesian || currentLang === "id")
+            };
+          }
+        } catch (e) {
+          console.warn("Gemini query formulation note:", e);
+        }
+      }
+
+      // Client-side heuristic / dictionary translation fallback
+      return fallbackMultilingualQueries(rawTopic);
+    }
+
+    function fallbackMultilingualQueries(text) {
+      const dict = {
+        "persepsi wicara": "speech perception",
+        "persepsi suara": "sound perception",
+        "pemrosesan auditori": "auditory processing",
+        "kecerdasan buatan": "artificial intelligence",
+        "pembelajaran mesin": "machine learning",
+        "pembelajaran mendalam": "deep learning",
+        "jaringan saraf": "neural networks",
+        "komputasi kuantum": "quantum computing",
+        "kriptografi kuantum": "quantum cryptography",
+        "keamanan siber": "cybersecurity",
+        "rekayasa perangkat lunak": "software engineering",
+        "pemrosesan bahasa alami": "natural language processing",
+        "diagnosis medis": "medical diagnosis",
+        "pelayanan kesehatan": "healthcare medicine",
+        "penyakit kardiovaskular": "cardiovascular disease",
+        "perubahan iklim": "climate change",
+        "energi terbarukan": "renewable energy",
+        "komputasi awan": "cloud computing",
+        "arsitektur mikroservis": "microservices architecture",
+        "biologi molekuler": "molecular biology",
+        "ilmu saraf": "neuroscience"
+      };
+
+      const lower = text.toLowerCase();
+      let global = text;
+      let isId = (currentLang === "id");
+
+      for (const [idTerm, enTerm] of Object.entries(dict)) {
+        if (lower.includes(idTerm)) {
+          global = global.toLowerCase().replace(idTerm, enTerm);
+          isId = true;
+        }
+      }
+
+      const idWords = ["yang", "dan", "di", "dari", "untuk", "pada", "adalah", "dengan", "dalam", "bagaimana", "cara", "dampak", "pengaruh", "analisis", "tentang", "wicara", "persepsi"];
+      const tokens = lower.split(/\s+/);
+      if (tokens.some(t => idWords.includes(t))) {
+        isId = true;
+      }
+
+      return {
+        global: global.trim(),
+        regional: text.trim(),
+        isIndonesian: isId
+      };
+    }
+
     // Scholarly Research Fetchers with Live Progress Callbacks & Resilient Fallbacks
-    async function fetchArxivPapers(topic, updateProg) {
-      updateProg("searching", `Querying open preprints for "${topic}"...`);
+    async function fetchArxivPapers(queries, updateProg) {
+      const topic = typeof queries === "object" ? (queries.global || queries.topic || "") : queries;
+      updateProg("searching", currentLang === "id" ? `Menelusuri pra-cetak STEM global untuk "${topic}"...` : `Querying open preprints for "${topic}"...`);
       try {
         const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&filter=primary_location.source.id:s4306400194&per-page=4&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url);
@@ -540,7 +801,7 @@
             const arxivId = r.ids?.arxiv || "";
             const landingUrl = r.primary_location?.landing_page_url || (arxivId ? `https://arxiv.org/abs/${arxivId}` : r.doi || "");
             return {
-              source: "arXiv Preprints",
+              source: "arXiv API",
               title: r.title || "Untitled arXiv Preprint",
               authors: authors || "Anonymous",
               year: r.publication_year || "Recent",
@@ -549,7 +810,7 @@
           });
 
           if (items.length > 0) {
-            updateProg("done", `✓ ${items.length} Preprints Found`, items);
+            updateProg("done", currentLang === "id" ? `✓ ${items.length} Pra-cetak Ditemukan (arXiv)` : `✓ ${items.length} Preprints Found (arXiv)`, items);
             return items;
           }
         }
@@ -559,7 +820,7 @@
 
       // Resilient Fallback: Crossref preprint index
       try {
-        updateProg("searching", `Querying Crossref preprint index for "${topic}"...`);
+        updateProg("searching", currentLang === "id" ? `Menelusuri indeks pra-cetak alternatif untuk "${topic}"...` : `Querying Crossref preprint index for "${topic}"...`);
         const fbUrl = `https://api.crossref.org/works?query=${encodeURIComponent(topic + " arxiv")}&rows=3&mailto=${POLITE_EMAIL}`;
         const fbRes = await fetch(fbUrl);
         if (fbRes.ok) {
@@ -569,7 +830,7 @@
             const title = (it.title || ["Untitled Paper"])[0];
             const doi = it.DOI || "";
             return {
-              source: "arXiv Preprints (Crossref)",
+              source: "arXiv API (Crossref)",
               title: title,
               authors: authors || "Anonymous",
               year: it.created?.["date-parts"]?.[0]?.[0] || "Recent",
@@ -577,7 +838,7 @@
             };
           });
           if (fbItems.length > 0) {
-            updateProg("done", `✓ ${fbItems.length} Preprints Found (Crossref Index)`, fbItems);
+            updateProg("done", currentLang === "id" ? `✓ ${fbItems.length} Pra-cetak Ditemukan (Indeks Alternatif)` : `✓ ${fbItems.length} Preprints Found (Alternative Index)`, fbItems);
             return fbItems;
           }
         }
@@ -585,12 +846,13 @@
         console.warn("arXiv fallback error:", e);
       }
 
-      updateProg("empty", "No preprints matched query", []);
+      updateProg("empty", currentLang === "id" ? "Tidak ditemukan pra-cetak" : "No preprints matched query", []);
       return [];
     }
 
-    async function fetchCrossrefPapers(topic, updateProg) {
-      updateProg("searching", `Querying Crossref 150M+ DOI index for "${topic}"...`);
+    async function fetchCrossrefPapers(queries, updateProg) {
+      const topic = typeof queries === "object" ? (queries.global || queries.topic || "") : queries;
+      updateProg("searching", currentLang === "id" ? `Menelusuri indeks DOI Crossref 150M+ untuk "${topic}"...` : `Querying Crossref 150M+ DOI index for "${topic}"...`);
       try {
         const url = `https://api.crossref.org/works?query=${encodeURIComponent(topic)}&rows=4&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url);
@@ -603,7 +865,7 @@
             const publisher = it.publisher || "Scholarly Publisher";
             const year = it.created?.["date-parts"]?.[0]?.[0] || "Recent";
             return {
-              source: "Crossref DOI Index",
+              source: "Crossref API",
               title: title,
               authors: authors || "Anonymous",
               year: year,
@@ -613,19 +875,20 @@
           });
 
           if (items.length > 0) {
-            updateProg("done", `✓ ${items.length} Peer-Reviewed DOIs Found`, items);
+            updateProg("done", currentLang === "id" ? `✓ ${items.length} Publikasi Peer-Review Ditemukan (Crossref)` : `✓ ${items.length} Peer-Reviewed DOIs Found (Crossref)`, items);
             return items;
           }
         }
       } catch (e) {
         console.warn("Crossref error:", e);
       }
-      updateProg("empty", "No Crossref DOIs matched", []);
+      updateProg("empty", currentLang === "id" ? "Tidak ditemukan DOI Crossref" : "No Crossref DOIs matched", []);
       return [];
     }
 
-    async function fetchSemanticScholarPapers(topic, updateProg) {
-      updateProg("searching", `Querying Semantic Scholar API for "${topic}"...`);
+    async function fetchSemanticScholarPapers(queries, updateProg) {
+      const topic = typeof queries === "object" ? (queries.global || queries.topic || "") : queries;
+      updateProg("searching", currentLang === "id" ? `Menelusuri API Semantic Scholar 200M+ untuk "${topic}"...` : `Querying Semantic Scholar API for "${topic}"...`);
       // 1. Primary: Direct Semantic Scholar API (Generous Public Tier)
       try {
         const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(topic)}&limit=4&fields=title,authors,year,citationCount,url`;
@@ -640,12 +903,12 @@
               authors: authors || "Anonymous",
               year: p.year || "Recent",
               citations: p.citationCount || 0,
-              meta: `${(p.citationCount || 0).toLocaleString()} citations • ${authors}`,
+              meta: `${(p.citationCount || 0).toLocaleString()} ${currentLang === "id" ? "sitasi" : "citations"} • ${authors}`,
               url: p.url || (p.paperId ? `https://www.semanticscholar.org/paper/${p.paperId}` : "")
             };
           });
           if (items.length > 0) {
-            updateProg("done", `✓ ${items.length} High-Impact Papers Found (Semantic Scholar)`, items);
+            updateProg("done", currentLang === "id" ? `✓ ${items.length} Makalah Sitasi Tinggi Ditemukan (Semantic Scholar)` : `✓ ${items.length} High-Impact Papers Found (Semantic Scholar)`, items);
             return items;
           }
         }
@@ -655,7 +918,7 @@
 
       // 2. Resilient Fallback: OpenAlex citation-ranked index
       try {
-        updateProg("searching", `Querying citation graph index for "${topic}"...`);
+        updateProg("searching", currentLang === "id" ? `Menelusuri grafik sitasi akademis untuk "${topic}"...` : `Querying citation graph index for "${topic}"...`);
         const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&sort=cited_by_count:desc&per-page=4&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url);
         if (res.ok) {
@@ -668,35 +931,39 @@
               authors: authors || "Anonymous",
               year: r.publication_year || "Recent",
               citations: r.cited_by_count || 0,
-              meta: `${(r.cited_by_count || 0).toLocaleString()} citations • ${authors}`,
+              meta: `${(r.cited_by_count || 0).toLocaleString()} ${currentLang === "id" ? "sitasi" : "citations"} • ${authors}`,
               url: r.doi || r.primary_location?.landing_page_url || ""
             };
           });
 
           if (items.length > 0) {
-            updateProg("done", `✓ ${items.length} High-Impact Papers Found`, items);
+            updateProg("done", currentLang === "id" ? `✓ ${items.length} Makalah Sitasi Tinggi Ditemukan` : `✓ ${items.length} High-Impact Papers Found`, items);
             return items;
           }
         }
       } catch (e) {
         console.warn("Semantic Scholar fallback error:", e);
       }
-      updateProg("empty", "No citation-ranked papers matched", []);
+      updateProg("empty", currentLang === "id" ? "Tidak ada makalah dengan peringkat sitasi" : "No citation-ranked papers matched", []);
       return [];
     }
 
-    async function fetchOpenAlexWorks(topic, updateProg) {
-      updateProg("searching", `Querying OpenAlex 250M+ catalog for "${topic}"...`);
+    async function fetchOpenAlexWorks(queries, updateProg) {
+      const topic = typeof queries === "object" ? (queries.global || queries.topic || "") : queries;
+      const regTopic = typeof queries === "object" ? (queries.regional || "") : "";
+      const isId = typeof queries === "object" ? Boolean(queries.isIndonesian || currentLang === "id") : (currentLang === "id");
+
+      updateProg("searching", currentLang === "id" ? `Menelusuri katalog global OpenAlex 250M+ untuk "${topic}"...` : `Querying OpenAlex 250M+ catalog for "${topic}"...`);
       try {
         const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&per-page=4&mailto=${POLITE_EMAIL}`;
         const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          const items = (data.results || []).map(r => {
+          let items = (data.results || []).map(r => {
             const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
             const venue = r.primary_location?.source?.display_name || "Academic Journal";
             return {
-              source: "OpenAlex Global Catalog",
+              source: "OpenAlex API",
               title: r.title || "Untitled Paper",
               authors: authors || "Anonymous",
               year: r.publication_year || "Recent",
@@ -706,20 +973,53 @@
             };
           });
 
+          // If Indonesian query, also search OpenAlex for Indonesian regional papers and merge
+          if (isId && regTopic && regTopic.toLowerCase() !== topic.toLowerCase()) {
+            try {
+              const regUrl = `https://api.openalex.org/works?search=${encodeURIComponent(regTopic)}&per-page=2&mailto=${POLITE_EMAIL}`;
+              const regRes = await fetch(regUrl);
+              if (regRes.ok) {
+                const regData = await regRes.json();
+                const regItems = (regData.results || []).map(r => {
+                  const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
+                  const venue = r.primary_location?.source?.display_name || "Jurnal Akademis";
+                  return {
+                    source: "OpenAlex API (Regional)",
+                    title: r.title || "Untitled Paper",
+                    authors: authors || "Peneliti",
+                    year: r.publication_year || "Recent",
+                    venue: venue,
+                    meta: `${venue} (${r.publication_year || "Recent"}) • ${authors}`,
+                    url: r.doi || r.primary_location?.landing_page_url || ""
+                  };
+                });
+                const existingUrls = new Set(items.map(it => it.url));
+                regItems.forEach(ri => {
+                  if (ri.url && !existingUrls.has(ri.url)) {
+                    items.push(ri);
+                  }
+                });
+              }
+            } catch (e) {
+              console.warn("OpenAlex regional query note:", e);
+            }
+          }
+
           if (items.length > 0) {
-            updateProg("done", `✓ ${items.length} Scholarly Records Found`, items);
+            updateProg("done", currentLang === "id" ? `✓ ${items.length} Rekam Ilmiah Ditemukan (OpenAlex)` : `✓ ${items.length} Scholarly Records Found (OpenAlex)`, items);
             return items;
           }
         }
       } catch (e) {
         console.warn("OpenAlex error:", e);
       }
-      updateProg("empty", "No OpenAlex works matched", []);
+      updateProg("empty", currentLang === "id" ? "Tidak ditemukan publikasi OpenAlex" : "No OpenAlex works matched", []);
       return [];
     }
 
-    async function fetchPubMedWorks(topic, updateProg) {
-      updateProg("searching", `Querying NCBI PubMed Central for "${topic}"...`);
+    async function fetchPubMedWorks(queries, updateProg) {
+      const topic = typeof queries === "object" ? (queries.global || queries.topic || "") : queries;
+      updateProg("searching", currentLang === "id" ? `Menelusuri NCBI PubMed Central 36M+ untuk "${topic}"...` : `Querying NCBI PubMed Central for "${topic}"...`);
       try {
         const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pmc&term=${encodeURIComponent(topic)}&retmode=json&retmax=4`;
         const res = await fetch(searchUrl);
@@ -736,7 +1036,7 @@
                 const authors = (doc.authors || []).map(a => a.name).slice(0, 3).join(", ") || "Researchers";
                 const title = (doc.title || "Untitled Study").replace(/<\/?[^>]+(>|$)/g, "");
                 return {
-                  source: "PubMed Central (PMC)",
+                  source: "PubMed / Europe PMC",
                   title: title,
                   authors: authors,
                   year: doc.pubdate ? doc.pubdate.split(" ")[0] : "Recent",
@@ -744,7 +1044,7 @@
                   url: `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${id}/`
                 };
               });
-              updateProg("done", `✓ ${items.length} Biomedical Articles Found`, items);
+              updateProg("done", currentLang === "id" ? `✓ ${items.length} Artikel Biomedis & Kesehatan Ditemukan` : `✓ ${items.length} Biomedical Articles Found`, items);
               return items;
             }
           }
@@ -752,44 +1052,93 @@
       } catch (e) {
         console.warn("PubMed error:", e);
       }
-      updateProg("empty", "No PMC articles matched", []);
+      updateProg("empty", currentLang === "id" ? "Tidak ditemukan artikel PMC" : "No PMC articles matched", []);
       return [];
     }
 
-    async function fetchWikipediaSummary(topic, updateProg) {
-      updateProg("searching", `Searching Wikipedia encyclopedia for "${topic}"...`);
+    async function fetchWikipediaSummary(queries, updateProg) {
+      const qReg = typeof queries === "object" ? (queries.regional || queries.topic || "") : queries;
+      const qGlob = typeof queries === "object" ? (queries.global || queries.topic || "") : queries;
+      const isId = typeof queries === "object" ? Boolean(queries.isIndonesian || currentLang === "id") : (currentLang === "id");
+
+      updateProg("searching", currentLang === "id" 
+        ? `Mencari ensiklopedia Wikipedia untuk "${qReg}"...` 
+        : `Searching Wikipedia encyclopedia for "${qGlob}"...`);
+
+      const wikiItems = [];
+
+      // 1. If Indonesian mode or Indonesian query, search Indonesian Wikipedia first
+      if (isId) {
+        try {
+          const idSearchUrl = `https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(qReg)}&format=json&origin=*`;
+          const idRes = await fetch(idSearchUrl);
+          if (idRes.ok) {
+            const idData = await idRes.json();
+            const topHit = idData.query?.search?.[0];
+            if (topHit) {
+              const summaryUrl = `https://id.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topHit.title.replace(/ /g, "_"))}`;
+              const sumRes = await fetch(summaryUrl);
+              if (sumRes.ok) {
+                const sumData = await sumRes.json();
+                if (sumData.extract) {
+                  wikiItems.push({
+                    source: "Wikipedia (Bahasa Indonesia)",
+                    title: sumData.title,
+                    extract: sumData.extract,
+                    meta: "Ensiklopedia Bahasa Indonesia",
+                    url: sumData.content_urls?.desktop?.page || `https://id.wikipedia.org/wiki/${encodeURIComponent(topHit.title)}`
+                  });
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn("ID Wikipedia error:", e);
+        }
+      }
+
+      // 2. Query Global English Wikipedia for comprehensive worldwide overview
       try {
-        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(topic)}&format=json&origin=*`;
-        const sRes = await fetch(searchUrl);
-        if (sRes.ok) {
-          const sData = await sRes.json();
-          const topHit = sData.query?.search?.[0];
+        const enSearchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(qGlob)}&format=json&origin=*`;
+        const enRes = await fetch(enSearchUrl);
+        if (enRes.ok) {
+          const enData = await enRes.json();
+          const topHit = enData.query?.search?.[0];
           if (topHit) {
             const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topHit.title.replace(/ /g, "_"))}`;
             const sumRes = await fetch(summaryUrl);
             if (sumRes.ok) {
               const sumData = await sumRes.json();
-              const item = {
-                source: "Wikipedia",
-                title: sumData.title,
-                extract: sumData.extract,
-                meta: "Encyclopedic Reference Overview",
-                url: sumData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topHit.title)}`
-              };
-              updateProg("done", `✓ Overview Found: "${sumData.title}"`, [item]);
-              return item;
+              if (sumData.extract) {
+                wikiItems.push({
+                  source: isId ? "Wikipedia (Global Reference)" : "Wikipedia",
+                  title: sumData.title,
+                  extract: sumData.extract,
+                  meta: isId ? "Rujukan Ensiklopedia Global" : "Encyclopedic Reference Overview",
+                  url: sumData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topHit.title)}`
+                });
+              }
             }
           }
         }
       } catch (e) {
-        console.warn("Wikipedia error:", e);
+        console.warn("EN Wikipedia error:", e);
       }
-      updateProg("empty", "No Wikipedia articles matched", []);
-      return null;
+
+      if (wikiItems.length > 0) {
+        const msg = currentLang === "id" 
+          ? `✓ Ringkasan Ditemukan: ${wikiItems.map(w => `"${w.title}"`).join(" & ")}`
+          : `✓ Overview Found: ${wikiItems.map(w => `"${w.title}"`).join(" & ")}`;
+        updateProg("done", msg, wikiItems);
+        return wikiItems;
+      }
+
+      updateProg("empty", currentLang === "id" ? "Tidak ditemukan artikel Wikipedia" : "No Wikipedia articles matched", []);
+      return [];
     }
 
     // Live Progression Tracker Card UI Builders
-    function initResearchProgressCard(activeSources, topic) {
+    function initResearchProgressCard(activeSources, rawTopic, queries = {}) {
       const card = document.createElement("div");
       card.id = "liveResearchProgressCard";
       card.className = "bg-slate-900 border border-cyan-500/50 rounded-2xl p-5 shadow-2xl transition space-y-4";
@@ -802,32 +1151,48 @@
               <span class="font-bold text-xs text-slate-100">${s.name}</span>
             </div>
             <span id="prog-badge-${s.id}" class="text-[10px] font-mono px-2.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/80">
-              ⏳ Searching...
+              ${currentLang === "id" ? "⏳ Sedang mencari..." : "⏳ Searching..."}
             </span>
           </div>
           <div id="prog-msg-${s.id}" class="text-[11px] text-slate-400">
-            Initializing connection...
+            ${currentLang === "id" ? "Menghubungkan ke repositori..." : "Initializing connection..."}
           </div>
           <div id="prog-list-${s.id}" class="mt-2.5 pt-2 border-t border-slate-800/60 hidden space-y-1.5"></div>
         </div>
       `).join("");
+
+      const title = currentLang === "id" 
+        ? "Progres Penelusuran Riset & Literatur Ilmiah Langsung" 
+        : "Live Research & Literature Grounding Progress";
+      const subtitle = currentLang === "id"
+        ? "Menelusuri basis data akademis global &bull; Pembaruan pencarian multi-bahasa waktu nyata"
+        : "Querying scholarly databases &bull; Real-time multilingual lookup progression";
+      const initialCounter = currentLang === "id"
+        ? `0 / ${activeSources.length} Selesai`
+        : `0 / ${activeSources.length} Completed`;
+      const topicLabel = currentLang === "id" ? "Topik Riset:" : "Search query:";
+      const activeCountLabel = currentLang === "id" ? `${activeSources.length} sumber aktif` : `${activeSources.length} sources enabled`;
+      const globalQuery = queries.global || rawTopic;
 
       card.innerHTML = `
         <div class="flex items-center justify-between border-b border-slate-800 pb-3">
           <div class="flex items-center gap-2.5">
             <span class="text-xl">🔍</span>
             <div>
-              <div class="font-bold text-cyan-300 text-sm">Live Research & Literature Grounding Progress</div>
-              <div class="text-[10px] text-slate-400">Querying scholarly databases &bull; Real-time lookup progression</div>
+              <div class="font-bold text-cyan-300 text-sm">${title}</div>
+              <div class="text-[10px] text-slate-400">${subtitle}</div>
             </div>
           </div>
           <span id="researchProgressCounter" class="text-xs bg-slate-800 text-slate-300 border border-slate-700 px-3 py-1 rounded-full font-mono font-medium">
-            0 / ${activeSources.length} Completed
+            ${initialCounter}
           </span>
         </div>
-        <div class="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 flex items-center justify-between">
-          <span>Search query: <strong class="text-cyan-300 font-mono">"${topic}"</strong></span>
-          <span class="text-[10px] text-slate-400 font-mono">${activeSources.length} sources enabled</span>
+        <div class="text-xs text-slate-300 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+          <div>
+            <span>${topicLabel} <strong class="text-cyan-300 font-mono">"${rawTopic}"</strong></span>
+            ${globalQuery && globalQuery.toLowerCase() !== rawTopic.toLowerCase() ? `<span class="block sm:inline sm:ml-2 text-[11px] text-emerald-400 font-mono">🌐 ${currentLang === "id" ? "Penelusuran Global (STEM / Semua Bahasa)" : "Global STEM Search"}: "${globalQuery}"</span>` : `<span class="block sm:inline sm:ml-2 text-[11px] text-cyan-400 font-mono">🌐 ${currentLang === "id" ? "Penelusuran Literatur Global" : "Global Literature Search"}</span>`}
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono whitespace-nowrap">${activeCountLabel}</span>
         </div>
         <div class="space-y-2.5">
           ${rowsHtml}
@@ -848,13 +1213,13 @@
       if (status === "searching") {
         if (dot) { dot.className = "w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"; }
         badge.className = "text-[10px] font-mono px-2.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/80";
-        badge.textContent = "⏳ Searching...";
+        badge.textContent = currentLang === "id" ? "⏳ Sedang mencari..." : "⏳ Searching...";
         msg.textContent = message;
       } else if (status === "done") {
         if (dot) { dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400"; }
         badge.className = "text-[10px] font-mono px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/80";
         badge.textContent = message;
-        msg.textContent = `Found ${items.length} relevant record(s):`;
+        msg.textContent = currentLang === "id" ? `Ditemukan ${items.length} catatan ilmiah relevan:` : `Found ${items.length} relevant record(s):`;
 
         if (list && items.length > 0) {
           list.classList.remove("hidden");
@@ -873,12 +1238,12 @@
       } else if (status === "empty") {
         if (dot) { dot.className = "w-2.5 h-2.5 rounded-full bg-slate-500"; }
         badge.className = "text-[10px] font-mono px-2.5 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700";
-        badge.textContent = "✕ None found";
+        badge.textContent = currentLang === "id" ? "✕ Tidak ditemukan" : "✕ None found";
         msg.textContent = message;
       }
     }
 
-    async function collectScholarlyDossier(topic) {
+    async function collectScholarlyDossier(rawTopic, queries) {
       const activeSources = [];
       if (arxivCheck?.checked) activeSources.push({ id: "arxiv", name: "📚 arXiv API" });
       if (semanticScholarCheck?.checked) activeSources.push({ id: "semantic", name: "🔬 Semantic Scholar API" });
@@ -886,22 +1251,24 @@
       if (openAlexCheck?.checked) activeSources.push({ id: "openalex", name: "🏛️ OpenAlex API" });
       if (crossrefCheck?.checked) activeSources.push({ id: "crossref", name: "🏷️ Crossref API" });
       if (wikipediaCheck?.checked) activeSources.push({ id: "wikipedia", name: "📖 Wikipedia Reference" });
-      if (uploadedDocument) activeSources.push({ id: "doc", name: `📄 Local Document: ${uploadedDocument.name}` });
+      if (uploadedDocument) activeSources.push({ id: "doc", name: `📄 ${currentLang === "id" ? "Dokumen Lokal" : "Local Document"}: ${uploadedDocument.name}` });
 
       if (activeSources.length === 0) return null;
 
       // Render the live progressive lookup card
-      initResearchProgressCard(activeSources, topic);
+      initResearchProgressCard(activeSources, rawTopic, queries);
       const counterEl = document.getElementById("researchProgressCounter");
 
       let completedCount = 0;
       const citationList = [];
-      let dossierMarkdown = "## VERIFIED SCHOLARLY RESEARCH & REFERENCE DOSSIER\n\n";
+      let dossierMarkdown = currentLang === "id" 
+        ? "## VERIFIED SCHOLARLY RESEARCH & REFERENCE DOSSIER (MULTI-BAHASA)\n\n"
+        : "## VERIFIED SCHOLARLY RESEARCH & REFERENCE DOSSIER\n\n";
 
       // Execute sources with small stagger (120ms) to ensure smooth polite rate-limiting
       for (const s of activeSources) {
         if (s.id === "arxiv") {
-          const items = await fetchArxivPapers(topic, (st, msg, its) => updateSourceProgressUI("arxiv", st, msg, its));
+          const items = await fetchArxivPapers(queries, (st, msg, its) => updateSourceProgressUI("arxiv", st, msg, its));
           if (items.length > 0) {
             dossierMarkdown += "### 📚 arXiv API:\n";
             items.forEach(p => {
@@ -911,7 +1278,7 @@
             dossierMarkdown += "\n";
           }
         } else if (s.id === "semantic") {
-          const items = await fetchSemanticScholarPapers(topic, (st, msg, its) => updateSourceProgressUI("semantic", st, msg, its));
+          const items = await fetchSemanticScholarPapers(queries, (st, msg, its) => updateSourceProgressUI("semantic", st, msg, its));
           if (items.length > 0) {
             dossierMarkdown += "### 🔬 Semantic Scholar API:\n";
             items.forEach(p => {
@@ -921,7 +1288,7 @@
             dossierMarkdown += "\n";
           }
         } else if (s.id === "pubmed") {
-          const items = await fetchPubMedWorks(topic, (st, msg, its) => updateSourceProgressUI("pubmed", st, msg, its));
+          const items = await fetchPubMedWorks(queries, (st, msg, its) => updateSourceProgressUI("pubmed", st, msg, its));
           if (items.length > 0) {
             dossierMarkdown += "### 🧬 PubMed / Europe PMC (NCBI E-utilities):\n";
             items.forEach(p => {
@@ -931,17 +1298,17 @@
             dossierMarkdown += "\n";
           }
         } else if (s.id === "openalex") {
-          const items = await fetchOpenAlexWorks(topic, (st, msg, its) => updateSourceProgressUI("openalex", st, msg, its));
+          const items = await fetchOpenAlexWorks(queries, (st, msg, its) => updateSourceProgressUI("openalex", st, msg, its));
           if (items.length > 0) {
             dossierMarkdown += "### 🏛️ OpenAlex API:\n";
             items.forEach(p => {
               dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Venue: ${p.venue}\n  Authors: ${p.authors}\n  DOI: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "OpenAlex API", meta: p.meta });
+              citationList.push({ title: p.title, url: p.url, source: p.source || "OpenAlex API", meta: p.meta });
             });
             dossierMarkdown += "\n";
           }
         } else if (s.id === "crossref") {
-          const items = await fetchCrossrefPapers(topic, (st, msg, its) => updateSourceProgressUI("crossref", st, msg, its));
+          const items = await fetchCrossrefPapers(queries, (st, msg, its) => updateSourceProgressUI("crossref", st, msg, its));
           if (items.length > 0) {
             dossierMarkdown += "### 🏷️ Crossref API:\n";
             items.forEach(p => {
@@ -951,26 +1318,32 @@
             dossierMarkdown += "\n";
           }
         } else if (s.id === "wikipedia") {
-          const item = await fetchWikipediaSummary(topic, (st, msg, its) => updateSourceProgressUI("wikipedia", st, msg, its));
-          if (item) {
-            dossierMarkdown += `### 📖 Wikipedia Reference Overview (${item.title}):\n${item.extract}\nReference URL: ${item.url}\n\n`;
-            citationList.push({ title: item.title, url: item.url, source: "Wikipedia", meta: "Encyclopedic Overview" });
+          const wikiItems = await fetchWikipediaSummary(queries, (st, msg, its) => updateSourceProgressUI("wikipedia", st, msg, its));
+          if (wikiItems && wikiItems.length > 0) {
+            wikiItems.forEach(item => {
+              dossierMarkdown += `### 📖 ${item.source} (${item.title}):\n${item.extract}\nReference URL: ${item.url}\n\n`;
+              citationList.push({ title: item.title, url: item.url, source: item.source, meta: item.meta });
+            });
           }
         } else if (s.id === "doc" && uploadedDocument) {
-          updateSourceProgressUI("doc", "done", `✓ Processed (${uploadedDocument.charCount.toLocaleString()} chars)`, [{ title: uploadedDocument.name, url: "#", meta: "Local PDF/Document" }]);
-          dossierMarkdown += `### 📄 User-Uploaded Document (${uploadedDocument.name}):\n\"\"\"\n${uploadedDocument.text.slice(0, 6000)}\n\"\"\"\n\n`;
-          citationList.push({ title: uploadedDocument.name, url: "#", source: "Local Document", meta: `${uploadedDocument.charCount.toLocaleString()} characters` });
+          updateSourceProgressUI("doc", "done", currentLang === "id" ? `✓ Diproses (${uploadedDocument.charCount.toLocaleString()} karakter)` : `✓ Processed (${uploadedDocument.charCount.toLocaleString()} chars)`, [{ title: uploadedDocument.name, url: "#", meta: currentLang === "id" ? "Dokumen / PDF Lokal" : "Local PDF/Document" }]);
+          dossierMarkdown += `### 📄 ${currentLang === "id" ? "Dokumen Pengguna" : "User Document"} (${uploadedDocument.name}):\n\"\"\"\n${uploadedDocument.text.slice(0, 6000)}\n\"\"\"\n\n`;
+          citationList.push({ title: uploadedDocument.name, url: "#", source: currentLang === "id" ? "Dokumen Lokal" : "Local Document", meta: `${uploadedDocument.charCount.toLocaleString()} ${currentLang === "id" ? "karakter" : "characters"}` });
         }
 
         completedCount++;
         if (counterEl) {
-          counterEl.textContent = `${completedCount} / ${activeSources.length} Completed`;
+          counterEl.textContent = currentLang === "id"
+            ? `${completedCount} / ${activeSources.length} Selesai`
+            : `${completedCount} / ${activeSources.length} Completed`;
         }
         await new Promise(r => setTimeout(r, 120));
       }
 
       if (counterEl) {
-        counterEl.textContent = `✓ All ${activeSources.length} Sources Gathered (${citationList.length} references)`;
+        counterEl.textContent = currentLang === "id"
+          ? `✓ Seluruh ${activeSources.length} Sumber Terkumpul (${citationList.length} referensi)`
+          : `✓ All ${activeSources.length} Sources Gathered (${citationList.length} references)`;
         counterEl.className = "text-xs bg-emerald-950 text-emerald-300 border border-emerald-800 px-3 py-1 rounded-full font-mono font-medium";
       }
 
@@ -1051,20 +1424,29 @@
       return text;
     }
 
-    // Agent Functions
+    // Agent Functions with Full Bilingual & Multilingual Capabilities
     async function runWriterDraft(apiKey, topic, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null) {
       let sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
+      if (currentLang === "id") {
+        sys += "\n\nPANDUAN BAHASA & SINTESIS:\n" +
+               "Anda WAJIB menulis seluruh naskah dan draf secara komprehensif dalam BAHASA INDONESIA yang baku, ilmiah, mengalir, dan profesional.\n" +
+               "Sintesiskan semua temuan dari literatur ilmiah internasional dan regional (arXiv, Semantic Scholar, PubMed, OpenAlex, Crossref, Wikipedia) ke dalam Bahasa Indonesia dengan runtut.\n" +
+               "Rujuk nama penulis dan tahun penelitian di dalam teks.\n" +
+               "Wajib sertakan bagian penutup: '## 📚 Referensi & Sitasi Akademis' dengan tautan dan DOI lengkap.";
+      }
       if (enableSearch) {
         sys += " Use the Google Search tool to find and incorporate up-to-date facts, current developments, and accurate references.";
       }
       if (scholarlyDossier) {
-        sys += " You are provided with a Verified Scholarly Research Dossier. You MUST ground your writing in these academic papers and reference sources, cite them with authors and dates in the text, and include a dedicated '## 📚 Scholarly References & Citations' section at the end of the draft with markdown links and DOIs.";
+        sys += " You are provided with a Verified Scholarly Research Dossier. You MUST ground your writing in these academic papers and reference sources, cite them with authors and dates in the text, and include a dedicated section for scholarly references at the end of the draft with markdown links and DOIs.";
       }
       let prompt = `Topic/Goal: ${topic}\n`;
       if (scholarlyDossier) {
         prompt += `\n${scholarlyDossier.text}\n`;
       }
-      prompt += "Please write Draft 1 grounded in the topic and research.";
+      prompt += currentLang === "id" 
+        ? "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas."
+        : "Please write Draft 1 grounded in the topic and research.";
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
@@ -1072,6 +1454,9 @@
       let sys = `You are a meticulous Senior Editor and Critic Agent. 
 Evaluate drafts strictly on clarity, depth, coherence, tone, and practical examples.
 Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.`;
+      if (currentLang === "id") {
+        sys += `\nPANDUAN BAHASA:\nBerikan seluruh evaluasi, analisis kekuatan, kelemahan, dan tindakan revisi dalam BAHASA INDONESIA yang objektif dan konstruktif.`;
+      }
       if (scholarlyDossier) {
         sys += ` Verify that the draft properly incorporates facts from the provided research dossier and includes valid academic citations and links.`;
       }
@@ -1101,6 +1486,10 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 
     async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null) {
       let sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
+      if (currentLang === "id") {
+        sys += "\n\nPANDUAN BAHASA & REVISI:\n" +
+               "Perbaiki dan sempurnakan draf secara menyeluruh dalam BAHASA INDONESIA. Tangani setiap kelemahan dan rekomendasi perbaikan dari Pengkritik, serta pertahankan rujukan akademis dan sitasi DOIs.";
+      }
       if (enableSearch) {
         sys += " Use Google Search to look up any missing facts, latest data, or references requested by the Critic.";
       }
@@ -1111,7 +1500,9 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       if (scholarlyDossier) {
         prompt += `\nResearch Dossier Reference:\n${scholarlyDossier.text}\n`;
       }
-      prompt += `\nPlease write Draft ${turn + 1} addressing all feedback.`;
+      prompt += currentLang === "id"
+        ? `Silakan tulis Draf ${turn + 1} dalam Bahasa Indonesia dengan menindaklanjuti seluruh umpan balik.`
+        : `Please write Draft ${turn + 1} addressing all feedback.`;
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
@@ -1119,13 +1510,15 @@ You MUST respond ONLY with valid JSON conforming to this schema:
     function renderWriterCard(turn, draftText) {
       const card = document.createElement("div");
       card.className = "bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 shadow-xl transition";
+      const title = currentLang === "id" ? `Agen Penulis &bull; Draf ${turn}` : `Writer Agent &bull; Draft ${turn}`;
+      const statusLabel = currentLang === "id" ? "Selesai" : "Completed";
       card.innerHTML = `
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
-            <span class="font-bold text-emerald-400 text-sm">Writer Agent &bull; Draft ${turn}</span>
+            <span class="font-bold text-emerald-400 text-sm">${title}</span>
           </div>
-          <span class="text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-2.5 py-0.5 rounded-full font-mono">Completed</span>
+          <span class="text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-2.5 py-0.5 rounded-full font-mono">${statusLabel}</span>
         </div>
         <div class="markdown-body text-slate-200 text-sm">
           ${marked.parse(draftText)}
@@ -1139,6 +1532,16 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       const card = document.createElement("div");
       card.className = `bg-slate-900 border ${isApproved ? "border-cyan-500/50" : "border-amber-500/40"} rounded-2xl p-6 shadow-xl transition`;
       
+      const title = currentLang === "id" ? `Agen Pengkritik &bull; Tinjauan ${turn}` : `Critic Agent &bull; Review ${turn}`;
+      const statusText = isApproved 
+        ? (currentLang === "id" ? "✓ DISETUJUI" : "✓ APPROVED")
+        : (currentLang === "id" ? "⏳ PERLU REVISI" : "⏳ NEEDS REVISION");
+      const strengthsHeading = currentLang === "id" ? "Kelebihan / Kekuatan:" : "Strengths:";
+      const weaknessesHeading = currentLang === "id" ? "Kelemahan Kritis:" : "Critical Weaknesses:";
+      const revisionsHeading = currentLang === "id" ? "Tindakan Perbaikan yang Diperlukan:" : "Required Improvements:";
+      const scoreLabel = currentLang === "id" ? "Skor:" : "Score:";
+      const targetLabel = currentLang === "id" ? "Target:" : "Target:";
+
       const strengthsList = (critique.strengths || []).map(s => `<li>${s}</li>`).join("");
       const weaknessesList = (critique.weaknesses || []).map(w => `<li>${w}</li>`).join("");
       const actionsList = (critique.actionable_revisions || []).map(a => `<li>${a}</li>`).join("");
@@ -1147,29 +1550,41 @@ You MUST respond ONLY with valid JSON conforming to this schema:
         <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full ${isApproved ? "bg-cyan-400" : "bg-amber-400"}"></span>
-            <span class="font-bold ${isApproved ? "text-cyan-400" : "text-amber-400"} text-sm">Critic Agent &bull; Review ${turn}</span>
+            <span class="font-bold ${isApproved ? "text-cyan-400" : "text-amber-400"} text-sm">${title}</span>
           </div>
           <div class="flex items-center gap-3">
-            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${isApproved ? "bg-cyan-950 text-cyan-300 border border-cyan-800" : "bg-amber-950 text-amber-300 border border-amber-800"}">
-              Score: ${critique.score.toFixed(1)} / 10.0
+            <span class="text-xs font-mono font-semibold ${isApproved ? "text-cyan-300" : "text-amber-300"}">
+              ${scoreLabel} <span class="text-sm font-bold">${critique.score.toFixed(1)}</span>/10 <span class="text-[10px] text-slate-400">(${targetLabel} ${targetScore.toFixed(1)})</span>
             </span>
-            <span class="text-xs font-mono px-2 py-0.5 rounded ${isApproved ? "bg-emerald-900/60 text-emerald-300" : "bg-rose-900/60 text-rose-300"}">
-              ${isApproved ? "APPROVED" : "NEEDS REVISION"}
+            <span class="text-xs px-2.5 py-0.5 rounded-full font-mono font-semibold ${isApproved ? "bg-cyan-950 text-cyan-300 border border-cyan-800" : "bg-amber-950 text-amber-300 border border-amber-800"}">
+              ${statusText}
             </span>
           </div>
         </div>
-        <div class="space-y-3 text-xs">
-          <div>
-            <h4 class="font-semibold text-emerald-400 uppercase tracking-wide mb-1">Strengths:</h4>
-            <ul class="list-disc pl-5 text-slate-300 space-y-1">${strengthsList}</ul>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80">
+            <div class="font-semibold text-emerald-400 mb-2 flex items-center gap-1.5">
+              <span>✓</span> ${strengthsHeading}
+            </div>
+            <ul class="list-disc list-inside space-y-1 text-slate-300">
+              ${strengthsList || `<li>${currentLang === "id" ? "Struktur argumen jelas" : "Clear structure"}</li>`}
+            </ul>
           </div>
-          <div>
-            <h4 class="font-semibold text-rose-400 uppercase tracking-wide mb-1">Weaknesses:</h4>
-            <ul class="list-disc pl-5 text-slate-300 space-y-1">${weaknessesList}</ul>
+          <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80">
+            <div class="font-semibold text-amber-400 mb-2 flex items-center gap-1.5">
+              <span>⚠</span> ${weaknessesHeading}
+            </div>
+            <ul class="list-disc list-inside space-y-1 text-slate-300">
+              ${weaknessesList || `<li>${currentLang === "id" ? "Tidak ada kelemahan besar" : "None identified"}</li>`}
+            </ul>
           </div>
-          <div>
-            <h4 class="font-semibold text-amber-400 uppercase tracking-wide mb-1">Actionable Revisions:</h4>
-            <ul class="list-decimal pl-5 text-slate-300 space-y-1">${actionsList}</ul>
+          <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/80">
+            <div class="font-semibold text-cyan-400 mb-2 flex items-center gap-1.5">
+              <span>🔧</span> ${revisionsHeading}
+            </div>
+            <ul class="list-disc list-inside space-y-1 text-slate-300">
+              ${actionsList || `<li>${currentLang === "id" ? "Draf siap untuk persetujuan akhir" : "Ready for final polish"}</li>`}
+            </ul>
           </div>
         </div>
       `;
@@ -1179,16 +1594,27 @@ You MUST respond ONLY with valid JSON conforming to this schema:
     function renderDossierCard(dossier) {
       if (!dossier || !dossier.citations || dossier.citations.length === 0) return;
       const card = document.createElement("div");
-      card.className = "bg-slate-900 border border-indigo-500/50 rounded-2xl p-5 shadow-xl transition";
+      card.id = "finalScholarlyDossierCard";
+      card.className = "bg-slate-900 border border-indigo-500/50 rounded-2xl p-5 shadow-xl transition space-y-3";
+
+      const title = currentLang === "id" 
+        ? "Dossier Riset Akademis & Referensi Terverifikasi" 
+        : "Verified Academic & Reference Research Dossier";
+      const desc = currentLang === "id"
+        ? "Agen Penulis dan Pengkritik merujuk langsung pada literatur ilmiah, publikasi peer-review, tinjauan ensiklopedia, dan dokumen terverifikasi ini:"
+        : "The Writer and Critic agents are strictly grounded in these verified scholarly preprints, papers, encyclopedic overviews, and documents:";
+      const countBadge = currentLang === "id"
+        ? `${dossier.citations.length} Sumber Rujukan Aktif`
+        : `${dossier.citations.length} Grounding Source(s)`;
 
       const itemsHtml = dossier.citations.map(c => `
-        <div class="flex items-start justify-between gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-          <div class="flex-1">
+        <div class="flex items-start justify-between gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800 hover:border-indigo-500/30 transition">
+          <div class="flex-1 min-w-0">
             <div class="flex flex-wrap items-center gap-2 mb-1">
               <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">${c.source}</span>
               ${c.url && c.url !== "#" ? `<a href="${c.url}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-cyan-400 hover:underline flex items-center gap-1">${c.title} 🔗</a>` : `<span class="text-xs font-semibold text-slate-200">${c.title}</span>`}
             </div>
-            <div class="text-[11px] text-slate-400">${c.meta}</div>
+            <div class="text-[11px] text-slate-400 truncate">${c.meta || ""}</div>
           </div>
         </div>
       `).join("");
@@ -1197,14 +1623,14 @@ You MUST respond ONLY with valid JSON conforming to this schema:
         <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2.5">
           <div class="flex items-center gap-2">
             <span class="text-lg">📚</span>
-            <span class="font-bold text-indigo-300 text-sm">Verified Academic & Reference Research Dossier</span>
+            <span class="font-bold text-indigo-300 text-sm">${title}</span>
           </div>
           <span class="text-xs bg-indigo-950 text-indigo-300 border border-indigo-800 px-2.5 py-0.5 rounded-full font-mono">
-            ${dossier.citations.length} Grounding Source(s)
+            ${countBadge}
           </span>
         </div>
         <p class="text-xs text-slate-400 mb-3">
-          The Writer and Critic agents are strictly grounded in these verified scholarly preprints, papers, encyclopedic overviews, and documents:
+          ${desc}
         </p>
         <div class="space-y-2.5">
           ${itemsHtml}
@@ -1216,19 +1642,25 @@ You MUST respond ONLY with valid JSON conforming to this schema:
     function renderFinalApprovedCard(finalDraft, score, turns) {
       const card = document.createElement("div");
       card.className = "bg-gradient-to-b from-cyan-950/40 to-slate-900 border-2 border-cyan-400/80 rounded-2xl p-6 shadow-2xl transition";
+      const title = currentLang === "id" ? "Hasil Akhir Disetujui" : "Final Polish Approved";
+      const copyBtnText = currentLang === "id" ? "📋 Salin Markdown" : "📋 Copy Markdown";
+      const scoreLabel = currentLang === "id" ? "Skor Akhir:" : "Final Score:";
+      const turnsLabel = currentLang === "id" ? "Selesai dalam:" : "Completed in:";
+      const turnsUnit = currentLang === "id" ? "putaran" : "turn(s)";
+
       card.innerHTML = `
         <div class="flex items-center justify-between mb-4 border-b border-cyan-800/60 pb-3">
           <div class="flex items-center gap-2">
             <span class="text-xl">🏆</span>
-            <span class="font-bold text-cyan-300 text-base">Final Polish Approved</span>
+            <span class="font-bold text-cyan-300 text-base">${title}</span>
           </div>
           <button id="copyArtifactBtn" class="text-xs bg-cyan-900/60 hover:bg-cyan-800 text-cyan-200 border border-cyan-700 px-3 py-1.5 rounded-lg transition">
-            📋 Copy Markdown
+            ${copyBtnText}
           </button>
         </div>
         <div class="text-xs text-slate-400 mb-4 flex gap-4">
-          <span>Final Score: <strong class="text-emerald-400 font-mono">${score.toFixed(1)}/10</strong></span>
-          <span>Completed in: <strong class="text-slate-200 font-mono">${turns} turn(s)</strong></span>
+          <span>${scoreLabel} <strong class="text-emerald-400 font-mono">${score.toFixed(1)}/10</strong></span>
+          <span>${turnsLabel} <strong class="text-slate-200 font-mono">${turns} ${turnsUnit}</strong></span>
         </div>
         <div class="markdown-body text-slate-100 text-sm">
           ${marked.parse(finalDraft)}
@@ -1239,8 +1671,8 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       const copyBtn = card.querySelector("#copyArtifactBtn");
       copyBtn.addEventListener("click", () => {
         navigator.clipboard.writeText(finalDraft).then(() => {
-          copyBtn.textContent = "✓ Copied!";
-          setTimeout(() => copyBtn.textContent = "📋 Copy Markdown", 2000);
+          copyBtn.textContent = currentLang === "id" ? "✓ Tersalin!" : "✓ Copied!";
+          setTimeout(() => copyBtn.textContent = copyBtnText, 2000);
         });
       });
     }
@@ -1249,7 +1681,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
     startPipelineBtn.addEventListener("click", async () => {
       const apiKey = apiKeyInput.value.trim();
       if (!apiKey) {
-        alert("Please enter a Google Gemini API Key first!");
+        alert(currentLang === "id" ? "Silakan masukkan Kunci API Google Gemini terlebih dahulu!" : "Please enter a Google Gemini API Key first!");
         apiKeyInput.focus();
         return;
       }
@@ -1257,7 +1689,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 
       const topic = topicInput.value.trim();
       if (!topic) {
-        alert("Please provide a topic or prompt.");
+        alert(currentLang === "id" ? "Silakan tentukan topik atau instruksi target." : "Please provide a topic or prompt.");
         topicInput.focus();
         return;
       }
@@ -1266,7 +1698,6 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       const selectedThinking = document.getElementById("thinkingLevelSelect")?.value || "medium";
       const maxTurns = parseInt(maxTurnsSelect.value, 10) || 3;
       
-      // Parse decimal safely (supporting European "8,5" and standard "8.5")
       const rawScoreStr = (targetScoreInput.value || "9.5").trim().replace(",", ".");
       let targetScore = parseFloat(rawScoreStr);
       if (isNaN(targetScore)) targetScore = 9.5;
@@ -1279,14 +1710,14 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       statusCard.classList.remove("hidden");
       startPipelineBtn.disabled = true;
       startPipelineBtn.classList.add("opacity-50", "cursor-not-allowed");
-      startBtnText.textContent = "Agents Working...";
+      startBtnText.textContent = currentLang === "id" ? "Agen Sedang Bekerja..." : "Agents Working...";
 
       let currentDraft = "";
       let latestCritique = null;
       let scholarlyDossier = null;
 
       try {
-        // Step 0: Collect Academic & Reference Grounding Dossier if any source selected
+        // Step 0: Formulate Multilingual Search Queries & Collect Grounding Dossier
         const anyScholarly = (arxivCheck && arxivCheck.checked) || 
                              (crossrefCheck && crossrefCheck.checked) || 
                              (semanticScholarCheck && semanticScholarCheck.checked) || 
@@ -1295,18 +1726,25 @@ You MUST respond ONLY with valid JSON conforming to this schema:
                              (wikipediaCheck && wikipediaCheck.checked) || 
                              uploadedDocument;
         if (anyScholarly) {
-          statusText.textContent = "Querying verified academic repositories & literature...";
-          scholarlyDossier = await collectScholarlyDossier(topic);
+          statusText.textContent = currentLang === "id" 
+            ? "Menganalisis kueri & menelusuri repositori akademis global..." 
+            : "Formulating queries & querying verified academic repositories...";
+          
+          const queries = await resolveMultilingualQueries(topic, apiKey, selectedModel);
+          scholarlyDossier = await collectScholarlyDossier(topic, queries);
           if (scholarlyDossier) {
             renderDossierCard(scholarlyDossier);
           }
         }
 
         for (let turn = 1; turn <= maxTurns; turn++) {
-          stepCounter.textContent = `Turn ${turn} of ${maxTurns}`;
+          stepCounter.textContent = currentLang === "id" ? `Putaran ${turn} dari ${maxTurns}` : `Turn ${turn} of ${maxTurns}`;
 
           // Step 1: Writer
-          statusText.textContent = `Turn ${turn}: Writer Agent (${selectedModel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Search" : ""}${scholarlyDossier ? " | 📚 Scholarly Grounded" : ""}) is composing...`;
+          statusText.textContent = currentLang === "id"
+            ? `Putaran ${turn}: Agen Penulis (${selectedModel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Web Search" : ""}${scholarlyDossier ? " | 📚 Rujukan Ilmiah" : ""}) sedang menyusun draf...`
+            : `Turn ${turn}: Writer Agent (${selectedModel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Search" : ""}${scholarlyDossier ? " | 📚 Scholarly Grounded" : ""}) is composing...`;
+          
           if (turn === 1) {
             currentDraft = await runWriterDraft(apiKey, topic, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier);
           } else {
@@ -1315,7 +1753,10 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           renderWriterCard(turn, currentDraft);
 
           // Step 2: Critic
-          statusText.textContent = `Turn ${turn}: Critic Agent (${selectedModel} | 🧠 ${selectedThinking}) is evaluating...`;
+          statusText.textContent = currentLang === "id"
+            ? `Putaran ${turn}: Agen Pengkritik (${selectedModel} | 🧠 ${selectedThinking}) sedang mengevaluasi draf...`
+            : `Turn ${turn}: Critic Agent (${selectedModel} | 🧠 ${selectedThinking}) is evaluating...`;
+          
           latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel, selectedThinking, scholarlyDossier);
           renderCriticCard(turn, latestCritique, targetScore);
 
@@ -1323,21 +1764,29 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 
           // Check whether to stop early or continue
           if (isApproved && !forceAllTurns) {
-            statusText.textContent = `Approved! Critic score ${latestCritique.score.toFixed(1)} reached target ${targetScore.toFixed(1)}.`;
+            statusText.textContent = currentLang === "id"
+              ? `Disetujui! Skor Pengkritik ${latestCritique.score.toFixed(1)} mencapai target ${targetScore.toFixed(1)}.`
+              : `Approved! Critic score ${latestCritique.score.toFixed(1)} reached target ${targetScore.toFixed(1)}.`;
             renderFinalApprovedCard(currentDraft, latestCritique.score, turn);
             break;
           } else if (turn === maxTurns) {
-            statusText.textContent = `Completed all ${maxTurns} iterations (Final score: ${latestCritique.score.toFixed(1)}).`;
+            statusText.textContent = currentLang === "id"
+              ? `Menyelesaikan seluruh ${maxTurns} putaran (Skor akhir: ${latestCritique.score.toFixed(1)}).`
+              : `Completed all ${maxTurns} iterations (Final score: ${latestCritique.score.toFixed(1)}).`;
             renderFinalApprovedCard(currentDraft, latestCritique.score, turn);
           } else if (isApproved && forceAllTurns) {
-            statusText.textContent = `Turn ${turn} scored ${latestCritique.score.toFixed(1)} (>= ${targetScore.toFixed(1)}), continuing next turn (Force mode active)...`;
+            statusText.textContent = currentLang === "id"
+              ? `Putaran ${turn} bernilai ${latestCritique.score.toFixed(1)} (>= ${targetScore.toFixed(1)}), lanjut ke putaran berikutnya (Mode paksa aktif)...`
+              : `Turn ${turn} scored ${latestCritique.score.toFixed(1)} (>= ${targetScore.toFixed(1)}), continuing next turn (Force mode active)...`;
           }
         }
       } catch (err) {
         console.error(err);
         let userMsg = err.message;
         if (userMsg.includes("quota") || userMsg.includes("429")) {
-          userMsg += "\n\n💡 Tip: If 'Google Web Search' is checked, uncheck it to use standard model reasoning. Google imposes a separate quota on web search grounding.";
+          userMsg += currentLang === "id" 
+            ? "\n\n💡 Petunjuk: Jika 'Pencarian Web Google' aktif, hapus centangnya. Google menerapkan kuota terpisah untuk pencarian web."
+            : "\n\n💡 Tip: If 'Google Web Search' is checked, uncheck it to use standard model reasoning. Google imposes a separate quota on web search grounding.";
         }
         alert(`Pipeline Error: ${userMsg}`);
         statusText.textContent = `Error: ${userMsg}`;
@@ -1345,9 +1794,12 @@ You MUST respond ONLY with valid JSON conforming to this schema:
         statusSpinner.classList.add("hidden");
         startPipelineBtn.disabled = false;
         startPipelineBtn.classList.remove("opacity-50", "cursor-not-allowed");
-        startBtnText.textContent = "Run Agentic Pipeline";
+        startBtnText.textContent = I18N[currentLang]?.startBtnText || "Run Agentic Pipeline";
       }
     });
+
+    // Initialize Language on Page Load
+    applyLanguage(currentLang);
   </script>
 </body>
 </html>
