@@ -156,6 +156,10 @@ def run_browser_tests():
         print(f"  • Badge after selecting gemini-3.5-flash-lite: '{badge_lite}'", flush=True)
         assert "Gemini 3.5 Flash Lite" in badge_lite
 
+        # Ensure advanced options are open for interaction
+        if page.locator("#advancedOptionsDetails").count() > 0:
+            page.evaluate("document.getElementById('advancedOptionsDetails').open = true")
+
         page.select_option("#thinkingLevelSelect", "medium")
         page.select_option("#maxTurnsSelect", "1")
         page.locator("#targetScoreInput").fill("8.5")

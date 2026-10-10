@@ -355,6 +355,26 @@ The application provides a responsive dual-mode interaction model:
   ```
 - Print styling (`@media print`) hides studio controls, sidebars, and buttons, rendering black-and-white clean typography for high-quality PDF exports.
 
+### 6. Mobile Browser Decluttering & Responsive UI Architecture
+To solve mobile vertical clutter without sacrificing desktop ergonomics, the frontend implements several progressive disclosure patterns:
+- **Compact App Bar (48–52px)**: Header is refactored from a multi-row 200px block to a single-row flex layout. Verbose elements (e.g. `#headerPoweredBadge`) remain in the DOM for desktop screens and test assertions, but collapse gracefully on narrow viewports (`< md:`).
+- **Smart Collapsible API Key Card**: Managed via `updateApiKeyCardState(hasKey)`:
+  - When an API key exists in `localStorage`, `#apiKeyFullForm` hides and `#apiKeySavedSummary` displays a sleek 1-line badge `✓ 🔑 Kunci API Gemini Terpasang (••••••••) [Ubah / Edit]`.
+  - Tapping `#editApiKeyBtn` reopens the form.
+  - Absolute toggle button inside `#apiKeyInput` is secured with `pr-16` right padding, preventing text collision on small viewports.
+- **Responsive Collapsible `<details>`**: Parameters (Thinking level, Turns, Target score, Google search, Force turns) are grouped inside `<details id="advancedOptionsDetails">`:
+  - Defaults to collapsed on mobile (`< 768px`) and automatically expands on desktop (`window.innerWidth >= 768`).
+  - Live summary badge updates via `updateAdvancedOptionsSummary()` on any change or input event.
+- **CSS `:has(input:checked)` Declarative State**: Academic sources use a responsive 2-column chip grid styled with:
+  ```css
+  .source-chip:has(input:checked) {
+    background-color: var(--accent-subtle);
+    border-color: var(--accent-color);
+  }
+  ```
+  This eliminates imperative JavaScript class toggling on individual clicks while maintaining complete cross-theme visual fidelity.
+- **Fluid Padding Scale**: Dynamic output generators (`renderWriterCard`, `renderCriticCard`, `renderDossierCard`, `renderFinalApprovedCard`) use `p-4 sm:p-6 rounded-xl sm:rounded-2xl`, ensuring edge-to-edge readability on phones without horizontal overflow.
+
 ---
 
 ## 🧪 Test Automation Suite (Playwright)

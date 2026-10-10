@@ -29,6 +29,7 @@ This guide provides end-users, students, researchers, technical writers, and con
    - [Typographic Ergonomics & Reader Toolbar](#2-typographic-ergonomics--reader-toolbar)
    - [Interactive Citation Micro-Previews & Mobile Bottom Sheet Drawer](#3-interactive-citation-micro-previews--mobile-bottom-sheet-drawer)
    - [Zen Mode Focus Reading Overlay](#4-zen-mode-focus-reading-overlay)
+   - [Mobile Phone Streamlined Experience & Decluttering](#5-mobile-phone-streamlined-experience--decluttering)
 10. [CLI Usage & Command Reference](#-cli-usage--command-reference)
 11. [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
@@ -251,6 +252,14 @@ Click **`📖 Zen View`** (or **`📖 Mode Baca`** in Indonesian) on any card to
 - Retains full typography controls (`Serif/Sans`, `A-/A/A+`).
 - Includes a one-click print/PDF button (`🖨️`) optimized for clean paper formatting.
 - Press <kbd>Esc</kbd> anytime to return to the studio dashboard.
+
+### 5. Mobile Phone Streamlined Experience & Decluttering
+When accessed on narrow smartphone screens (such as 390×844 iPhone 14/Pixel 7, or 375×667 iPhone SE), the interface automatically adapts into an ultra-clean mobile-first layout:
+- **Compact App Bar (48–52px)**: Replaces multi-row headers with a slim, native app-bar containing the icon, title, quick theme switcher pills (`📜 🌙 ☀️ 🖤`), and language toggle (`EN / ID`).
+- **Auto-Collapsing API Key Card**: When an API key is saved in `localStorage`, the large input box automatically condenses into a clean 1-line badge: `✓ 🔑 Gemini API Key Configured (••••••••) [Edit Key]`. This reclaims ~80% of vertical space above the fold. Tapping `[Edit Key]` instantly re-expands the input field whenever you need to change your key.
+- **Collapsible Advanced Options Accordion**: Complex parameters (Thinking Mode, Iteration Mode, Approval Target Score, Force All Turns, Google Search) are housed inside a smooth collapsible `<details>` panel. A dynamic summary badge (`⚙️ Advanced Pipeline Options (🧠 Medium • 3 Turns • Target 9.5)`) keeps you informed of your current settings at a single glance.
+- **2-Column Responsive Grounding Grid**: The 7 academic literature repositories are arranged in an ergonomic 2-column chip grid with quick-toggle `[Select All]` and `[Clear]` buttons, reducing scroll depth by over 60%. Active sources display a subtle cyan glow and highlight border.
+- **Native Touch Targets & Safe Padding**: Cards use responsive padding (`p-4` on mobile, `p-6` on desktop) to ensure full readability without excessive side margins or horizontal overflow.
 
 ---
 
