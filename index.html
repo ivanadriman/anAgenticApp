@@ -787,6 +787,20 @@ Respond ONLY with valid JSON:
       };
     }
 
+    // Helper to reconstruct verbatim abstract from OpenAlex inverted index
+    function reconstructAbstract(invertedIndex) {
+      if (!invertedIndex || typeof invertedIndex !== "object") return "";
+      const words = [];
+      for (const [word, positions] of Object.entries(invertedIndex)) {
+        if (Array.isArray(positions)) {
+          for (const pos of positions) {
+            words[pos] = word;
+          }
+        }
+      }
+      return words.join(" ").replace(/\s+/g, " ").trim();
+    }
+
     // Scholarly Research Fetchers with Live Progress Callbacks & Resilient Fallbacks
     async function fetchArxivPapers(queries, updateProg) {
       const topic = typeof queries === "object" ? (queries.global || queries.topic || "") : queries;
@@ -800,12 +814,14 @@ Respond ONLY with valid JSON:
             const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
             const arxivId = r.ids?.arxiv || "";
             const landingUrl = r.primary_location?.landing_page_url || (arxivId ? `https://arxiv.org/abs/${arxivId}` : r.doi || "");
+            const abstract = reconstructAbstract(r.abstract_inverted_index);
             return {
               source: "arXiv API",
               title: r.title || "Untitled arXiv Preprint",
               authors: authors || "Anonymous",
               year: r.publication_year || "Recent",
-              url: landingUrl
+              url: landingUrl,
+              abstract: abstract
             };
           });
 
@@ -834,7 +850,8 @@ Respond ONLY with valid JSON:
               title: title,
               authors: authors || "Anonymous",
               year: it.created?.["date-parts"]?.[0]?.[0] || "Recent",
-              url: doi ? `https://doi.org/${doi}` : ""
+              url: doi ? `https://doi.org/${doi}` : "",
+              abstract: ""
             };
           });
           if (fbItems.length > 0) {
@@ -891,7 +908,7 @@ Respond ONLY with valid JSON:
       updateProg("searching", currentLang === "id" ? `Menelusuri API Semantic Scholar 200M+ untuk "${topic}"...` : `Querying Semantic Scholar API for "${topic}"...`);
       // 1. Primary: Direct Semantic Scholar API (Generous Public Tier)
       try {
-        const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(topic)}&limit=4&fields=title,authors,year,citationCount,url`;
+        const s2Url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(topic)}&limit=4&fields=title,authors,year,citationCount,url,abstract`;
         const s2Res = await fetch(s2Url);
         if (s2Res.ok) {
           const s2Data = await s2Res.json();
@@ -904,7 +921,8 @@ Respond ONLY with valid JSON:
               year: p.year || "Recent",
               citations: p.citationCount || 0,
               meta: `${(p.citationCount || 0).toLocaleString()} ${currentLang === "id" ? "sitasi" : "citations"} • ${authors}`,
-              url: p.url || (p.paperId ? `https://www.semanticscholar.org/paper/${p.paperId}` : "")
+              url: p.url || (p.paperId ? `https://www.semanticscholar.org/paper/${p.paperId}` : ""),
+              abstract: p.abstract || ""
             };
           });
           if (items.length > 0) {
@@ -932,7 +950,8 @@ Respond ONLY with valid JSON:
               year: r.publication_year || "Recent",
               citations: r.cited_by_count || 0,
               meta: `${(r.cited_by_count || 0).toLocaleString()} ${currentLang === "id" ? "sitasi" : "citations"} • ${authors}`,
-              url: r.doi || r.primary_location?.landing_page_url || ""
+              url: r.doi || r.primary_location?.landing_page_url || "",
+              abstract: reconstructAbstract(r.abstract_inverted_index)
             };
           });
 
@@ -969,7 +988,8 @@ Respond ONLY with valid JSON:
               year: r.publication_year || "Recent",
               venue: venue,
               meta: `${venue} (${r.publication_year || "Recent"}) • ${authors}`,
-              url: r.doi || r.primary_location?.landing_page_url || ""
+              url: r.doi || r.primary_location?.landing_page_url || "",
+              abstract: reconstructAbstract(r.abstract_inverted_index)
             };
           });
 
@@ -990,7 +1010,8 @@ Respond ONLY with valid JSON:
                     year: r.publication_year || "Recent",
                     venue: venue,
                     meta: `${venue} (${r.publication_year || "Recent"}) • ${authors}`,
-                    url: r.doi || r.primary_location?.landing_page_url || ""
+                    url: r.doi || r.primary_location?.landing_page_url || "",
+                    abstract: reconstructAbstract(r.abstract_inverted_index)
                   };
                 });
                 const existingUrls = new Set(items.map(it => it.url));
@@ -1019,7 +1040,40 @@ Respond ONLY with valid JSON:
 
     async function fetchPubMedWorks(queries, updateProg) {
       const topic = typeof queries === "object" ? (queries.global || queries.topic || "") : queries;
-      updateProg("searching", currentLang === "id" ? `Menelusuri NCBI PubMed Central 36M+ untuk "${topic}"...` : `Querying NCBI PubMed Central for "${topic}"...`);
+      updateProg("searching", currentLang === "id" ? `Menelusuri NCBI PubMed Central / Europe PMC 36M+ untuk "${topic}"...` : `Querying NCBI PubMed / Europe PMC for "${topic}"...`);
+      // 1. Primary: Europe PMC REST with resultType=core for verbatim abstractText
+      try {
+        const epUrl = `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=${encodeURIComponent(topic)}&resultType=core&format=json&pageSize=4`;
+        const epRes = await fetch(epUrl);
+        if (epRes.ok) {
+          const epData = await epRes.json();
+          const list = epData.resultList?.result || [];
+          if (list.length > 0) {
+            const items = list.map(it => {
+              const authors = it.authorString ? it.authorString.split(",").slice(0, 3).join(",") : "Researchers";
+              const title = (it.title || "Untitled Study").replace(/<\/?[^>]+(>|$)/g, "");
+              const pmcid = it.pmcid || "";
+              const landing = pmcid ? `https://www.ncbi.nlm.nih.gov/pmc/articles/${pmcid}/` : (it.doi ? `https://doi.org/${it.doi}` : "");
+              const rawAbs = (it.abstractText || "").replace(/<\/?[^>]+(>|$)/g, "");
+              return {
+                source: "PubMed / Europe PMC",
+                title: title,
+                authors: authors,
+                year: it.pubYear || "Recent",
+                meta: `${it.journalTitle || "PMC"} (${it.pubYear || "Recent"}) • ${authors}`,
+                url: landing,
+                abstract: rawAbs
+              };
+            });
+            updateProg("done", currentLang === "id" ? `✓ ${items.length} Artikel Biomedis Ditemukan` : `✓ ${items.length} Biomedical Articles Found`, items);
+            return items;
+          }
+        }
+      } catch (epErr) {
+        console.warn("Europe PMC query error, trying NCBI fallback:", epErr);
+      }
+
+      // 2. Resilient Fallback: NCBI E-utilities
       try {
         const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pmc&term=${encodeURIComponent(topic)}&retmode=json&retmax=4`;
         const res = await fetch(searchUrl);
@@ -1041,7 +1095,8 @@ Respond ONLY with valid JSON:
                   authors: authors,
                   year: doc.pubdate ? doc.pubdate.split(" ")[0] : "Recent",
                   meta: `${doc.source || "PMC"} • ${authors}`,
-                  url: `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${id}/`
+                  url: `https://www.ncbi.nlm.nih.gov/pmc/articles/PMC${id}/`,
+                  abstract: ""
                 };
               });
               updateProg("done", currentLang === "id" ? `✓ ${items.length} Artikel Biomedis & Kesehatan Ditemukan` : `✓ ${items.length} Biomedical Articles Found`, items);
@@ -1260,6 +1315,7 @@ Respond ONLY with valid JSON:
       const counterEl = document.getElementById("researchProgressCounter");
 
       let completedCount = 0;
+      let sourceNum = 1;
       const citationList = [];
       let dossierMarkdown = currentLang === "id" 
         ? "## VERIFIED SCHOLARLY RESEARCH & REFERENCE DOSSIER (MULTI-BAHASA)\n\n"
@@ -1272,63 +1328,100 @@ Respond ONLY with valid JSON:
           if (items.length > 0) {
             dossierMarkdown += "### 📚 arXiv API:\n";
             items.forEach(p => {
-              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Link: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "arXiv API", meta: `${p.authors} (${p.year})` });
+              dossierMarkdown += `[Source ${sourceNum}] arXiv: "${p.title}" (${p.year})\n`;
+              dossierMarkdown += `  Authors: ${p.authors}\n`;
+              dossierMarkdown += `  Link: ${p.url}\n`;
+              if (p.abstract) {
+                dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              }
+              dossierMarkdown += "\n";
+              citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "arXiv API", authors: p.authors, year: p.year, meta: `${p.authors} (${p.year})`, abstract: p.abstract || "" });
+              sourceNum++;
             });
-            dossierMarkdown += "\n";
           }
         } else if (s.id === "semantic") {
           const items = await fetchSemanticScholarPapers(queries, (st, msg, its) => updateSourceProgressUI("semantic", st, msg, its));
           if (items.length > 0) {
             dossierMarkdown += "### 🔬 Semantic Scholar API:\n";
             items.forEach(p => {
-              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Citations: ${p.citations}\n  DOI/Link: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "Semantic Scholar API", meta: p.meta });
+              dossierMarkdown += `[Source ${sourceNum}] Semantic Scholar: "${p.title}" (${p.year})\n`;
+              dossierMarkdown += `  Authors: ${p.authors}\n`;
+              dossierMarkdown += `  Citations: ${p.citations}\n`;
+              dossierMarkdown += `  Link/DOI: ${p.url}\n`;
+              if (p.abstract) {
+                dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              }
+              dossierMarkdown += "\n";
+              citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "Semantic Scholar API", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+              sourceNum++;
             });
-            dossierMarkdown += "\n";
           }
         } else if (s.id === "pubmed") {
           const items = await fetchPubMedWorks(queries, (st, msg, its) => updateSourceProgressUI("pubmed", st, msg, its));
           if (items.length > 0) {
-            dossierMarkdown += "### 🧬 PubMed / Europe PMC (NCBI E-utilities):\n";
+            dossierMarkdown += "### 🧬 PubMed / Europe PMC:\n";
             items.forEach(p => {
-              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Article Link: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "PubMed / Europe PMC", meta: p.meta });
+              dossierMarkdown += `[Source ${sourceNum}] PubMed/PMC: "${p.title}" (${p.year})\n`;
+              dossierMarkdown += `  Authors: ${p.authors}\n`;
+              dossierMarkdown += `  Article Link: ${p.url}\n`;
+              if (p.abstract) {
+                dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              }
+              dossierMarkdown += "\n";
+              citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "PubMed / Europe PMC", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+              sourceNum++;
             });
-            dossierMarkdown += "\n";
           }
         } else if (s.id === "openalex") {
           const items = await fetchOpenAlexWorks(queries, (st, msg, its) => updateSourceProgressUI("openalex", st, msg, its));
           if (items.length > 0) {
             dossierMarkdown += "### 🏛️ OpenAlex API:\n";
             items.forEach(p => {
-              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Venue: ${p.venue}\n  Authors: ${p.authors}\n  DOI: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: p.source || "OpenAlex API", meta: p.meta });
+              dossierMarkdown += `[Source ${sourceNum}] OpenAlex: "${p.title}" (${p.year})\n`;
+              dossierMarkdown += `  Venue: ${p.venue}\n`;
+              dossierMarkdown += `  Authors: ${p.authors}\n`;
+              dossierMarkdown += `  DOI/Link: ${p.url}\n`;
+              if (p.abstract) {
+                dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              }
+              dossierMarkdown += "\n";
+              citationList.push({ num: sourceNum, title: p.title, url: p.url, source: p.source || "OpenAlex API", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+              sourceNum++;
             });
-            dossierMarkdown += "\n";
           }
         } else if (s.id === "crossref") {
           const items = await fetchCrossrefPapers(queries, (st, msg, its) => updateSourceProgressUI("crossref", st, msg, its));
           if (items.length > 0) {
             dossierMarkdown += "### 🏷️ Crossref API:\n";
             items.forEach(p => {
-              dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  DOI/Link: ${p.url}\n`;
-              citationList.push({ title: p.title, url: p.url, source: "Crossref API", meta: p.meta });
+              dossierMarkdown += `[Source ${sourceNum}] Crossref: "${p.title}" (${p.year})\n`;
+              dossierMarkdown += `  Authors: ${p.authors}\n`;
+              dossierMarkdown += `  DOI/Link: ${p.url}\n`;
+              if (p.abstract) {
+                dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              }
+              dossierMarkdown += "\n";
+              citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "Crossref API", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+              sourceNum++;
             });
-            dossierMarkdown += "\n";
           }
         } else if (s.id === "wikipedia") {
           const wikiItems = await fetchWikipediaSummary(queries, (st, msg, its) => updateSourceProgressUI("wikipedia", st, msg, its));
           if (wikiItems && wikiItems.length > 0) {
             wikiItems.forEach(item => {
-              dossierMarkdown += `### 📖 ${item.source} (${item.title}):\n${item.extract}\nReference URL: ${item.url}\n\n`;
-              citationList.push({ title: item.title, url: item.url, source: item.source, meta: item.meta });
+              dossierMarkdown += `[Source ${sourceNum}] ${item.source} (${item.title}):\n`;
+              dossierMarkdown += `  Reference URL: ${item.url}\n`;
+              dossierMarkdown += `  Verbatim Encyclopedic Text (FOR EXACT CTRL+F QUOTING):\n  """\n  ${item.extract}\n  """\n\n`;
+              citationList.push({ num: sourceNum, title: item.title, url: item.url, source: item.source, meta: item.meta, abstract: item.extract });
+              sourceNum++;
             });
           }
         } else if (s.id === "doc" && uploadedDocument) {
           updateSourceProgressUI("doc", "done", currentLang === "id" ? `✓ Diproses (${uploadedDocument.charCount.toLocaleString()} karakter)` : `✓ Processed (${uploadedDocument.charCount.toLocaleString()} chars)`, [{ title: uploadedDocument.name, url: "#", meta: currentLang === "id" ? "Dokumen / PDF Lokal" : "Local PDF/Document" }]);
-          dossierMarkdown += `### 📄 ${currentLang === "id" ? "Dokumen Pengguna" : "User Document"} (${uploadedDocument.name}):\n\"\"\"\n${uploadedDocument.text.slice(0, 6000)}\n\"\"\"\n\n`;
-          citationList.push({ title: uploadedDocument.name, url: "#", source: currentLang === "id" ? "Dokumen Lokal" : "Local Document", meta: `${uploadedDocument.charCount.toLocaleString()} ${currentLang === "id" ? "karakter" : "characters"}` });
+          dossierMarkdown += `[Source ${sourceNum}] User Document (${uploadedDocument.name}):\n`;
+          dossierMarkdown += `  Verbatim Document Text (FOR EXACT CTRL+F QUOTING):\n  """\n  ${uploadedDocument.text.slice(0, 6000)}\n  """\n\n`;
+          citationList.push({ num: sourceNum, title: uploadedDocument.name, url: "#", source: currentLang === "id" ? "Dokumen Lokal" : "Local Document", meta: `${uploadedDocument.charCount.toLocaleString()} ${currentLang === "id" ? "karakter" : "characters"}`, abstract: uploadedDocument.text.slice(0, 6000) });
+          sourceNum++;
         }
 
         completedCount++;
@@ -1424,29 +1517,47 @@ Respond ONLY with valid JSON:
       return text;
     }
 
-    // Agent Functions with Full Bilingual & Multilingual Capabilities
+    // Agent Functions with Full Bilingual & Multilingual Capabilities and Verbatim Quotation Protocols
     async function runWriterDraft(apiKey, topic, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null) {
       let sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
       if (currentLang === "id") {
         sys += "\n\nPANDUAN BAHASA & SINTESIS:\n" +
                "Anda WAJIB menulis seluruh naskah dan draf secara komprehensif dalam BAHASA INDONESIA yang baku, ilmiah, mengalir, dan profesional.\n" +
-               "Sintesiskan semua temuan dari literatur ilmiah internasional dan regional (arXiv, Semantic Scholar, PubMed, OpenAlex, Crossref, Wikipedia) ke dalam Bahasa Indonesia dengan runtut.\n" +
-               "Rujuk nama penulis dan tahun penelitian di dalam teks.\n" +
-               "Wajib sertakan bagian penutup: '## 📚 Referensi & Sitasi Akademis' dengan tautan dan DOI lengkap.";
+               "Sintesiskan semua temuan dari literatur ilmiah internasional dan regional (arXiv, Semantic Scholar, PubMed, OpenAlex, Crossref, Wikipedia) ke dalam Bahasa Indonesia dengan runtut.\n";
       }
+
+      sys += "\n\n" +
+        "ATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n" +
+        "1. FORMAT KUTIPAN & NOMOR SITASI:\n" +
+        "   Setiap kali mengutip bukti, data, temuan kunci, atau definisi dari berkas riset, Anda WAJIB mengapit kutipan dalam tanda petik ganda dan menyertakan nomor kutipan dalam kurung siku di akhir kutipan:\n" +
+        "   Contoh format: \"... bla bla bla ...\" [1] atau \"... bla bla bla ...\" [2].\n" +
+        "2. KEASLIAN PERSIS (EXACT MATCH FOR CTRL+F SEARCH):\n" +
+        "   Teks di dalam tanda petik \"... ...\" HARUS PERSIS SAMA KATA-DEMI-KATA, HURUF-DEMI-HURUF dengan teks asli pada 'Verbatim Excerpt / Abstract' atau teks dokumen yang disediakan di berkas riset.\n" +
+        "   JANGAN PERNAH memparafrasekan atau mengubah kata di dalam tanda petik. Tujuannya adalah agar pembaca dapat membuka tautan sumber atau dokumen asli, menekan CTRL + F, menempelkan teks kutipan tersebut, dan langsung menemukan kalimatnya dalam konteks penuh.\n" +
+        "   (Catatan: Jika menulis dalam Bahasa Indonesia dan sumber dalam Bahasa Inggris, biarkan kutipan bukti di dalam tanda petik persis dalam bahasa aslinya, lalu berikan ulasan, konteks, atau terjemahan Anda dalam Bahasa Indonesia sebelum atau sesudah kutipan tersebut).\n" +
+        "3. PENOMORAN SITASI URUT:\n" +
+        "   Beri nomor kutipan secara berurutan sesuai kemunculan pertamanya di dalam teks: [1], [2], [3], dst.\n" +
+        "4. DAFTAR SUMBER RUJUKAN DI AKHIR NASKAH:\n" +
+        "   Di bagian paling akhir naskah, Anda WAJIB menyertakan daftar sumber rujukan bernomor yang cocok persis dengan nomor kutipan di teks:\n" +
+        (currentLang === "id" ? "   '## 📚 Referensi & Sumber Terkutip'\n" : "   '## 📚 References & Cited Sources'\n") +
+        "   Format setiap entri:\n" +
+        "   [1] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [Tautan / DOI](url)\n" +
+        "   [2] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [Tautan / DOI](url)\n" +
+        "   Setiap nomor [n] yang dikutip dalam teks WAJIB ada di daftar akhir ini!";
+
       if (enableSearch) {
         sys += " Use the Google Search tool to find and incorporate up-to-date facts, current developments, and accurate references.";
       }
       if (scholarlyDossier) {
-        sys += " You are provided with a Verified Scholarly Research Dossier. You MUST ground your writing in these academic papers and reference sources, cite them with authors and dates in the text, and include a dedicated section for scholarly references at the end of the draft with markdown links and DOIs.";
+        sys += " You are provided with a Verified Scholarly Research Dossier. You MUST ground your writing in these academic papers and reference sources and strictly obey the Verbatim Quotation & Citation Rules above.";
       }
       let prompt = `Topic/Goal: ${topic}\n`;
       if (scholarlyDossier) {
         prompt += `\n${scholarlyDossier.text}\n`;
       }
       prompt += currentLang === "id" 
-        ? "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas."
-        : "Please write Draft 1 grounded in the topic and research.";
+        ? "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir."
+        : "Please write Draft 1 grounded in the topic and research, using exact verbatim quotes \"... ...\" [n] and the numbered references list at the end.";
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
@@ -1457,6 +1568,13 @@ Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.`;
       if (currentLang === "id") {
         sys += `\nPANDUAN BAHASA:\nBerikan seluruh evaluasi, analisis kekuatan, kelemahan, dan tindakan revisi dalam BAHASA INDONESIA yang objektif dan konstruktif.`;
       }
+      sys += `
+AUDIT KUTIPAN KATA-DEMI-KATA & REFERENSI (VERBATIM QUOTATION & CITATION AUDIT):
+1. Format Kutipan: Periksa apakah setiap kutipan fakta/bukti diapit tanda petik "... bla bla bla ..." dan diikuti nomor sitasi dalam kurung siku seperti [1], [2].
+2. Verifikasi CTRL+F: Periksa apakah kutipan di dalam "... ..." persis sama kata-demi-kata dengan teks sumber/abstrak di berkas riset sehingga pembaca dapat mencarinya dengan CTRL+F di sumber aslinya. Jika ada kutipan yang diparafrasekan di dalam tanda petik, tandai sebagai KELEMAHAN (Weakness).
+3. Daftar Referensi Akhir: Periksa apakah di akhir naskah terdapat daftar rujukan bernomor ([1], [2], ...) yang memetakan nomor kutipan ke judul makalah, penulis, tahun, dan tautan/DOI.
+Jika aturan kutipan dan referensi ini belum terpenuhi dengan sempurna, status WAJIB 'NEEDS_REVISION'.
+`;
       if (scholarlyDossier) {
         sys += ` Verify that the draft properly incorporates facts from the provided research dossier and includes valid academic citations and links.`;
       }
@@ -1488,8 +1606,17 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       let sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
       if (currentLang === "id") {
         sys += "\n\nPANDUAN BAHASA & REVISI:\n" +
-               "Perbaiki dan sempurnakan draf secara menyeluruh dalam BAHASA INDONESIA. Tangani setiap kelemahan dan rekomendasi perbaikan dari Pengkritik, serta pertahankan rujukan akademis dan sitasi DOIs.";
+               "Perbaiki dan sempurnakan draf secara menyeluruh dalam BAHASA INDONESIA. Tangani setiap kelemahan dan rekomendasi perbaikan dari Pengkritik, serta pertahankan rujukan akademis dan sitasi DOIs.\n";
       }
+
+      sys += "\n\n" +
+        "ATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n" +
+        "1. KUTIPAN & NOMOR SITASI: Seluruh kutipan bukti harus diapit tanda petik ganda dan nomor sitasi: \"... bla bla bla ...\" [n].\n" +
+        "2. PERSIS SAMA UNTUK CTRL+F: Teks di dalam tanda petik HARUS persis sama huruf-demi-huruf dengan sumber aslinya di dossier agar bisa dicari dengan CTRL+F di sumber aslinya.\n" +
+        "3. DAFTAR RUJUKAN DI AKHIR: Pertahankan dan lengkapi daftar bernomor di bagian akhir:\n" +
+        (currentLang === "id" ? "   '## 📚 Referensi & Sumber Terkutip'\n" : "   '## 📚 References & Cited Sources'\n") +
+        "   yang memetakan setiap [n] ke judul, penulis, tahun, dan tautan/DOI.";
+
       if (enableSearch) {
         sys += " Use Google Search to look up any missing facts, latest data, or references requested by the Critic.";
       }
@@ -1501,8 +1628,8 @@ You MUST respond ONLY with valid JSON conforming to this schema:
         prompt += `\nResearch Dossier Reference:\n${scholarlyDossier.text}\n`;
       }
       prompt += currentLang === "id"
-        ? `Silakan tulis Draf ${turn + 1} dalam Bahasa Indonesia dengan menindaklanjuti seluruh umpan balik.`
-        : `Please write Draft ${turn + 1} addressing all feedback.`;
+        ? `Silakan tulis Draf ${turn + 1} dalam Bahasa Indonesia dengan menindaklanjuti seluruh umpan balik, memastikan kutipan \"... ...\" [n] persis sama untuk CTRL+F, dan daftar referensi bernomor di akhir.`
+        : `Please write Draft ${turn + 1} addressing all feedback with exact verbatim quotes \"... ...\" [n] and the numbered references list at the end.`;
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 

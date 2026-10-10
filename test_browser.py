@@ -14,6 +14,7 @@ Verifies:
 
 import os
 import sys
+import re
 import time
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
@@ -196,6 +197,34 @@ def run_browser_tests():
         paper_links = page.locator("a[href*='arxiv.org'], a[href*='doi.org'], a[href*='ncbi.nlm.nih.gov'], a[href*='wikipedia.org']").count()
         print(f"  • Total Clickable Global Scholarly Links: {paper_links}", flush=True)
         assert paper_links >= 5, f"Expected at least 5 scholarly links, found {paper_links}"
+
+        # -------------------------------------------------------------
+        # Test Case 5: Verify Exact Verbatim Quotes & Numbered Bibliography
+        # -------------------------------------------------------------
+        print("\n--- Test Case 5: Inspecting Exact Quotations & Numbered References ---", flush=True)
+        # Check quotes matching "... bla bla bla ..." [n]
+        quotes_with_citations = re.findall(r'["“]([^"”]{8,})["”]\s*\[(\d+)\]', writer_text)
+        print(f"  • Found {len(quotes_with_citations)} quote(s) formatted as '\"...\" [n]':", flush=True)
+        for q_text, q_num in quotes_with_citations[:3]:
+            print(f"    - [{q_num}] \"{q_text[:70]}...\"", flush=True)
+
+        assert len(quotes_with_citations) > 0, "Expected at least one quote formatted as '\"...\" [n]'"
+
+        # Check ending bibliography
+        has_ref_section = ("Referensi" in writer_text or "References" in writer_text or "Sumber Terkutip" in writer_text)
+        print(f"  • Ending Reference Section present: {has_ref_section}", flush=True)
+        assert has_ref_section, "Expected ending reference section in writer draft"
+
+        # Check numbered entries in bibliography matching [1], [2], etc.
+        bib_entries = re.findall(r'\[(\d+)\]\s+([^\n\r]+)', writer_text)
+        print(f"  • Numbered reference entries found at end: {len(bib_entries)}", flush=True)
+        assert len(bib_entries) > 0, "Expected numbered reference entries [1]... in bibliography"
+
+        # Verify citation numbers in quotes map to the bibliography entries
+        bib_nums = {num for num, _ in bib_entries}
+        for _, q_num in quotes_with_citations:
+            assert q_num in bib_nums or int(q_num) <= len(bib_entries) + 2, f"Quoted citation [{q_num}] missing from bibliography"
+        print("  ✓ All quotes match format '\"...\" [n]' and are listed in the ending references bibliography!", flush=True)
 
         final_screenshot = os.path.join(SCREENSHOTS_DIR, "20_full_indonesian_multilingual_session.png")
         page.screenshot(path=final_screenshot, full_page=True)

@@ -4,57 +4,91 @@
 **Model:** `gemini-3.5-flash-lite`
 **Thinking Mode:** `medium`
 **Web Search:** `Disabled`
-**Academic Grounding Sources:** `12 source(s) active`
+**Academic Grounding Sources:** `8 source(s) active`
 **Final Score:** 9.2/10.0
 **Total Iterations:** 1
 
 ## Content
 
-# Analisis Komprehensif Persepsi Wicara: Dari Landasan Neurologis hingga Model Komputasi Modern
+# Persepsi Wicara: Tinjauan Komputasi, Neurosains, dan Integrasi Sensorimotor
 
-## 1. Pendahuluan
-Persepsi wicara (*speech perception*) merujuk pada proses kompleks di mana bunyi-bunyi bahasa diidentifikasi, diinterpretasikan, dan dipahami oleh sistem pendengaran dan saraf manusia. Sebagai pilar utama komunikasi manusia, persepsi wicara tidak hanya melibatkan mekanisme auditori perifer, tetapi juga integrasi kognitif tingkat tinggi, memori, serta keterkaitan erat antara produksi dan persepsi wicara (*production for perception*) (Tatham & Morton, 2016). 
+## Pendahuluan
 
-Dalam dekade terakhir, studi mengenai persepsi wicara telah berkembang pesat, mencakup pemahaman neurofisiologis melalui rekaman gelombang otak (EEG), pemodelan komputasi untuk kecerdasan buatan, hingga studi perkembangan bahasa pada bayi.
+Persepsi wicara adalah proses kompleks di mana sistem pendengaran dan kognitif manusia menguraikan sinyal akustik atau isyarat audiovisual menjadi representasi linguistik yang bermakna. Memahami mekanisme ini tidak hanya krusial bagi ilmu saraf kognitif, tetapi juga mendasari pengembangan teknologi kecerdasan buatan, seperti evaluasi kualitas wicara sintetik dan antarmuka otak-komputer (*brain-computer interface* / BCI) [1, 2]. 
 
----
-
-## 2. Landasan Neurologis dan Karakteristik Osilasi Otak
-Pemahaman mengenai bagaimana otak manusia memproses wicara dapat diamati melalui karakteristik osilasi saraf. Dalam studi komparatif oleh Moon, Orlandi, dan Chau (2020), ditemukan adanya kesamaan serta perbedaan pola osilasi saraf antara wicara tertutup (*covert speech*) dan persepsi wicara secara nyata. Aktivitas osilasi ini menunjukkan bahwa otak memanfaatkan ritme saraf yang serupa untuk memproduksi bahasa secara internal maupun mempersepsikan ujaran eksternal.
-
-Selain itu, pemrosesan sensorik auditori dasar memegang peranan krusial dalam persepsi wicara. Penelitian oleh Lehmann, Schönwiesner, dan Rainville (2026) menyoroti bagaimana respons auditori kortikal (seperti komponen gelombang P2 dan *mismatch negativity*) dapat dipengaruhi oleh faktor eksternal seperti nyeri, yang mengindikasikan bahwa persepsi auditori tidak berlangsung dalam isolasi melainkan terintegrasi dengan status somatosensorik dan atensi global individu.
+Penelitian modern menggabungkan pemodelan komputasi terinspirasi biologi, perekaman aktivitas intrakranial, serta analisis neuroimaging untuk memetakan bagaimana otak manusia memproses dan merepresentasikan wicara.
 
 ---
 
-## 3. Perkembangan Persepsi Wicara pada Masa Bayi
-Kemampuan mempersepsikan wicara bukanlah bawaan yang statis, melainkan hasil dari proses pembelajaran yang masif sejak usia dini. Zurbuchen (2016) mengembangkan model komprehensif mengenai persepsi dan pembelajaran wicara pada bayi (*infant speech perception and learning*). Model ini menjelaskan bagaimana bayi secara bertahap menyerap struktur fonetik dari lingkungan bahasa di sekitar mereka, memetakan kategori suara, dan membangun fondasi linguistik sebelum mereka mampu memproduksi kata-kata pertama mereka.
+## 1. Pemodelan Komputasi dan Persepsi Auditori
+
+Penilaian kualitas wicara otomatis berupaya meniru penilaian subjektif manusia menggunakan model komputasi. Sebagaimana dinyatakan dalam literatur mengenai model APG-MOS: 
+> `"Automatic speech quality assessment aims to quantify subjective human perception of speech through computational models to reduce the need for labor-consuming manual evaluations."` [1]
+
+Meskipun model pembelajaran mendalam telah berkembang pesat, pengabaian terhadap mekanisme persepsi auditori fundamental seringkali membatasi konsistensi model dengan penilaian manusia [1]. Untuk mengatasi hal ini, pendekatan terkini merancang modul perseptual yang berakar pada mekanisme auditori biologis guna mensimulasikan fungsi koklea, yang kemudian dikombinasikan dengan analisis semantik [1].
+
+Selain itu, dalam pemodelan persepsi fonetik, kerangka kerja baru telah dikembangkan untuk meniru cara manusia memproses bukti akustik. Seperti yang diusulkan oleh Guo dan rekan-rekan melalui kerangka kerja HuPER:
+> `"We propose HuPER, a human-inspired framework that models phonetic perception as adaptive inference over acoustic-phonetics evidence and linguistic knowledge."` [3]
+
+Kerangka kerja semacam ini mampu mencapai tingkat kesalahan fonetik yang rendah di berbagai bahasa serta mendukung persepsi fonetik adaptif multi-jalur di bawah kondisi akustik yang beragam [3].
 
 ---
 
-## 4. Teknologi Wicara, Model Komputasi, dan Pengenalan Berbasis EEG
-Seiring dengan kemajuan teknologi kecerdasan buatan (AI) dan antarmuka otak-komputer (*Brain-Computer Interface* / BCI), pemodelan persepsi wicara menjadi sangat penting:
-* **Benchmark Model Komputasi:** Millet dan Dunbar (2020) memperkenalkan *The Perceptimatic English Benchmark*, sebuah kerangka kerja untuk mengevaluasi seberapa baik model persepsi wicara berbasis mesin meniru kemampuan diskriminasi fonetik manusia dalam bahasa Inggris.
-* **Sistem Pengenalan Wicara Berbasis EEG:** Krishna, Tran, dan Carnahan (2020) meneliti bagaimana pemahaman efek persepsi wicara dapat diintegrasikan ke dalam sistem pengenalan wicara berbasis EEG. Pendekatan ini memungkinkan penerjemahan sinyal otak langsung menjadi teks dengan memanfaatkan pemahaman neuro-kognitif dari persepsi wicara manusia.
-* **Sintesis dan Kualitas Wicara:** Studi klasik dan modern mengenai teknologi wicara menunjukkan bahwa persepsi kualitas wicara sangat bergantung pada parameter akustik dan sintesis yang akurat (Anonymous, 2005; Flanagan, 2012; Tatham & Morton, 2016). Pemahaman mendalam tentang bagaimana manusia mempersepsikan suara buatan (*speech-like sounds*) membantu para insinyur merancang sistem komunikasi yang lebih alami dan efisien.
+## 2. Dekode Aktivitas Otak Selama Mendengarkan dan Memproduksi Wicara
+
+Studi neurosaintifik kontemporer juga berfokus pada upaya mendekode aktivitas listrik di otak saat seseorang mendengarkan wicara. Penelitian oleh Fodor et al. menggunakan data *intracranial electroencephalographic* (iEEG) dengan metode pembelajaran mendalam:
+> `"The aim of the study is to investigate the complex mechanisms of speech perception and ultimately decode the electrical changes in the brain accruing while listening to speech."` [2]
+
+Pendekatan ini mengalihkan fokus konvensional dari produksi wicara menuju investigasi representasi saraf dari wicara yang dipersepsikan, guna memperkuat teknologi BCI [2]. 
+
+Pada ranah non-invasif, tantangan decoding sinyal *electroencephalography* (EEG) untuk kalimat yang kompleks (seperti bahasa Mandarin) dijembatani oleh kerangka kerja efisien parameter seperti **EEGAlign**. Metode ini menyelaraskan EEG dengan penyematan teks dan fitur wicara melalui pembelajaran kontrastif (*contrastive learning*) [4].
 
 ---
 
-## 5. Kesimpulan
-Persepsi wicara adalah fenomena multidisiplin yang menjembatani linguistik, neurosains, psikologi perkembangan, dan kecerdasan buatan. Dari dinamika osilasi saraf di otak hingga model pembelajaran bayi dan penerapan teknologi BCI berbasis EEG, pemahaman kita mengenai bagaimana manusia memaknai bunyi bahasa terus mengalami evolusi. Penelitian lanjutan di bidang ini tidak hanya memperkaya teori kognitif manusia tetapi juga mendorong inovasi dalam teknologi pengenalan suara dan antarmuka manusia-mesin.
+## 3. Peran Isyarat Visual dalam Persepsi Wicara Audiovisual
+
+Persepsi wicara jarang terjadi secara eksklusif melalui saluran auditori; isyarat visual seperti gerakan bibir (*lipreading*) memainkan peran penting. Berdasarkan temuan dari rekaman iEEG pada girus temporal superior (*superior temporal gyrus* / STG):
+> `"Visual speech, such as lipreading, facilitates spoken word recognition, but the neural mechanisms underlying audiovisual speech perception remain poorly understood."` [5]
+
+Lebih lanjut, analisis menunjukkan bahwa penglihatan tidak sekadar memperkuat semua informasi terkait wicara secara merata. Sebaliknya, masukan visual secara selektif mempertajam representasi fonetik yang bersifat kategoris di dalam korteks auditori:
+> `"Seeing a speaker’s face improves speech perception, especially in noise, but the neural representations altered by visual speech remain unclear."` [5]
+
+Hal ini mengklarifikasi bahwa fasilitasi audiovisual bekerja secara primer pada representasi wicara kategoris yang mendukung pengenalan kata secara langsung [5].
 
 ---
 
-## 📚 Referensi & Sitasi Akademis
+## 4. Representasi Sensorimotor dalam Produksi Terselubung (*Covert Speech*)
 
-- Moon, J., Orlandi, S., & Chau, T. T. (2020). A comparison of oscillatory characteristics in covert speech and speech perception. *arXiv preprint arXiv:2009.02816*. [Link arXiv](http://arxiv.org/abs/2009.02816)
-- Millet, J., & Dunbar, E. (2020). The Perceptimatic English Benchmark for Speech Perception Models. *arXiv preprint arXiv:2005.03418*. [Link arXiv](http://arxiv.org/abs/2005.03418)
-- Krishna, G., Tran, C., & Carnahan, M. (2020). Understanding effect of speech perception in EEG based speech recognition systems. *arXiv preprint arXiv:2006.01261*. [Link arXiv](http://arxiv.org/abs/2006.01261)
-- Zurbuchen, P. (2016). A model of infant speech perception and learning. *arXiv preprint arXiv:1610.06214*. [Link arXiv](http://arxiv.org/abs/1610.06214)
-- Anonymous. (2012). Speech synthesis and speech perception. In *Speech Synthesis and Perception*. [DOI: 10.1017/cbo9781139165952.008](https://doi.org/10.1017/cbo9781139165952.008)
-- Anonymous. (2005). Speech Technology and Speech Quality Perception. [DOI: 10.1007/3-540-28860-0_4](https://doi.org/10.1007/3-540-28860-0_4)
-- Tatham, M., & Morton, K. (2016). Speech Perception: Production for Perception. [DOI: 10.1057/9780230513969_8](https://doi.org/10.1057/9780230513969_8)
-- Flanagan, J. L. (2012). Perception of Speech and Speech-Like Sounds. [DOI: 10.1007/978-3-662-00849-2_7](https://doi.org/10.1007/978-3-662-00849-2_7)
-- Lehmann, A., Schönwiesner, M., & Rainville, P. (2026). Pain Enhances the Auditory P2 but Attenuates Mismatch Response and P3a. *PubMed Central*. [PMC13651782](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13651782/)
+Persepsi dan produksi wicara juga terhubung erat melalui mekanisme internal, seperti saat seseorang berbicara dalam hati (*inner speaking*). Orpella dan rekan-rekannya menyelidiki dinamika saraf selama produksi suku kata terselubung:
+> `"Inner speaking-the deliberate generation of speech through covert production mechanisms-is a common human experience."` [7]
+
+Hasil studi ini menunjukkan bahwa korteks motorik wicara dan korteks auditori mempertahankan struktur temporal dan granularitas yang mirip dengan wicara terbuka (*overt speech*), di mana kontras artikulasi dan akustik diproses secara terstruktur pada tahapan yang spesifik [7].
+
+---
+
+## Kesimpulan
+
+Persepsi wicara melibatkan interaksi canggih antara mekanisme koklea biologis, pemrosesan semantik, integrasi audiovisual di girus temporal superior, serta dinamika sensorimotor internal. Integrasi antara temuan neurosaintifik (iEEG/EEG) dan model komputasi prediktif (seperti APG-MOS, HuPER, dan EEGAlign) membuka jalan baru menuju pemahaman kognitif yang lebih mendalam serta pengembangan teknologi antarmuka otak-komputer yang canggih di masa depan.
+
+---
+
+## 📚 Referensi & Sumber Terkutip
+
+[1] Zhicheng Lian, Lizhi Wang, Hua Huang (2025). *APG-MOS: Auditory Perception Guided-MOS Predictor for Synthetic Speech*. arXiv:2504.20447. [http://arxiv.org/abs/2504.20447](http://arxiv.org/abs/2504.20447)
+
+[2] Milán András Fodor, Tamás Gábor Csapó, Frigyes Viktor Arthur (2024). *Towards Decoding Brain Activity During Passive Listening of Speech*. arXiv:2402.16996. [http://arxiv.org/abs/2402.16996](http://arxiv.org/abs/2402.16996)
+
+[3] Chenxu Guo, Jiachen Lian, Yisi Liu (2026). *HuPER: A Human-Inspired Framework for Phonetic Perception*. arXiv:2602.01634. [https://arxiv.org/abs/2602.01634](https://arxiv.org/abs/2602.01634)
+
+[4] Tian Zheng, Xurong Xie, Xinxin Zhu (2026). *Joint Text-Audio Alignment for EEG-to-Text Decoding in Chinese Speech Production and Perception*. arXiv:2607.25626. [https://arxiv.org/abs/2607.25626](https://arxiv.org/abs/2607.25626)
+
+[5] Li Y, DeWitt I, Brennan JR (2026). *Visual speech enhances phoneme separability in human superior temporal gyrus*. PubMed / DOI. [https://doi.org/10.64898/2026.09.10.750762](https://doi.org/10.64898/2026.09.10.750762)
+
+[6] Researchers (2026). *Visual speech enhances phoneme separability in human superior temporal gyrus*. PubMed Central. [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13622663/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13622663/)
+
+[7] Orpella J, Mantegna F, Oderbolz C (2026). *Temporally structured motor and auditory representations in covert syllable production*. PubMed Central. [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13578806/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13578806/)
+
+[8] Olivares C, Schettini N. (Recent). *A high-precision synchronization and centroid-based framework for single-trial decoding of perceived natural speech*. PubMed Central. [https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13642302/](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC13642302/)
 
 ---
 ## Revision History & Critic Log
@@ -62,6 +96,5 @@ Persepsi wicara adalah fenomena multidisiplin yang menjembatani linguistik, neur
 ### Draft 1 (Score: 9.2/10)
 **Critic Status:** `APPROVED`
 **Actionable Feedback:**
-- Melacak dan memperbarui nama penulis pada referensi yang bertuliskan 'Anonymous' di bagian daftar pustaka.
-- Mempertahankan standar kualitas, ketepatan fakta, dan kedalaman analisis ini untuk publikasi atau pengembangan lanjutan.
+- Kombinasikan beberapa kutipan langsung dengan parafrase analitis untuk membuat alur bacaan lebih mengalir alami.
 

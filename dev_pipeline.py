@@ -124,6 +124,21 @@ Respond ONLY with JSON:
     }
 
 
+def reconstruct_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str:
+    """Reconstruct verbatim abstract from OpenAlex inverted index."""
+    if not inverted_index or not isinstance(inverted_index, dict):
+        return ""
+    words: Dict[int, str] = {}
+    for word, positions in inverted_index.items():
+        if isinstance(positions, list):
+            for pos in positions:
+                words[pos] = word
+    if not words:
+        return ""
+    sorted_positions = sorted(words.keys())
+    return " ".join(words[p] for p in sorted_positions).strip()
+
+
 def fetch_arxiv_papers(topic: str) -> List[Dict[str, Any]]:
     """Fetch arXiv preprints via OpenAlex arXiv index with polite pool & fallback."""
     try:
@@ -136,12 +151,14 @@ def fetch_arxiv_papers(topic: str) -> List[Dict[str, Any]]:
                 authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
                 arxiv_id = r.get("ids", {}).get("arxiv", "")
                 landing_url = r.get("primary_location", {}).get("landing_page_url") or (f"https://arxiv.org/abs/{arxiv_id}" if arxiv_id else r.get("doi", ""))
+                abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
                 results.append({
                     "source": "arXiv Preprints",
                     "title": r.get("title") or "Untitled Paper",
                     "authors": authors or "Anonymous",
                     "year": r.get("publication_year") or "Recent",
-                    "url": landing_url
+                    "url": landing_url,
+                    "abstract": abstract
                 })
             if results:
                 return results
@@ -163,7 +180,8 @@ def fetch_arxiv_papers(topic: str) -> List[Dict[str, Any]]:
                     "title": (it.get("title") or ["Untitled Paper"])[0],
                     "authors": authors or "Anonymous",
                     "year": it.get("created", {}).get("date-parts", [[ "Recent" ]])[0][0],
-                    "url": f"https://doi.org/{doi}" if doi else ""
+                    "url": f"https://doi.org/{doi}" if doi else "",
+                    "abstract": ""
                 })
             return results
     except Exception as e:
@@ -190,7 +208,8 @@ def fetch_crossref_papers(topic: str) -> List[Dict[str, Any]]:
                     "authors": authors or "Anonymous",
                     "year": year,
                     "meta": f"{publisher} • DOI: {doi}",
-                    "url": f"https://doi.org/{doi}" if doi else ""
+                    "url": f"https://doi.org/{doi}" if doi else "",
+                    "abstract": ""
                 })
             return results
     except Exception as e:
@@ -202,7 +221,7 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
     """Fetch high-impact cited academic works (Semantic Scholar API / Citation ranking)."""
     # 1. Primary: Direct Semantic Scholar API
     try:
-        url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={urllib.parse.quote(topic)}&limit=4&fields=title,authors,year,citationCount,url"
+        url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={urllib.parse.quote(topic)}&limit=4&fields=title,authors,year,citationCount,url,abstract"
         req = urllib.request.Request(url, headers={"User-Agent": "AgenticApp/1.0"})
         with urllib.request.urlopen(req, timeout=8) as resp:
             data = json.loads(resp.read().decode())
@@ -212,6 +231,7 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
                 citations = p.get("citationCount", 0) or 0
                 paper_id = p.get("paperId", "")
                 link = p.get("url") or (f"https://www.semanticscholar.org/paper/{paper_id}" if paper_id else "")
+                abstract = p.get("abstract") or ""
                 results.append({
                     "source": "Semantic Scholar API",
                     "title": p.get("title") or "Untitled Paper",
@@ -219,7 +239,8 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
                     "year": p.get("year") or "Recent",
                     "citations": citations,
                     "meta": f"{citations:,} citations • {authors}",
-                    "url": link
+                    "url": link,
+                    "abstract": abstract
                 })
             if results:
                 return results
@@ -237,6 +258,7 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
                 authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
                 citations = r.get("cited_by_count", 0)
                 url = r.get("doi") or r.get("primary_location", {}).get("landing_page_url") or ""
+                abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
                 results.append({
                     "source": "Semantic Scholar API",
                     "title": r.get("title") or "Untitled Paper",
@@ -244,7 +266,8 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
                     "year": r.get("publication_year") or "Recent",
                     "citations": citations,
                     "meta": f"{citations:,} citations • {authors}",
-                    "url": url
+                    "url": url,
+                    "abstract": abstract
                 })
             return results
     except Exception as e:
@@ -263,6 +286,7 @@ def fetch_openalex_works(topic: str, reg_topic: Optional[str] = None, is_id: boo
             for r in data.get("results", []):
                 authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
                 venue = r.get("primary_location", {}).get("source", {}).get("display_name", "Academic Venue") if r.get("primary_location") else "Academic Venue"
+                abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
                 results.append({
                     "source": "OpenAlex Global Catalog",
                     "title": r.get("title") or "Untitled Paper",
@@ -270,7 +294,8 @@ def fetch_openalex_works(topic: str, reg_topic: Optional[str] = None, is_id: boo
                     "year": r.get("publication_year") or "Recent",
                     "venue": venue,
                     "meta": f"{venue} ({r.get('publication_year', 'Recent')}) • {authors}",
-                    "url": r.get("doi") or r.get("primary_location", {}).get("landing_page_url") or ""
+                    "url": r.get("doi") or r.get("primary_location", {}).get("landing_page_url") or "",
+                    "abstract": abstract
                 })
     except Exception as e:
         console.print(f"[yellow]Warning: OpenAlex fetch failed: {e}[/yellow]")
@@ -288,6 +313,7 @@ def fetch_openalex_works(topic: str, reg_topic: Optional[str] = None, is_id: boo
                     venue = r.get("primary_location", {}).get("source", {}).get("display_name", "Jurnal Akademis") if r.get("primary_location") else "Jurnal Akademis"
                     item_url = r.get("doi") or r.get("primary_location", {}).get("landing_page_url") or ""
                     if item_url and item_url not in seen_urls:
+                        abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
                         results.append({
                             "source": "OpenAlex Regional Catalog",
                             "title": r.get("title") or "Untitled Paper",
@@ -295,7 +321,8 @@ def fetch_openalex_works(topic: str, reg_topic: Optional[str] = None, is_id: boo
                             "year": r.get("publication_year") or "Recent",
                             "venue": venue,
                             "meta": f"{venue} ({r.get('publication_year', 'Recent')}) • {authors}",
-                            "url": item_url
+                            "url": item_url,
+                            "abstract": abstract
                         })
         except Exception as e:
             console.print(f"[dim]OpenAlex regional query note: {e}[/dim]")
@@ -304,7 +331,39 @@ def fetch_openalex_works(topic: str, reg_topic: Optional[str] = None, is_id: boo
 
 
 def fetch_pubmed_works(topic: str) -> List[Dict[str, Any]]:
-    """Fetch biomedical and life sciences papers via NCBI PubMed Central."""
+    """Fetch biomedical and life sciences papers via Europe PMC (with verbatim abstracts) / NCBI PMC."""
+    # 1. Primary: Europe PMC REST with resultType=core for verbatim abstractText
+    try:
+        ep_url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={urllib.parse.quote(topic)}&resultType=core&format=json&pageSize=4"
+        req = urllib.request.Request(ep_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            ep_data = json.loads(resp.read().decode())
+            results = []
+            for it in ep_data.get("resultList", {}).get("result", []):
+                authors = it.get("authorString", "Researchers")
+                if authors:
+                    authors = ", ".join(authors.split(",")[:3])
+                title = re.sub(r"<[^>]+>", "", it.get("title", "Untitled Study"))
+                pmcid = it.get("pmcid", "")
+                landing = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/" if pmcid else (f"https://doi.org/{it.get('doi')}" if it.get("doi") else "")
+                raw_abs = re.sub(r"<[^>]+>", "", it.get("abstractText", "") or "")
+                pub_year = str(it.get("pubYear", "Recent"))
+                journal = it.get("journalTitle", "PMC")
+                results.append({
+                    "source": "PubMed / Europe PMC",
+                    "title": title,
+                    "authors": authors or "Researchers",
+                    "year": pub_year,
+                    "meta": f"{journal} ({pub_year}) • {authors}",
+                    "url": landing,
+                    "abstract": raw_abs
+                })
+            if results:
+                return results
+    except Exception as ep_err:
+        console.print(f"[dim]Europe PMC query note: {ep_err}, falling back to NCBI PMC...[/dim]")
+
+    # 2. Resilient Fallback: NCBI PubMed Central
     try:
         search_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pmc&term={urllib.parse.quote(topic)}&retmode=json&retmax=4"
         req = urllib.request.Request(search_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
@@ -331,7 +390,8 @@ def fetch_pubmed_works(topic: str) -> List[Dict[str, Any]]:
                         "authors": authors or "Researchers",
                         "year": pubdate,
                         "meta": f"{source} • {authors}",
-                        "url": f"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC{uid}/"
+                        "url": f"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC{uid}/",
+                        "abstract": ""
                     })
                 return results
     except Exception as e:
@@ -434,9 +494,10 @@ def build_scholarly_dossier(
     doc_path: Optional[str],
     lang: str = "en"
 ) -> Tuple[str, List[Dict[str, Any]]]:
-    """Compile all active grounding sources with live progression logging and cross-lingual querying."""
+    """Compile all active grounding sources with live progression logging, sequential numbering, and verbatim abstracts."""
     citations = []
     sections = []
+    source_num = 1
 
     # Resolve multilingual query representations
     queries = resolve_multilingual_queries(topic, lang=lang)
@@ -459,8 +520,12 @@ def build_scholarly_dossier(
             console.print(f"[green]  ✓ [arXiv] Found {len(papers)} preprints[/green]")
             p_text = "### 📚 arXiv Preprints:\n"
             for p in papers:
-                p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
-                citations.append({"source": "arXiv", "title": p["title"], "url": p["url"], "meta": f"{p['authors']} ({p['year']})"})
+                p_text += f"[Source {source_num}] arXiv: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "arXiv", "title": p["title"], "url": p["url"], "meta": f"{p['authors']} ({p['year']})", "abstract": p.get("abstract", "")})
+                source_num += 1
             sections.append(p_text)
         else:
             console.print("[dim]  ✕ [arXiv] No preprints found[/dim]")
@@ -472,8 +537,12 @@ def build_scholarly_dossier(
             console.print(f"[green]  ✓ [Crossref] Found {len(papers)} publisher DOIs[/green]")
             p_text = "### 🏷️ Crossref Verified DOIs:\n"
             for p in papers:
-                p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  DOI: {p['url']}\n"
-                citations.append({"source": "Crossref", "title": p["title"], "url": p["url"], "meta": p["meta"]})
+                p_text += f"[Source {source_num}] Crossref: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  DOI: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "Crossref", "title": p["title"], "url": p["url"], "meta": p["meta"], "abstract": p.get("abstract", "")})
+                source_num += 1
             sections.append(p_text)
         else:
             console.print("[dim]  ✕ [Crossref] No records found[/dim]")
@@ -485,8 +554,12 @@ def build_scholarly_dossier(
             console.print(f"[green]  ✓ [Semantic Scholar] Found {len(papers)} high-impact papers[/green]")
             p_text = "### 🔬 High-Impact Academic Works (Semantic Scholar):\n"
             for p in papers:
-                p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Citations: {p['citations']:,}\n  DOI/Link: {p['url']}\n"
-                citations.append({"source": "Semantic Scholar", "title": p["title"], "url": p["url"], "meta": p["meta"]})
+                p_text += f"[Source {source_num}] Semantic Scholar: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Citations: {p['citations']:,}\n  DOI/Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "Semantic Scholar", "title": p["title"], "url": p["url"], "meta": p["meta"], "abstract": p.get("abstract", "")})
+                source_num += 1
             sections.append(p_text)
         else:
             console.print("[dim]  ✕ [Semantic Scholar] No records found[/dim]")
@@ -498,21 +571,29 @@ def build_scholarly_dossier(
             console.print(f"[green]  ✓ [OpenAlex] Found {len(works)} peer-reviewed works[/green]")
             p_text = "### 🏛️ OpenAlex Global Scholarly Catalog:\n"
             for p in works:
-                p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Venue: {p['venue']}\n  Authors: {p['authors']}\n  DOI: {p['url']}\n"
-                citations.append({"source": p.get("source", "OpenAlex"), "title": p["title"], "url": p["url"], "meta": p["meta"]})
+                p_text += f"[Source {source_num}] OpenAlex: \"{p['title']}\" ({p['year']})\n  Venue: {p['venue']}\n  Authors: {p['authors']}\n  DOI: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": p.get("source", "OpenAlex"), "title": p["title"], "url": p["url"], "meta": p["meta"], "abstract": p.get("abstract", "")})
+                source_num += 1
             sections.append(p_text)
         else:
             console.print("[dim]  ✕ [OpenAlex] No records found[/dim]")
 
     if use_pubmed:
-        console.print(f"[cyan]🔍 [PubMed] Querying NCBI PubMed Central for '{glob_topic}'...[/cyan]")
+        console.print(f"[cyan]🔍 [PubMed] Querying PubMed / Europe PMC for '{glob_topic}'...[/cyan]")
         works = fetch_pubmed_works(glob_topic)
         if works:
             console.print(f"[green]  ✓ [PubMed] Found {len(works)} biomedical articles[/green]")
-            p_text = "### 🧬 PubMed Central (PMC) Biomedical Literature:\n"
+            p_text = "### 🧬 PubMed / Europe PMC Biomedical Literature:\n"
             for p in works:
-                p_text += f"- Title: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Article Link: {p['url']}\n"
-                citations.append({"source": "PubMed Central", "title": p["title"], "url": p["url"], "meta": p["meta"]})
+                p_text += f"[Source {source_num}] PubMed: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Article Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": p.get("source", "PubMed Central"), "title": p["title"], "url": p["url"], "meta": p["meta"], "abstract": p.get("abstract", "")})
+                source_num += 1
             sections.append(p_text)
         else:
             console.print("[dim]  ✕ [PubMed] No records found[/dim]")
@@ -523,9 +604,10 @@ def build_scholarly_dossier(
         if wiki_items:
             for w in wiki_items:
                 console.print(f"[green]  ✓ [{w['source']}] Found overview for '{w['title']}'[/green]")
-                w_text = f"### 📖 {w['source']} ({w['title']}):\n{w['extract']}\nReference URL: {w['url']}\n"
+                w_text = f"[Source {source_num}] {w['source']} ({w['title']}):\n  Reference URL: {w['url']}\n  Verbatim Encyclopedic Text (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {w['extract']}\n  \"\"\"\n\n"
                 sections.append(w_text)
-                citations.append({"source": w["source"], "title": w["title"], "url": w["url"], "meta": w.get("meta", "Encyclopedic Overview")})
+                citations.append({"num": source_num, "source": w["source"], "title": w["title"], "url": w["url"], "meta": w.get("meta", "Encyclopedic Overview"), "abstract": w["extract"]})
+                source_num += 1
         else:
             console.print("[dim]  ✕ [Wikipedia] No summary found[/dim]")
 
@@ -533,9 +615,10 @@ def build_scholarly_dossier(
         console.print(f"[cyan]🔍 [Document] Loading local document: {doc_path}...[/cyan]")
         doc_name, doc_content = load_document(doc_path)
         excerpt = doc_content[:6000]
-        d_text = f"### 📄 User-Supplied Document ({doc_name}):\n\"\"\"\n{excerpt}\n\"\"\"\n"
+        d_text = f"[Source {source_num}] User Document ({doc_name}):\n  Verbatim Document Text (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {excerpt}\n  \"\"\"\n\n"
         sections.append(d_text)
-        citations.append({"source": "Local Document", "title": doc_name, "url": doc_path, "meta": f"{len(doc_content):,} characters"})
+        citations.append({"num": source_num, "source": "Local Document", "title": doc_name, "url": doc_path, "meta": f"{len(doc_content):,} characters", "abstract": excerpt})
+        source_num += 1
 
     if not sections:
         return "", []
@@ -561,17 +644,36 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
             "\n\nPANDUAN BAHASA & SINTESIS:\n"
             "Anda WAJIB menulis seluruh naskah dan draf secara komprehensif dalam BAHASA INDONESIA yang baku, ilmiah, mengalir, dan profesional.\n"
             "Sintesiskan semua temuan dari literatur ilmiah internasional dan regional (arXiv, Semantic Scholar, PubMed, OpenAlex, Crossref, Wikipedia) ke dalam Bahasa Indonesia dengan runtut.\n"
-            "Rujuk nama penulis dan tahun penelitian di dalam teks.\n"
-            "Wajib sertakan bagian penutup: '## 📚 Referensi & Sitasi Akademis' dengan tautan dan DOI lengkap."
         )
+
+    quotation_rules = (
+        "\n\nATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n"
+        "1. FORMAT KUTIPAN & NOMOR SITASI:\n"
+        "   Setiap kali mengutip bukti, data, temuan kunci, atau definisi dari berkas riset, Anda WAJIB mengapit kutipan dalam tanda petik ganda dan menyertakan nomor kutipan dalam kurung siku di akhir kutipan:\n"
+        "   Contoh format: \"... bla bla bla ...\" [1] atau \"... bla bla bla ...\" [2].\n"
+        "2. KEASLIAN PERSIS (EXACT MATCH FOR CTRL+F SEARCH):\n"
+        "   Teks di dalam tanda petik \"... ...\" HARUS PERSIS SAMA KATA-DEMI-KATA, HURUF-DEMI-HURUF dengan teks asli pada 'Verbatim Excerpt / Abstract' atau teks dokumen yang disediakan di berkas riset.\n"
+        "   JANGAN PERNAH memparafrasekan atau mengubah kata di dalam tanda petik. Tujuannya adalah agar pembaca dapat membuka tautan sumber atau dokumen asli, menekan CTRL + F, menempelkan teks kutipan tersebut, dan langsung menemukan kalimatnya dalam konteks penuh.\n"
+        "   (Catatan: Jika menulis dalam Bahasa Indonesia dan sumber dalam Bahasa Inggris, biarkan kutipan bukti di dalam tanda petik persis dalam bahasa aslinya, lalu berikan ulasan, konteks, atau terjemahan Anda dalam Bahasa Indonesia sebelum atau sesudah kutipan tersebut).\n"
+        "3. PENOMORAN SITASI URUT:\n"
+        "   Beri nomor kutipan secara berurutan sesuai kemunculan pertamanya di dalam teks: [1], [2], [3], dst.\n"
+        "4. DAFTAR SUMBER RUJUKAN DI AKHIR NASKAH:\n"
+        "   Di bagian paling akhir naskah, Anda WAJIB menyertakan daftar sumber rujukan bernomor yang cocok persis dengan nomor kutipan di teks:\n"
+        f"   {'## 📚 Referensi & Sumber Terkutip' if lang == 'id' else '## 📚 References & Cited Sources'}\n"
+        "   Format setiap entri:\n"
+        "   [1] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [Tautan / DOI](url)\n"
+        "   [2] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [Tautan / DOI](url)\n"
+        "   Setiap nomor [n] yang dikutip dalam teks WAJIB ada di daftar akhir ini!"
+    )
+    system_prompt += quotation_rules
+
     if enable_search:
         system_prompt += " Use Google Search to look up up-to-date facts, data points, and references."
     if scholarly_dossier:
         system_prompt += (
             " You are provided with a Verified Scholarly Research Dossier. "
             "You MUST ground your explanations in these academic papers, DOIs, and reference materials. "
-            "Cite the authors and dates in the text, and include a dedicated '## 📚 Scholarly References & Citations' "
-            "section at the end with markdown links and DOIs."
+            "Strictly follow the Verbatim Quotation & Citation Rules above."
         )
 
     user_prompt = f"Topic/Goal: {topic}\n"
@@ -580,9 +682,9 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
     if instructions:
         user_prompt += f"Special Instructions: {instructions}\n"
     if lang == "id":
-        user_prompt += "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas."
+        user_prompt += "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir."
     else:
-        user_prompt += "Please write Draft 1 grounded in the topic and research."
+        user_prompt += "Please write Draft 1 grounded in the topic and research, using exact verbatim quotes \"... ...\" [n] and the numbered references list at the end."
 
     tools = [{"type": "google_search"}] if enable_search else None
     response = client.interactions.create(
@@ -608,10 +710,21 @@ def run_writer_revision(original_topic: str, previous_draft: str, critique: Crit
             "Perbaiki dan sempurnakan draf secara menyeluruh dalam BAHASA INDONESIA. "
             "Tangani setiap kelemahan dan rekomendasi perbaikan dari Pengkritik, serta pertahankan rujukan akademis dan sitasi DOIs."
         )
+
+    quotation_rules = (
+        "\n\nATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n"
+        "1. KUTIPAN & NOMOR SITASI: Seluruh kutipan bukti harus diapit tanda petik ganda dan nomor sitasi: \"... bla bla bla ...\" [n].\n"
+        "2. PERSIS SAMA UNTUK CTRL+F: Teks di dalam tanda petik HARUS persis sama huruf-demi-huruf dengan sumber aslinya di dossier agar bisa dicari dengan CTRL+F di sumber aslinya.\n"
+        "3. DAFTAR RUJUKAN DI AKHIR: Pertahankan dan lengkapi daftar bernomor di bagian akhir:\n"
+        f"   {'## 📚 Referensi & Sumber Terkutip' if lang == 'id' else '## 📚 References & Cited Sources'}\n"
+        "   yang memetakan setiap [n] ke judul, penulis, tahun, dan tautan/DOI."
+    )
+    system_prompt += quotation_rules
+
     if enable_search:
         system_prompt += " Use Google Search to look up up-to-date information for the Critic's points."
     if scholarly_dossier:
-        system_prompt += " Ensure all academic references, DOIs, and citations from the research dossier are retained and accurately cited."
+        system_prompt += " Ensure all academic references, DOIs, and citations from the research dossier are retained, properly cited, and expanded as necessary."
 
     revisions_formatted = "\n".join(f"- {item}" for item in critique.actionable_revisions)
     prompt = f"""
@@ -633,9 +746,9 @@ Required Improvements:
         prompt += f"\nResearch Dossier Reference:\n{scholarly_dossier}\n"
 
     if lang == "id":
-        prompt += f"\nSilakan tulis revisi lengkap (Draf {turn + 1}) dalam Bahasa Indonesia yang menindaklanjuti seluruh evaluasi di atas."
+        prompt += f"\nSilakan tulis revisi lengkap (Draf {turn + 1}) dalam Bahasa Indonesia yang menindaklanjuti seluruh evaluasi di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir."
     else:
-        prompt += f"\nPlease write the complete revised version (Draft {turn + 1}) addressing all feedback."
+        prompt += f"\nPlease write the complete revised version (Draft {turn + 1}) addressing all feedback with exact verbatim quotes \"... ...\" [n] and the numbered references list at the end."
 
     tools = [{"type": "google_search"}] if enable_search else None
     response = client.interactions.create(
@@ -658,8 +771,17 @@ def run_critic_review(topic: str, draft: str, turn: int, model: str = DEFAULT_MO
     if lang == "id":
         system_prompt += (
             "\nPANDUAN BAHASA:\n"
-            "Berikan seluruh evaluasi, analisis kekuatan, kelemahan, dan tindakan revisi dalam BAHASA INDONESIA yang objektif dan konstruktif."
+            "Berikan seluruh evaluasi, analisis kekuatan, kelemahan, dan tindakan revisi dalam BAHASA INDONESIA yang objektif dan konstruktif.\n"
         )
+
+    system_prompt += (
+        "\nAUDIT KUTIPAN KATA-DEMI-KATA & REFERENSI (VERBATIM QUOTATION & CITATION AUDIT):\n"
+        "1. Format Kutipan: Periksa apakah setiap kutipan fakta/bukti diapit tanda petik \"... bla bla bla ...\" dan diikuti nomor sitasi dalam kurung siku seperti [1], [2].\n"
+        "2. Verifikasi CTRL+F: Periksa apakah kutipan di dalam \"... ...\" persis sama kata-demi-kata dengan teks sumber/abstrak di berkas riset sehingga pembaca dapat mencarinya dengan CTRL+F di sumber aslinya. Jika ada kutipan yang diparafrasekan di dalam tanda petik, tandai sebagai KELEMAHAN (Weakness).\n"
+        "3. Daftar Referensi Akhir: Periksa apakah di akhir naskah terdapat daftar rujukan bernomor ([1], [2], ...) yang memetakan nomor kutipan ke judul makalah, penulis, tahun, dan tautan/DOI.\n"
+        "Jika aturan kutipan dan referensi ini belum terpenuhi dengan sempurna, status WAJIB 'NEEDS_REVISION'.\n"
+    )
+
     if has_dossier:
         system_prompt += " Verify that the draft properly incorporates facts from the provided research dossier and includes valid academic citations and links. "
 
