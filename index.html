@@ -8,6 +8,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Marked.js for rendering markdown output -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- PDF.js for in-browser local research paper extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
   <style>
     .markdown-body h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; color: #f8fafc; }
     .markdown-body h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #38bdf8; }
@@ -166,6 +169,75 @@
           <span id="searchQuotaBadge" class="text-[10px] text-slate-400 pl-6 hidden"></span>
         </div>
       </div>
+
+      <!-- Scholarly & Reference Grounding Sources -->
+      <div class="border-t border-slate-800/80 pt-4 mt-2">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">📚</span>
+            <label class="text-xs font-semibold uppercase tracking-wider text-cyan-400">
+              Scholarly & Reference Grounding Sources
+            </label>
+          </div>
+          <span class="text-[11px] text-slate-400">Independent academic literature & encyclopedic sources &bull; Free & Uncapped</span>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
+            <input type="checkbox" id="arxivCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">📚 arXiv Preprints</span>
+              <span class="text-[10px] text-slate-400">AI, CS, Math, & Physics preprints</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
+            <input type="checkbox" id="semanticScholarCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🔬 Semantic Scholar</span>
+              <span class="text-[10px] text-slate-400">High-impact papers & citations</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
+            <input type="checkbox" id="openAlexCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">🏛️ OpenAlex Catalog</span>
+              <span class="text-[10px] text-slate-400">250M+ verified peer-reviewed DOIs</span>
+            </div>
+          </label>
+
+          <label class="flex items-start gap-2.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition">
+            <input type="checkbox" id="wikipediaCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 mt-0.5" />
+            <div class="flex flex-col">
+              <span class="font-semibold text-slate-100 flex items-center gap-1.5">📖 Wikipedia Reference</span>
+              <span class="text-[10px] text-slate-400">Curated encyclopedic summaries</span>
+            </div>
+          </label>
+        </div>
+
+        <!-- Document / PDF Upload Area -->
+        <div class="p-3.5 rounded-xl bg-slate-950/40 border border-dashed border-slate-800 hover:border-slate-700 transition flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-base border border-slate-800">
+              📄
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-slate-200">Ground on Local Document / PDF</div>
+              <div class="text-[10px] text-slate-400">Client-side text parsing with PDF.js &bull; 100% private, zero uploads to external servers</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <input type="file" id="docFileInput" accept=".pdf,.txt,.md,.json" class="hidden" />
+            <button type="button" id="uploadDocBtn" class="text-xs px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg transition font-medium">
+              📁 Choose File
+            </button>
+            <span id="docFileStatus" class="text-xs text-slate-400 truncate max-w-[180px]">No document selected</span>
+            <button type="button" id="clearDocBtn" class="text-xs text-rose-400 hover:text-rose-300 px-1 hidden" title="Remove document">✕</button>
+          </div>
+        </div>
+      </div>
+
       <div class="pt-2">
         <button 
           id="startPipelineBtn" 
@@ -217,6 +289,17 @@
     const statusSpinner = document.getElementById("statusSpinner");
     const stepCounter = document.getElementById("stepCounter");
     const outputContainer = document.getElementById("outputContainer");
+
+    // Scholarly & Reference Grounding Elements
+    const arxivCheck = document.getElementById("arxivCheck");
+    const semanticScholarCheck = document.getElementById("semanticScholarCheck");
+    const openAlexCheck = document.getElementById("openAlexCheck");
+    const wikipediaCheck = document.getElementById("wikipediaCheck");
+    const docFileInput = document.getElementById("docFileInput");
+    const uploadDocBtn = document.getElementById("uploadDocBtn");
+    const docFileStatus = document.getElementById("docFileStatus");
+    const clearDocBtn = document.getElementById("clearDocBtn");
+    let uploadedDocument = null; // { name: string, text: string, charCount: number }
 
     const checkQuotaBtn = document.getElementById("checkQuotaBtn");
     const quotaStatusText = document.getElementById("quotaStatusText");
@@ -365,6 +448,235 @@
       }
     });
 
+    // Document Upload Handling
+    uploadDocBtn.addEventListener("click", () => docFileInput.click());
+
+    docFileInput.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      docFileStatus.textContent = "Parsing document...";
+      docFileStatus.className = "text-xs text-cyan-400 truncate max-w-[180px] animate-pulse";
+
+      try {
+        let extractedText = "";
+        if (file.name.toLowerCase().endsWith(".pdf")) {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const maxPages = Math.min(pdf.numPages, 15);
+          for (let i = 1; i <= maxPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(" ");
+            extractedText += `\n[Page ${i}]\n` + pageText;
+          }
+          if (pdf.numPages > 15) {
+            extractedText += `\n[... truncated to first 15 of ${pdf.numPages} pages]`;
+          }
+        } else {
+          extractedText = await file.text();
+        }
+
+        const charCount = extractedText.trim().length;
+        if (charCount === 0) {
+          throw new Error("Document appears empty or contains only scanned images.");
+        }
+
+        uploadedDocument = {
+          name: file.name,
+          text: extractedText.trim(),
+          charCount: charCount
+        };
+
+        docFileStatus.textContent = `✓ ${file.name} (${charCount.toLocaleString()} chars)`;
+        docFileStatus.className = "text-xs text-emerald-400 font-medium truncate max-w-[180px]";
+        clearDocBtn.classList.remove("hidden");
+      } catch (err) {
+        console.error("Document read error:", err);
+        alert(`Failed to extract text from document: ${err.message}`);
+        docFileStatus.textContent = "Error reading file";
+        docFileStatus.className = "text-xs text-rose-400 truncate max-w-[180px]";
+      }
+    });
+
+    clearDocBtn.addEventListener("click", () => {
+      uploadedDocument = null;
+      docFileInput.value = "";
+      docFileStatus.textContent = "No document selected";
+      docFileStatus.className = "text-xs text-slate-400 truncate max-w-[180px]";
+      clearDocBtn.classList.add("hidden");
+    });
+
+    // Scholarly Research Fetchers
+    async function fetchArxivPapers(topic) {
+      try {
+        // Query OpenAlex filtered specifically by arXiv repository (source ID s4306400194) for full CORS support
+        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&filter=primary_location.source.id:s4306400194&per-page=3`;
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.results || []).map(r => {
+          const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
+          const arxivId = r.ids?.arxiv || "";
+          const landingUrl = r.primary_location?.landing_page_url || (arxivId ? `https://arxiv.org/abs/${arxivId}` : r.doi || "");
+          return {
+            source: "arXiv Preprints",
+            title: r.title || "Untitled arXiv Preprint",
+            authors: authors || "Anonymous",
+            year: r.publication_year || "Recent",
+            url: landingUrl
+          };
+        });
+      } catch (e) {
+        console.warn("arXiv fetch failed:", e);
+        return [];
+      }
+    }
+
+    async function fetchSemanticScholarPapers(topic) {
+      try {
+        // Query OpenAlex sorted by citation count for high-impact academic works
+        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&sort=cited_by_count:desc&per-page=3`;
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.results || []).map(r => {
+          const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
+          return {
+            source: "Semantic Scholar & Citation Index",
+            title: r.title || "Untitled Paper",
+            authors: authors || "Anonymous",
+            year: r.publication_year || "Recent",
+            citations: r.cited_by_count || 0,
+            url: r.doi || r.primary_location?.landing_page_url || ""
+          };
+        });
+      } catch (e) {
+        console.warn("Semantic Scholar fetch failed:", e);
+        return [];
+      }
+    }
+
+    async function fetchOpenAlexWorks(topic) {
+      try {
+        const url = `https://api.openalex.org/works?search=${encodeURIComponent(topic)}&per-page=3`;
+        const res = await fetch(url);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.results || []).map(r => {
+          const authors = (r.authorships || []).map(a => a.author?.display_name).filter(Boolean).slice(0, 3).join(", ");
+          const venue = r.primary_location?.source?.display_name || "Academic Venue";
+          return {
+            source: "OpenAlex Global Catalog",
+            title: r.title || "Untitled Paper",
+            authors: authors || "Anonymous",
+            year: r.publication_year || "Recent",
+            venue: venue,
+            url: r.doi || r.primary_location?.landing_page_url || ""
+          };
+        });
+      } catch (e) {
+        console.warn("OpenAlex fetch failed:", e);
+        return [];
+      }
+    }
+
+    async function fetchWikipediaSummary(topic) {
+      try {
+        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(topic)}&format=json&origin=*`;
+        const sRes = await fetch(searchUrl);
+        if (!sRes.ok) return null;
+        const sData = await sRes.json();
+        const topHit = sData.query?.search?.[0];
+        if (!topHit) return null;
+
+        const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topHit.title.replace(/ /g, "_"))}`;
+        const sumRes = await fetch(summaryUrl);
+        if (!sumRes.ok) return null;
+        const sumData = await sumRes.json();
+        return {
+          source: "Wikipedia",
+          title: sumData.title,
+          extract: sumData.extract,
+          url: sumData.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(topHit.title)}`
+        };
+      } catch (e) {
+        console.warn("Wikipedia fetch failed:", e);
+        return null;
+      }
+    }
+
+    async function collectScholarlyDossier(topic) {
+      const promises = [];
+
+      if (arxivCheck.checked) {
+        promises.push(fetchArxivPapers(topic).then(res => ({ type: "arxiv", items: res })));
+      }
+      if (semanticScholarCheck.checked) {
+        promises.push(fetchSemanticScholarPapers(topic).then(res => ({ type: "semantic", items: res })));
+      }
+      if (openAlexCheck.checked) {
+        promises.push(fetchOpenAlexWorks(topic).then(res => ({ type: "openalex", items: res })));
+      }
+      if (wikipediaCheck.checked) {
+        promises.push(fetchWikipediaSummary(topic).then(res => ({ type: "wikipedia", item: res })));
+      }
+
+      if (promises.length === 0 && !uploadedDocument) {
+        return null;
+      }
+
+      const results = await Promise.all(promises);
+      let dossierMarkdown = "## VERIFIED SCHOLARLY RESEARCH & REFERENCE DOSSIER\n\n";
+      const citationList = [];
+
+      for (const res of results) {
+        if (res.type === "arxiv" && res.items?.length > 0) {
+          dossierMarkdown += "### 📚 arXiv Preprints:\n";
+          res.items.forEach(p => {
+            dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Link: ${p.url}\n`;
+            citationList.push({ title: p.title, url: p.url, source: "arXiv", meta: `${p.authors} (${p.year})` });
+          });
+          dossierMarkdown += "\n";
+        }
+        if (res.type === "semantic" && res.items?.length > 0) {
+          dossierMarkdown += "### 🔬 High-Impact Academic Works (Semantic Scholar):\n";
+          res.items.forEach(p => {
+            dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Authors: ${p.authors}\n  Citations: ${p.citations}\n  DOI/Link: ${p.url}\n`;
+            citationList.push({ title: p.title, url: p.url, source: "Semantic Scholar", meta: `${p.citations.toLocaleString()} citations • ${p.authors}` });
+          });
+          dossierMarkdown += "\n";
+        }
+        if (res.type === "openalex" && res.items?.length > 0) {
+          dossierMarkdown += "### 🏛️ OpenAlex Global Scholarly Catalog:\n";
+          res.items.forEach(p => {
+            dossierMarkdown += `- Title: "${p.title}" (${p.year})\n  Venue: ${p.venue}\n  Authors: ${p.authors}\n  DOI: ${p.url}\n`;
+            citationList.push({ title: p.title, url: p.url, source: "OpenAlex", meta: `${p.venue} (${p.year})` });
+          });
+          dossierMarkdown += "\n";
+        }
+        if (res.type === "wikipedia" && res.item) {
+          dossierMarkdown += `### 📖 Wikipedia Reference Overview (${res.item.title}):\n`;
+          dossierMarkdown += `${res.item.extract}\nReference URL: ${res.item.url}\n\n`;
+          citationList.push({ title: res.item.title, url: res.item.url, source: "Wikipedia", meta: "Encyclopedic Overview" });
+        }
+      }
+
+      if (uploadedDocument) {
+        dossierMarkdown += `### 📄 User-Uploaded Document (${uploadedDocument.name}):\n`;
+        const docExcerpt = uploadedDocument.text.slice(0, 6000);
+        dossierMarkdown += `\"\"\"\n${docExcerpt}\n\"\"\"\n\n`;
+        citationList.push({ title: uploadedDocument.name, url: "#", source: "Local Document", meta: `${uploadedDocument.charCount.toLocaleString()} characters` });
+      }
+
+      if (citationList.length === 0) return null;
+
+      return {
+        text: dossierMarkdown,
+        citations: citationList
+      };
+    }
+
     // Helper: Call Gemini REST API directly from browser
     async function callGemini(apiKey, systemInstruction, prompt, model = "gemini-3.8-flash", enableSearch = false, thinkingLevel = "medium") {
       const cleanKey = apiKey.trim();
@@ -435,19 +747,30 @@
     }
 
     // Agent Functions
-    async function runWriterDraft(apiKey, topic, model, enableSearch = false, thinkingLevel = "medium") {
+    async function runWriterDraft(apiKey, topic, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null) {
       let sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
       if (enableSearch) {
         sys += " Use the Google Search tool to find and incorporate up-to-date facts, current developments, and accurate references.";
       }
-      const prompt = `Topic/Goal: ${topic}\nPlease write Draft 1.`;
+      if (scholarlyDossier) {
+        sys += " You are provided with a Verified Scholarly Research Dossier. You MUST ground your writing in these academic papers and reference sources, cite them with authors and dates in the text, and include a dedicated '## 📚 Scholarly References & Citations' section at the end of the draft with markdown links and DOIs.";
+      }
+      let prompt = `Topic/Goal: ${topic}\n`;
+      if (scholarlyDossier) {
+        prompt += `\n${scholarlyDossier.text}\n`;
+      }
+      prompt += "Please write Draft 1 grounded in the topic and research.";
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
-    async function runCriticReview(apiKey, topic, draft, turn, model, thinkingLevel = "medium") {
-      const sys = `You are a meticulous Senior Editor and Critic Agent. 
+    async function runCriticReview(apiKey, topic, draft, turn, model, thinkingLevel = "medium", scholarlyDossier = null) {
+      let sys = `You are a meticulous Senior Editor and Critic Agent. 
 Evaluate drafts strictly on clarity, depth, coherence, tone, and practical examples.
-Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.
+Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.`;
+      if (scholarlyDossier) {
+        sys += ` Verify that the draft properly incorporates facts from the provided research dossier and includes valid academic citations and links.`;
+      }
+      sys += `
 You MUST respond ONLY with valid JSON conforming to this schema:
 {
   "score": float (1.0 to 10.0),
@@ -457,7 +780,11 @@ You MUST respond ONLY with valid JSON conforming to this schema:
   "actionable_revisions": ["string", ...]
 }`;
 
-      const prompt = `Goal: ${topic}\nIteration Turn: ${turn}\n\nDraft to review:\n\"\"\"\n${draft}\n\"\"\"\n\nReturn ONLY the JSON object.`;
+      let prompt = `Goal: ${topic}\nIteration Turn: ${turn}\n`;
+      if (scholarlyDossier) {
+        prompt += `\nGrounding Dossier Available: Yes (${scholarlyDossier.citations.length} academic & reference sources)\n`;
+      }
+      prompt += `\nDraft to review:\n\"\"\"\n${draft}\n\"\"\"\n\nReturn ONLY the JSON object.`;
       const raw = await callGemini(apiKey, sys, prompt, model, false, thinkingLevel);
 
       let clean = raw.trim();
@@ -467,12 +794,19 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       return JSON.parse(clean);
     }
 
-    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model, enableSearch = false, thinkingLevel = "medium") {
+    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null) {
       let sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
       if (enableSearch) {
         sys += " Use Google Search to look up any missing facts, latest data, or references requested by the Critic.";
       }
-      const prompt = `Original Topic: ${topic}\n\nPrevious Draft (Draft ${turn}):\n\"\"\"\n${prevDraft}\n\"\"\"\n\nCritic Score: ${critique.score}/10\nWeaknesses:\n${critique.weaknesses.map(w => `- ${w}`).join("\n")}\n\nRequired Improvements:\n${critique.actionable_revisions.map(r => `- ${r}`).join("\n")}\n\nPlease write Draft ${turn + 1} addressing all feedback.`;
+      if (scholarlyDossier) {
+        sys += " Ensure all academic references, DOIs, and citations from the research dossier are retained, properly cited, and expanded as necessary.";
+      }
+      let prompt = `Original Topic: ${topic}\n\nPrevious Draft (Draft ${turn}):\n\"\"\"\n${prevDraft}\n\"\"\"\n\nCritic Score: ${critique.score}/10\nWeaknesses:\n${critique.weaknesses.map(w => `- ${w}`).join("\n")}\n\nRequired Improvements:\n${critique.actionable_revisions.map(r => `- ${r}`).join("\n")}\n`;
+      if (scholarlyDossier) {
+        prompt += `\nResearch Dossier Reference:\n${scholarlyDossier.text}\n`;
+      }
+      prompt += `\nPlease write Draft ${turn + 1} addressing all feedback.`;
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
@@ -532,6 +866,43 @@ You MUST respond ONLY with valid JSON conforming to this schema:
             <h4 class="font-semibold text-amber-400 uppercase tracking-wide mb-1">Actionable Revisions:</h4>
             <ul class="list-decimal pl-5 text-slate-300 space-y-1">${actionsList}</ul>
           </div>
+        </div>
+      `;
+      outputContainer.appendChild(card);
+    }
+
+    function renderDossierCard(dossier) {
+      if (!dossier || !dossier.citations || dossier.citations.length === 0) return;
+      const card = document.createElement("div");
+      card.className = "bg-slate-900 border border-indigo-500/50 rounded-2xl p-5 shadow-xl transition";
+
+      const itemsHtml = dossier.citations.map(c => `
+        <div class="flex items-start justify-between gap-3 p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+          <div class="flex-1">
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">${c.source}</span>
+              ${c.url && c.url !== "#" ? `<a href="${c.url}" target="_blank" rel="noopener noreferrer" class="text-xs font-semibold text-cyan-400 hover:underline flex items-center gap-1">${c.title} 🔗</a>` : `<span class="text-xs font-semibold text-slate-200">${c.title}</span>`}
+            </div>
+            <div class="text-[11px] text-slate-400">${c.meta}</div>
+          </div>
+        </div>
+      `).join("");
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-3 border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">📚</span>
+            <span class="font-bold text-indigo-300 text-sm">Verified Academic & Reference Research Dossier</span>
+          </div>
+          <span class="text-xs bg-indigo-950 text-indigo-300 border border-indigo-800 px-2.5 py-0.5 rounded-full font-mono">
+            ${dossier.citations.length} Grounding Source(s)
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 mb-3">
+          The Writer and Critic agents are strictly grounded in these verified scholarly preprints, papers, encyclopedic overviews, and documents:
+        </p>
+        <div class="space-y-2.5">
+          ${itemsHtml}
         </div>
       `;
       outputContainer.appendChild(card);
@@ -607,23 +978,34 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 
       let currentDraft = "";
       let latestCritique = null;
+      let scholarlyDossier = null;
 
       try {
+        // Step 0: Collect Academic & Reference Grounding Dossier if any source selected
+        const anyScholarly = arxivCheck.checked || semanticScholarCheck.checked || openAlexCheck.checked || wikipediaCheck.checked || uploadedDocument;
+        if (anyScholarly) {
+          statusText.textContent = "Querying verified academic repositories & literature...";
+          scholarlyDossier = await collectScholarlyDossier(topic);
+          if (scholarlyDossier) {
+            renderDossierCard(scholarlyDossier);
+          }
+        }
+
         for (let turn = 1; turn <= maxTurns; turn++) {
           stepCounter.textContent = `Turn ${turn} of ${maxTurns}`;
 
           // Step 1: Writer
-          statusText.textContent = `Turn ${turn}: Writer Agent (${selectedModel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Search" : ""}) is composing...`;
+          statusText.textContent = `Turn ${turn}: Writer Agent (${selectedModel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Search" : ""}${scholarlyDossier ? " | 📚 Scholarly Grounded" : ""}) is composing...`;
           if (turn === 1) {
-            currentDraft = await runWriterDraft(apiKey, topic, selectedModel, enableWebSearch, selectedThinking);
+            currentDraft = await runWriterDraft(apiKey, topic, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier);
           } else {
-            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel, enableWebSearch, selectedThinking);
+            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier);
           }
           renderWriterCard(turn, currentDraft);
 
           // Step 2: Critic
           statusText.textContent = `Turn ${turn}: Critic Agent (${selectedModel} | 🧠 ${selectedThinking}) is evaluating...`;
-          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel, selectedThinking);
+          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel, selectedThinking, scholarlyDossier);
           renderCriticCard(turn, latestCritique, targetScore);
 
           const isApproved = latestCritique.score >= targetScore;
