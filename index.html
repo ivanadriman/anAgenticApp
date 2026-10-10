@@ -297,12 +297,24 @@
       color: var(--text-main);
     }
 
-    .markdown-body blockquote {
-      border-left: 3px solid var(--accent-color);
-      padding-left: 1rem;
-      color: var(--text-muted);
+    .markdown-body blockquote,
+    .markdown-body .verbatim-quote-block {
+      border-left: 3.5px solid var(--quote-border);
+      background: var(--quote-bg);
+      padding: 0.95rem 1.15rem 0.95rem 1.25rem;
+      border-radius: 0 0.75rem 0.75rem 0;
+      color: var(--text-main);
+      font-style: normal;
+      margin: 1.25rem 0;
+      box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.15);
+    }
+
+    .markdown-body blockquote p,
+    .markdown-body .verbatim-quote-block .quote-text {
       font-style: italic;
-      margin-bottom: 1.1rem;
+      line-height: 1.74;
+      color: var(--text-main);
+      margin: 0;
     }
 
     .markdown-body a {
@@ -317,17 +329,15 @@
       color: var(--accent-hover);
     }
 
-    /* Verbatim quote evidence pill */
+    /* Verbatim quote evidence inline (flows naturally with surrounding text) */
     .verbatim-quote {
+      font-style: italic;
+      color: var(--text-main);
       background: var(--quote-bg);
-      border-left: 3px solid var(--quote-border);
-      padding: 0.18rem 0.5rem;
-      border-radius: 0.3rem;
-      display: inline;
-      box-decoration-break: clone;
-      -webkit-box-decoration-break: clone;
+      padding: 0.1rem 0.35rem;
+      border-radius: 0.25rem;
       transition: all 0.2s ease;
-      font-style: normal;
+      display: inline;
     }
 
     .verbatim-quote:hover {
@@ -1397,10 +1407,31 @@
 
         let bodyPart = enriched.substring(0, refHeaderMatch.index);
 
-        // Highlight verbatim evidence quotes: wrap "..." [n] or “...” [n] in .verbatim-quote
-        bodyPart = bodyPart.replace(/(["“])([^"”\n\r]{8,})(["”])\s*(\[(\d+)\])/g, (m, openQ, quoteText, closeQ, citeBracket, citeNum) => {
-          return `<span class="verbatim-quote">&ldquo;${quoteText}&rdquo;</span> [${citeNum}]`;
-        });
+        const formatQuotesInText = (text) => {
+          // 1. Standalone block quotes (own paragraph or preceded by '>')
+          text = text.replace(/(^|\n+)[ \t]*(?:>\s*)?(["“])((?:[^"”\r\n]|\n(?!\n)){8,})(["”])\s*(\[(\d+)\])[ \t]*(?=\n+|$)/g, 
+            (m, leadNl, openQ, quoteText, closeQ, citeBracket, citeNum) => {
+              return `${leadNl}<blockquote class="verbatim-quote-block"><p class="quote-text">&ldquo;${quoteText.trim()}&rdquo; [${citeNum}]</p></blockquote>`;
+            }
+          );
+
+          // 2. Also transform quotes that are long (> 60 chars) and introduced after a colon on the same line
+          text = text.replace(/(:[ \t]*)(["“])((?:[^"”\r\n]|\n(?!\n)){60,})(["”])\s*(\[(\d+)\])[ \t]*(?=\n+|$)/g,
+            (m, colonLead, openQ, quoteText, closeQ, citeBracket, citeNum) => {
+              return `:\n\n<blockquote class="verbatim-quote-block"><p class="quote-text">&ldquo;${quoteText.trim()}&rdquo; [${citeNum}]</p></blockquote>`;
+            }
+          );
+
+          // 3. Transform inline quotes embedded within a sentence
+          text = text.replace(/(["“])([^"”\r\n]{8,})(["”])\s*(\[(\d+)\])/g, 
+            (m, openQ, quoteText, closeQ, citeBracket, citeNum) => {
+              return `<span class="verbatim-quote">&ldquo;${quoteText}&rdquo;</span> [${citeNum}]`;
+            }
+          );
+          return text;
+        };
+
+        bodyPart = formatQuotesInText(bodyPart);
 
         // Linkify in-text citations [1], [2] with rich data-citation metadata
         bodyPart = linkifyCitations(bodyPart);
@@ -1408,9 +1439,25 @@
         enriched = bodyPart + header + "\n" + refBody;
       } else {
         // Fallback if no references section header is recognized
-        enriched = enriched.replace(/(["“])([^"”\n\r]{8,})(["”])\s*(\[(\d+)\])/g, (m, openQ, quoteText, closeQ, citeBracket, citeNum) => {
-          return `<span class="verbatim-quote">&ldquo;${quoteText}&rdquo;</span> [${citeNum}]`;
-        });
+        const formatQuotesInText = (text) => {
+          text = text.replace(/(^|\n+)[ \t]*(?:>\s*)?(["“])((?:[^"”\r\n]|\n(?!\n)){8,})(["”])\s*(\[(\d+)\])[ \t]*(?=\n+|$)/g, 
+            (m, leadNl, openQ, quoteText, closeQ, citeBracket, citeNum) => {
+              return `${leadNl}<blockquote class="verbatim-quote-block"><p class="quote-text">&ldquo;${quoteText.trim()}&rdquo; [${citeNum}]</p></blockquote>`;
+            }
+          );
+          text = text.replace(/(:[ \t]*)(["“])((?:[^"”\r\n]|\n(?!\n)){60,})(["”])\s*(\[(\d+)\])[ \t]*(?=\n+|$)/g,
+            (m, colonLead, openQ, quoteText, closeQ, citeBracket, citeNum) => {
+              return `:\n\n<blockquote class="verbatim-quote-block"><p class="quote-text">&ldquo;${quoteText.trim()}&rdquo; [${citeNum}]</p></blockquote>`;
+            }
+          );
+          text = text.replace(/(["“])([^"”\r\n]{8,})(["”])\s*(\[(\d+)\])/g, 
+            (m, openQ, quoteText, closeQ, citeBracket, citeNum) => {
+              return `<span class="verbatim-quote">&ldquo;${quoteText}&rdquo;</span> [${citeNum}]`;
+            }
+          );
+          return text;
+        };
+        enriched = formatQuotesInText(enriched);
         enriched = linkifyCitations(enriched);
       }
 
