@@ -101,7 +101,7 @@
         >Explain how Agentic AI architectures work to software engineers with a concrete example</textarea>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div>
           <label for="modelSelect" class="block text-xs font-medium text-slate-300 mb-1">
             Gemini Model:
@@ -111,6 +111,16 @@
             <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Ultra Fast)</option>
             <option value="gemini-flash-latest">gemini-flash-latest</option>
             <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Deep Reasoning)</option>
+          </select>
+        </div>
+        <div>
+          <label for="thinkingLevelSelect" class="block text-xs font-medium text-slate-300 mb-1">
+            🧠 Thinking Mode:
+          </label>
+          <select id="thinkingLevelSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500">
+            <option value="low">Low (Fast Response)</option>
+            <option value="medium" selected>Medium (Balanced Reasoning)</option>
+            <option value="high">High (Deep Strategic Reasoning)</option>
           </select>
         </div>
         <div>
@@ -125,7 +135,7 @@
         </div>
         <div>
           <label for="targetScoreInput" class="block text-xs font-medium text-slate-300 mb-1">
-            Approval Target Score (out of 10):
+            Approval Target Score (1-10):
           </label>
           <input 
             id="targetScoreInput" 
@@ -136,25 +146,25 @@
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500"
           />
         </div>
-        <div class="flex flex-col gap-2 mb-2 sm:mb-0">
+        <div class="flex flex-col gap-2 justify-center">
           <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
             <input type="checkbox" id="forceAllTurnsCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
-            <span>Force all turns (don't stop early)</span>
+            <span>Force all turns</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
             <input type="checkbox" id="webSearchCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
-            <span>🌐 Live Google Web Search Grounding</span>
+            <span>🌐 Google Web Search</span>
           </label>
         </div>
-        <div class="flex items-end">
-          <button 
-            id="startPipelineBtn" 
-            class="w-full py-2.5 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition flex items-center justify-center gap-2"
-          >
-            <span id="startBtnIcon">🚀</span>
-            <span id="startBtnText">Run Agentic Pipeline</span>
-          </button>
-        </div>
+      </div>
+      <div class="pt-2">
+        <button 
+          id="startPipelineBtn" 
+          class="w-full py-3 px-6 rounded-xl font-semibold text-sm bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-lg shadow-cyan-500/25 active:scale-[0.98] transition flex items-center justify-center gap-2"
+        >
+          <span id="startBtnIcon">🚀</span>
+          <span id="startBtnText">Run Agentic Pipeline</span>
+        </button>
       </div>
     </div>
 
@@ -229,7 +239,7 @@
     });
 
     // Helper: Call Gemini REST API directly from browser
-    async function callGemini(apiKey, systemInstruction, prompt, model = "gemini-3.8-flash", enableSearch = false) {
+    async function callGemini(apiKey, systemInstruction, prompt, model = "gemini-3.8-flash", enableSearch = false, thinkingLevel = "medium") {
       const cleanKey = apiKey.trim();
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
 
@@ -245,6 +255,9 @@
         ],
         generationConfig: {
           temperature: 0.7,
+          thinkingConfig: {
+            thinkingLevel: thinkingLevel
+          }
         }
       };
 
@@ -295,16 +308,16 @@
     }
 
     // Agent Functions
-    async function runWriterDraft(apiKey, topic, model, enableSearch = false) {
+    async function runWriterDraft(apiKey, topic, model, enableSearch = false, thinkingLevel = "medium") {
       let sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
       if (enableSearch) {
         sys += " Use the Google Search tool to find and incorporate up-to-date facts, current developments, and accurate references.";
       }
       const prompt = `Topic/Goal: ${topic}\nPlease write Draft 1.`;
-      return await callGemini(apiKey, sys, prompt, model, enableSearch);
+      return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
-    async function runCriticReview(apiKey, topic, draft, turn, model) {
+    async function runCriticReview(apiKey, topic, draft, turn, model, thinkingLevel = "medium") {
       const sys = `You are a meticulous Senior Editor and Critic Agent. 
 Evaluate drafts strictly on clarity, depth, coherence, tone, and practical examples.
 Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.
@@ -318,7 +331,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 }`;
 
       const prompt = `Goal: ${topic}\nIteration Turn: ${turn}\n\nDraft to review:\n\"\"\"\n${draft}\n\"\"\"\n\nReturn ONLY the JSON object.`;
-      const raw = await callGemini(apiKey, sys, prompt, model, false);
+      const raw = await callGemini(apiKey, sys, prompt, model, false, thinkingLevel);
 
       let clean = raw.trim();
       if (clean.startsWith("```")) {
@@ -327,13 +340,13 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       return JSON.parse(clean);
     }
 
-    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model, enableSearch = false) {
+    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model, enableSearch = false, thinkingLevel = "medium") {
       let sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
       if (enableSearch) {
         sys += " Use Google Search to look up any missing facts, latest data, or references requested by the Critic.";
       }
       const prompt = `Original Topic: ${topic}\n\nPrevious Draft (Draft ${turn}):\n\"\"\"\n${prevDraft}\n\"\"\"\n\nCritic Score: ${critique.score}/10\nWeaknesses:\n${critique.weaknesses.map(w => `- ${w}`).join("\n")}\n\nRequired Improvements:\n${critique.actionable_revisions.map(r => `- ${r}`).join("\n")}\n\nPlease write Draft ${turn + 1} addressing all feedback.`;
-      return await callGemini(apiKey, sys, prompt, model, enableSearch);
+      return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
     // UI Render Helpers
@@ -447,6 +460,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       }
 
       const selectedModel = modelSelect.value || "gemini-3.8-flash";
+      const selectedThinking = document.getElementById("thinkingLevelSelect")?.value || "medium";
       const maxTurns = parseInt(maxTurnsSelect.value, 10) || 3;
       
       // Parse decimal safely (supporting European "8,5" and standard "8.5")
@@ -472,17 +486,17 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           stepCounter.textContent = `Turn ${turn} of ${maxTurns}`;
 
           // Step 1: Writer
-          statusText.textContent = `Turn ${turn}: Writer Agent (${selectedModel}${enableWebSearch ? " + 🌐 Web Search" : ""}) is composing...`;
+          statusText.textContent = `Turn ${turn}: Writer Agent (${selectedModel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Search" : ""}) is composing...`;
           if (turn === 1) {
-            currentDraft = await runWriterDraft(apiKey, topic, selectedModel, enableWebSearch);
+            currentDraft = await runWriterDraft(apiKey, topic, selectedModel, enableWebSearch, selectedThinking);
           } else {
-            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel, enableWebSearch);
+            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel, enableWebSearch, selectedThinking);
           }
           renderWriterCard(turn, currentDraft);
 
           // Step 2: Critic
-          statusText.textContent = `Turn ${turn}: Critic Agent (${selectedModel}) is evaluating...`;
-          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel);
+          statusText.textContent = `Turn ${turn}: Critic Agent (${selectedModel} | 🧠 ${selectedThinking}) is evaluating...`;
+          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel, selectedThinking);
           renderCriticCard(turn, latestCritique, targetScore);
 
           const isApproved = latestCritique.score >= targetScore;
