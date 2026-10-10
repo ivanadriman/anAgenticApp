@@ -58,9 +58,17 @@ def run_browser_tests():
         assert btn_en.count() > 0, "Missing #langEnBtn"
         assert btn_id.count() > 0, "Missing #langIdBtn"
 
+        powered_badge = page.locator("#headerPoweredBadge")
+        assert powered_badge.count() > 0, "Missing #headerPoweredBadge"
+
         initial_btn_label = start_btn_text.text_content().strip()
         print(f"  • Initial Start Button Text (EN): '{initial_btn_label}'", flush=True)
         assert "Run Agentic Pipeline" in initial_btn_label
+
+        initial_powered = powered_badge.text_content().strip()
+        print(f"  • Initial Powered By Badge (EN): '{initial_powered}'", flush=True)
+        assert "Powered by:" in initial_powered
+        assert "Gemini 3.5 Flash Lite" in initial_powered
 
         # Switch to Indonesian
         print("  • Clicking Indonesian Switch [🇮🇩 ID]...", flush=True)
@@ -70,6 +78,11 @@ def run_browser_tests():
         id_btn_label = start_btn_text.text_content().strip()
         print(f"  • Indonesian Start Button Text: '{id_btn_label}'", flush=True)
         assert "Jalankan Pipeline Agen" in id_btn_label
+
+        id_powered = powered_badge.text_content().strip()
+        print(f"  • Indonesian Powered By Badge: '{id_powered}'", flush=True)
+        assert "Didukung oleh:" in id_powered
+        assert "Gemini 3.5 Flash Lite" in id_powered
 
         # Check other Indonesian labels
         topic_label = page.locator("label[for='topicInput']").text_content().strip()
@@ -85,6 +98,8 @@ def run_browser_tests():
         en_btn_label = start_btn_text.text_content().strip()
         print(f"  • Reverted Start Button Text: '{en_btn_label}'", flush=True)
         assert "Run Agentic Pipeline" in en_btn_label
+        en_reverted_powered = powered_badge.text_content().strip()
+        assert "Powered by:" in en_reverted_powered
         page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "16_lang_en_switched.png"))
 
         # Switch back to Indonesian for the remainder of the test
@@ -120,7 +135,27 @@ def run_browser_tests():
         if search_box.is_checked():
             search_box.uncheck()
 
+        # Test dynamic Powered By update on model selection changes
+        print("  • Testing dynamic model badge update on #modelSelect changes...", flush=True)
+        page.select_option("#modelSelect", "gemini-3.8-flash")
+        time.sleep(0.3)
+        badge_38 = powered_badge.text_content().strip()
+        print(f"  • Badge after selecting gemini-3.8-flash: '{badge_38}'", flush=True)
+        assert "Gemini 3.8 Flash" in badge_38
+
+        page.select_option("#modelSelect", "gemini-3.1-pro-preview")
+        time.sleep(0.3)
+        badge_pro = powered_badge.text_content().strip()
+        print(f"  • Badge after selecting gemini-3.1-pro-preview: '{badge_pro}'", flush=True)
+        assert "Gemini 3.1 Pro Preview" in badge_pro
+
+        # Re-select gemini-3.5-flash-lite for active test execution
         page.select_option("#modelSelect", "gemini-3.5-flash-lite")
+        time.sleep(0.3)
+        badge_lite = powered_badge.text_content().strip()
+        print(f"  • Badge after selecting gemini-3.5-flash-lite: '{badge_lite}'", flush=True)
+        assert "Gemini 3.5 Flash Lite" in badge_lite
+
         page.select_option("#thinkingLevelSelect", "medium")
         page.select_option("#maxTurnsSelect", "1")
         page.locator("#targetScoreInput").fill("8.5")

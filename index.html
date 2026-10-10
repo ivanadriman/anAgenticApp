@@ -99,7 +99,7 @@
 
         <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/60 w-fit">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span data-i18n-html="headerPowered">Powered by: <strong>Gemini 3.8 Flash</strong></span>
+          <span id="headerPoweredBadge">Powered by: <strong>Gemini 3.5 Flash Lite</strong></span>
         </div>
       </div>
     </div>
@@ -455,6 +455,35 @@
       }
     };
 
+    const MODEL_DISPLAY_NAMES = {
+      "gemini-3.5-flash-lite": "Gemini 3.5 Flash Lite",
+      "gemini-3.5-flash": "Gemini 3.5 Flash",
+      "gemini-3-flash-preview": "Gemini 3 Flash Preview",
+      "gemini-3.8-flash": "Gemini 3.8 Flash",
+      "gemini-flash-latest": "Gemini Flash Latest",
+      "gemini-3.1-pro-preview": "Gemini 3.1 Pro Preview"
+    };
+
+    function getModelDisplayName(modelId) {
+      if (!modelId) return "Gemini";
+      if (MODEL_DISPLAY_NAMES[modelId]) return MODEL_DISPLAY_NAMES[modelId];
+      return modelId
+        .replace(/^models\//, "")
+        .split("-")
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+    }
+
+    function updateHeaderPoweredBadge(modelId = null) {
+      const selectEl = document.getElementById("modelSelect");
+      const selectedId = modelId || (selectEl ? selectEl.value : "gemini-3.5-flash-lite");
+      const modelName = getModelDisplayName(selectedId);
+      const badgeEl = document.getElementById("headerPoweredBadge");
+      if (!badgeEl) return;
+      const prefix = currentLang === "id" ? "Didukung oleh:" : "Powered by:";
+      badgeEl.innerHTML = `${prefix} <strong>${modelName}</strong>`;
+    }
+
     function applyLanguage(lang) {
       currentLang = lang;
       localStorage.setItem(LANG_STORAGE_KEY, lang);
@@ -504,6 +533,8 @@
       if (quotaStatusText.textContent === "Ready" || quotaStatusText.textContent === "Siap") {
         quotaStatusText.textContent = t.quotaReady;
       }
+
+      updateHeaderPoweredBadge();
     }
 
     langEnBtn.addEventListener("click", () => applyLanguage("en"));
@@ -523,6 +554,10 @@
     const statusSpinner = document.getElementById("statusSpinner");
     const stepCounter = document.getElementById("stepCounter");
     const outputContainer = document.getElementById("outputContainer");
+
+    modelSelect.addEventListener("change", () => {
+      updateHeaderPoweredBadge();
+    });
 
     // Configure Marked.js with clickable links and safe target="_blank"
     marked.use({
@@ -690,6 +725,7 @@
         });
         modelSelect.appendChild(exhaustedGroup);
       }
+      updateHeaderPoweredBadge();
 
       // Also probe Google Search tool availability on first available model
       const searchBadge = document.getElementById("searchQuotaBadge");
@@ -1954,6 +1990,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       }
 
       const selectedModel = modelSelect.value || "gemini-3.8-flash";
+      updateHeaderPoweredBadge(selectedModel);
       const selectedThinking = document.getElementById("thinkingLevelSelect")?.value || "medium";
       const maxTurns = parseInt(maxTurnsSelect.value, 10) || 3;
       
