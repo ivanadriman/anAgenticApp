@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="slate" data-font-family="sans" data-font-size="normal">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0F19" id="metaThemeColor" />
   <title>Gemini Agentic Studio - Writer & Critic Pipeline</title>
   <!-- Tailwind CSS CDN for modern responsive UI -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -12,65 +13,427 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
   <style>
-    .markdown-body h1 { font-size: 1.5rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; color: #f8fafc; }
-    .markdown-body h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; color: #38bdf8; }
-    .markdown-body h3 { font-size: 1.1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.25rem; color: #94a3b8; }
-    .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
-    .markdown-body ul, .markdown-body ol { margin-left: 1.5rem; margin-bottom: 0.75rem; list-style-type: disc; }
-    .markdown-body ol { list-style-type: decimal; }
-    .markdown-body li { margin-bottom: 0.25rem; }
-    .markdown-body hr { border-color: #334155; margin: 1.5rem 0; }
-    .markdown-body code { background: #1e293b; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.875rem; color: #f472b6; }
-    .markdown-body pre { background: #0f172a; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
-    .markdown-body pre code { background: transparent; padding: 0; color: #e2e8f0; }
-    .markdown-body blockquote { border-left: 3px solid #38bdf8; padding-left: 1rem; color: #94a3b8; font-style: italic; }
+    :root, [data-theme="slate"] {
+      --bg-page: #0b0f19;
+      --bg-card: #111827;
+      --bg-card-secondary: #0f172a;
+      --border-main: #1e293b;
+      --border-secondary: #334155;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --text-heading: #f8fafc;
+      --accent-color: #38bdf8;
+      --accent-hover: #7dd3fc;
+      --accent-bg: rgba(56, 189, 248, 0.12);
+      --quote-bg: rgba(56, 189, 248, 0.08);
+      --quote-border: #38bdf8;
+      --meta-theme: #0b0f19;
+      --code-bg: #1e293b;
+      --code-color: #f472b6;
+    }
+
+    [data-theme="sepia"] {
+      --bg-page: #f8f5ee;
+      --bg-card: #ffffff;
+      --bg-card-secondary: #fdfbf7;
+      --border-main: #e6dfd5;
+      --border-secondary: #d8cebf;
+      --text-main: #2d2825;
+      --text-muted: #6e665e;
+      --text-heading: #1a1614;
+      --accent-color: #b45309;
+      --accent-hover: #92400e;
+      --accent-bg: rgba(180, 83, 9, 0.12);
+      --quote-bg: rgba(180, 83, 9, 0.08);
+      --quote-border: #b45309;
+      --meta-theme: #f8f5ee;
+      --code-bg: #f3ece0;
+      --code-color: #9a3412;
+    }
+
+    [data-theme="light"] {
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-card-secondary: #f1f5f9;
+      --border-main: #e2e8f0;
+      --border-secondary: #cbd5e1;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-heading: #020617;
+      --accent-color: #0284c7;
+      --accent-hover: #0369a1;
+      --accent-bg: rgba(2, 132, 199, 0.12);
+      --quote-bg: rgba(2, 132, 199, 0.08);
+      --quote-border: #0284c7;
+      --meta-theme: #f8fafc;
+      --code-bg: #f1f5f9;
+      --code-color: #0369a1;
+    }
+
+    [data-theme="oled"] {
+      --bg-page: #000000;
+      --bg-card: #09090b;
+      --bg-card-secondary: #000000;
+      --border-main: #27272a;
+      --border-secondary: #3f3f46;
+      --text-main: #d4d4d8;
+      --text-muted: #71717a;
+      --text-heading: #fafafa;
+      --accent-color: #22d3ee;
+      --accent-hover: #67e8f9;
+      --accent-bg: rgba(34, 211, 238, 0.15);
+      --quote-bg: rgba(34, 211, 238, 0.08);
+      --quote-border: #22d3ee;
+      --meta-theme: #000000;
+      --code-bg: #18181b;
+      --code-color: #38bdf8;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Universal Theme Overrides */
+    [data-theme="sepia"] .bg-slate-950,
+    [data-theme="sepia"] .bg-slate-900,
+    [data-theme="sepia"] .bg-slate-900\/80,
+    [data-theme="sepia"] .bg-slate-900\/60,
+    [data-theme="sepia"] header,
+    [data-theme="sepia"] footer {
+      background-color: var(--bg-card) !important;
+      border-color: var(--border-main) !important;
+      color: var(--text-main);
+    }
+    [data-theme="sepia"] input,
+    [data-theme="sepia"] textarea,
+    [data-theme="sepia"] select,
+    [data-theme="sepia"] .bg-slate-950\/70,
+    [data-theme="sepia"] .bg-slate-950\/40 {
+      background-color: var(--bg-card-secondary) !important;
+      border-color: var(--border-main) !important;
+      color: var(--text-main) !important;
+    }
+    [data-theme="sepia"] .text-slate-100,
+    [data-theme="sepia"] .text-slate-200,
+    [data-theme="sepia"] .text-slate-300 {
+      color: var(--text-main) !important;
+    }
+    [data-theme="sepia"] .text-slate-400,
+    [data-theme="sepia"] .text-slate-500 {
+      color: var(--text-muted) !important;
+    }
+
+    [data-theme="light"] .bg-slate-950,
+    [data-theme="light"] .bg-slate-900,
+    [data-theme="light"] .bg-slate-900\/80,
+    [data-theme="light"] .bg-slate-900\/60,
+    [data-theme="light"] header,
+    [data-theme="light"] footer {
+      background-color: var(--bg-card) !important;
+      border-color: var(--border-main) !important;
+      color: var(--text-main);
+    }
+    [data-theme="light"] input,
+    [data-theme="light"] textarea,
+    [data-theme="light"] select,
+    [data-theme="light"] .bg-slate-950\/70,
+    [data-theme="light"] .bg-slate-950\/40 {
+      background-color: var(--bg-card-secondary) !important;
+      border-color: var(--border-main) !important;
+      color: var(--text-main) !important;
+    }
+    [data-theme="light"] .text-slate-100,
+    [data-theme="light"] .text-slate-200,
+    [data-theme="light"] .text-slate-300 {
+      color: var(--text-main) !important;
+    }
+    [data-theme="light"] .text-slate-400,
+    [data-theme="light"] .text-slate-500 {
+      color: var(--text-muted) !important;
+    }
+
+    [data-theme="oled"] .bg-slate-950,
+    [data-theme="oled"] .bg-slate-900,
+    [data-theme="oled"] .bg-slate-900\/80,
+    [data-theme="oled"] .bg-slate-900\/60,
+    [data-theme="oled"] header,
+    [data-theme="oled"] footer {
+      background-color: var(--bg-card) !important;
+      border-color: var(--border-main) !important;
+    }
+
+    [data-theme="sepia"] .from-cyan-950\/40,
+    [data-theme="sepia"] .to-slate-900,
+    [data-theme="light"] .from-cyan-950\/40,
+    [data-theme="light"] .to-slate-900 {
+      --tw-gradient-from: var(--bg-card) !important;
+      --tw-gradient-to: var(--bg-card) !important;
+      --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+    }
+
+    [data-theme="sepia"] .reading-toolbar,
+    [data-theme="light"] .reading-toolbar {
+      border-color: var(--border-main) !important;
+    }
+    [data-theme="sepia"] .reading-toolbar .bg-slate-950\/70,
+    [data-theme="light"] .reading-toolbar .bg-slate-950\/70 {
+      background-color: var(--bg-card-secondary) !important;
+      border-color: var(--border-main) !important;
+    }
+
+    /* Typographic Reading Rules */
+    .markdown-body {
+      color: var(--text-main);
+      line-height: 1.74;
+      font-size: clamp(0.975rem, 0.95rem + 0.35vw, 1.1rem);
+      max-width: 72ch;
+      margin-left: auto;
+      margin-right: auto;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    [data-font-family="serif"] .markdown-body,
+    .font-serif-reading .markdown-body,
+    .markdown-body.font-serif-reading {
+      font-family: Charter, Georgia, "Times New Roman", Cambria, serif !important;
+      letter-spacing: -0.003em;
+    }
+
+    [data-font-family="sans"] .markdown-body,
+    .font-sans-reading .markdown-body,
+    .markdown-body.font-sans-reading {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+
+    [data-font-size="small"] .markdown-body {
+      font-size: 0.925rem;
+      line-height: 1.62;
+    }
+
+    [data-font-size="normal"] .markdown-body {
+      font-size: 1.05rem;
+      line-height: 1.74;
+    }
+
+    [data-font-size="large"] .markdown-body {
+      font-size: 1.185rem;
+      line-height: 1.84;
+    }
+
+    .markdown-body h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      margin-top: 1.25rem;
+      margin-bottom: 0.6rem;
+      color: var(--text-heading);
+      line-height: 1.3;
+    }
+
+    .markdown-body h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-top: 1.35rem;
+      margin-bottom: 0.5rem;
+      color: var(--accent-color);
+      line-height: 1.35;
+    }
+
+    .markdown-body h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-top: 1rem;
+      margin-bottom: 0.35rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .markdown-body p {
+      margin-bottom: 1.1rem;
+      line-height: 1.74;
+    }
+
+    .markdown-body ul, .markdown-body ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+      list-style-type: disc;
+    }
+
+    .markdown-body ol {
+      list-style-type: decimal;
+    }
+
+    .markdown-body li {
+      margin-bottom: 0.35rem;
+    }
+
+    .markdown-body hr {
+      border-color: var(--border-secondary);
+      margin: 1.75rem 0;
+    }
+
+    .markdown-body code {
+      background: var(--code-bg);
+      padding: 0.15rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+      color: var(--code-color);
+    }
+
+    .markdown-body pre {
+      background: var(--bg-card-secondary);
+      border: 1px solid var(--border-main);
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      margin-bottom: 1.25rem;
+    }
+
+    .markdown-body pre code {
+      background: transparent;
+      padding: 0;
+      color: var(--text-main);
+    }
+
+    .markdown-body blockquote {
+      border-left: 3px solid var(--accent-color);
+      padding-left: 1rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 1.1rem;
+    }
+
     .markdown-body a {
-      color: #38bdf8;
+      color: var(--accent-color);
       text-decoration: underline;
       text-underline-offset: 3px;
       font-weight: 500;
       transition: all 0.2s ease;
     }
+
     .markdown-body a:hover {
-      color: #7dd3fc;
-      text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+      color: var(--accent-hover);
     }
+
+    /* Verbatim quote evidence pill */
+    .verbatim-quote {
+      background: var(--quote-bg);
+      border-left: 3px solid var(--quote-border);
+      padding: 0.18rem 0.5rem;
+      border-radius: 0.3rem;
+      display: inline;
+      box-decoration-break: clone;
+      -webkit-box-decoration-break: clone;
+      transition: all 0.2s ease;
+      font-style: normal;
+    }
+
+    .verbatim-quote:hover {
+      filter: brightness(1.08);
+    }
+
+    /* Citation jump ref pill */
     .markdown-body .citation-ref {
-      color: #38bdf8;
-      background: rgba(8, 51, 68, 0.7);
-      border: 1px solid rgba(14, 116, 144, 0.7);
-      padding: 0.1rem 0.4rem;
-      border-radius: 0.25rem;
-      font-size: 0.75rem;
+      color: var(--accent-color);
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-color);
+      padding: 0.15rem 0.45rem;
+      border-radius: 0.3rem;
+      font-size: 0.775rem;
       font-family: ui-monospace, monospace;
       font-weight: 600;
       text-decoration: none;
       display: inline-block;
       margin: 0 0.15rem;
+      cursor: pointer;
       transition: all 0.15s ease;
+      touch-action: manipulation;
     }
+
     .markdown-body .citation-ref:hover {
-      background: rgba(14, 116, 144, 0.9);
+      background: var(--accent-color);
       color: #ffffff;
-      border-color: #38bdf8;
       transform: translateY(-1px);
     }
+
     .markdown-body .reference-item {
-      background: rgba(15, 23, 42, 0.7);
-      border: 1px solid rgba(51, 65, 85, 0.8);
+      background: var(--bg-card-secondary);
+      border: 1px solid var(--border-main);
       border-radius: 0.75rem;
-      padding: 0.75rem 1rem;
-      margin-bottom: 0.6rem;
+      padding: 0.85rem 1.1rem;
+      margin-bottom: 0.65rem;
       transition: all 0.2s ease;
     }
-    .markdown-body .reference-item:hover, .markdown-body .reference-item:target {
-      border-color: rgba(56, 189, 248, 0.7);
-      background: rgba(15, 23, 42, 0.95);
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+
+    .markdown-body .reference-item:hover,
+    .markdown-body .reference-item:target {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 14px var(--accent-bg);
+    }
+
+    /* Reading Focus Modal */
+    #focusReadingModal {
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+
+    #focusReadingModal.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    #focusReadingModal:not(.hidden) {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    /* Mobile citation bottom sheet drawer */
+    #citationDrawer {
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    }
+
+    #citationDrawer.drawer-closed {
+      transform: translateY(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #citationDrawer.drawer-open {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Desktop Citation Tooltip */
+    #citationTooltip {
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    /* Print styling */
+    @media print {
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      header, footer, #themeSwitcherGroup, .reading-toolbar, #startPipelineBtn, #apiKeyInput, .no-print {
+        display: none !important;
+      }
+      .markdown-body {
+        max-width: 100% !important;
+        font-size: 11pt !important;
+        line-height: 1.5 !important;
+      }
+      .markdown-body a {
+        text-decoration: none !important;
+        color: #000000 !important;
+      }
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+<body class="min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white transition-colors duration-300" style="background-color: var(--bg-page); color: var(--text-main);">
 
   <!-- Header -->
   <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
@@ -86,7 +449,23 @@
           <p data-i18n="headerSubtitle" class="text-xs text-slate-400">Two-Agent Autonomous "Writer & Critic" Pipeline</p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap justify-end">
+        <!-- Theme Palette Switcher -->
+        <div class="inline-flex rounded-xl p-1 border border-slate-800 shadow-inner bg-slate-950" id="themeSwitcherGroup">
+          <button id="themeSepiaBtn" type="button" class="px-2 py-1 text-xs rounded-lg transition font-medium text-slate-400 hover:text-slate-200 border border-transparent" title="Warm Sepia (Academic Paper)">
+            📜 <span class="hidden md:inline">Sepia</span>
+          </button>
+          <button id="themeSlateBtn" type="button" class="px-2 py-1 text-xs rounded-lg font-semibold transition bg-cyan-500/20 text-cyan-400 border border-cyan-500/40" title="Midnight Slate (Dark Mode)">
+            🌙 <span class="hidden md:inline">Slate</span>
+          </button>
+          <button id="themeLightBtn" type="button" class="px-2 py-1 text-xs rounded-lg transition font-medium text-slate-400 hover:text-slate-200 border border-transparent" title="Nordic Daylight (Light Mode)">
+            ☀️ <span class="hidden md:inline">Light</span>
+          </button>
+          <button id="themeOledBtn" type="button" class="px-2 py-1 text-xs rounded-lg transition font-medium text-slate-400 hover:text-slate-200 border border-transparent" title="OLED Pure Black (Battery Saver)">
+            🖤 <span class="hidden md:inline">OLED</span>
+          </button>
+        </div>
+
         <!-- Language Switch: English / Indonesian -->
         <div class="inline-flex rounded-xl bg-slate-950 p-1 border border-slate-800 shadow-inner">
           <button id="langEnBtn" type="button" class="px-2.5 py-1 text-xs rounded-lg font-semibold transition bg-cyan-500/20 text-cyan-400 border border-cyan-500/40">
@@ -347,14 +726,314 @@
     </div>
   </footer>
 
+  <!-- Desktop Citation Tooltip -->
+  <div id="citationTooltip" class="hidden fixed z-50 max-w-sm p-3.5 rounded-xl border shadow-2xl backdrop-blur text-xs pointer-events-auto transition" style="background-color: var(--bg-card); border-color: var(--border-main); color: var(--text-main);">
+    <div class="flex items-center gap-1.5 mb-1.5">
+      <span id="tooltipSourceBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded" style="background-color: var(--accent-bg); color: var(--accent-color); border: 1px solid var(--accent-color);">arXiv</span>
+      <span id="tooltipYear" class="text-[10px] text-slate-400 font-mono"></span>
+    </div>
+    <div id="tooltipTitle" class="font-semibold text-slate-100 mb-1 leading-snug"></div>
+    <div id="tooltipAuthors" class="text-[11px] text-slate-400 mb-2 truncate"></div>
+    <a id="tooltipActionLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition" style="background-color: var(--accent-bg); color: var(--accent-color); border: 1px solid var(--accent-color);">
+      <span>🔗 Buka Makalah / Open Paper</span> <span>↗</span>
+    </a>
+  </div>
+
+  <!-- Mobile Citation Bottom Sheet Drawer -->
+  <div id="citationDrawerBackdrop" class="hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity"></div>
+  <div id="citationDrawer" class="drawer-closed fixed bottom-0 left-0 right-0 z-50 p-5 rounded-t-3xl border-t shadow-2xl transition max-w-xl mx-auto" style="background-color: var(--bg-card); border-color: var(--border-main); color: var(--text-main); padding-bottom: max(1.5rem, env(safe-area-inset-bottom));">
+    <div class="w-12 h-1 rounded-full mx-auto mb-3 opacity-40 bg-slate-400"></div>
+    <div class="flex items-center justify-between gap-2 mb-2">
+      <div class="flex items-center gap-2">
+        <span id="drawerSourceBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded" style="background-color: var(--accent-bg); color: var(--accent-color); border: 1px solid var(--accent-color);">Source</span>
+        <span id="drawerYear" class="text-xs text-slate-400 font-mono"></span>
+      </div>
+      <button id="closeDrawerBtn" type="button" class="text-slate-400 hover:text-slate-200 p-1 text-lg">✕</button>
+    </div>
+    <h4 id="drawerTitle" class="font-bold text-sm mb-1 leading-snug"></h4>
+    <p id="drawerAuthors" class="text-xs text-slate-400 mb-4"></p>
+    <a id="drawerActionLink" href="#" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-semibold text-sm transition" style="background-color: var(--accent-color); color: #ffffff;">
+      <span>🔗 Buka Makalah / Open Paper</span> <span>↗</span>
+    </a>
+  </div>
+
+  <!-- Focus Reading Mode (Zen View) Modal -->
+  <div id="focusReadingModal" class="hidden fixed inset-0 z-50 overflow-y-auto" style="background-color: var(--bg-page); color: var(--text-main); height: 100dvh;">
+    <!-- Top Sticky Progress & Controls Bar -->
+    <div class="sticky top-0 z-50 backdrop-blur border-b" style="background-color: var(--bg-card); border-color: var(--border-main);">
+      <!-- Scroll Progress Bar -->
+      <div id="readingProgressBar" class="h-1 w-0 transition-all duration-75" style="background-color: var(--accent-color);"></div>
+      <div class="max-w-4xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📖</span>
+          <span class="font-bold hidden sm:inline" id="focusModalTitle">Mode Baca Penuh</span>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap justify-end">
+          <!-- Font Face -->
+          <div class="inline-flex rounded-lg p-0.5 border" style="border-color: var(--border-main);">
+            <button type="button" id="focusFontSerifBtn" class="px-2 py-0.5 rounded font-serif">Serif</button>
+            <button type="button" id="focusFontSansBtn" class="px-2 py-0.5 rounded font-sans">Sans</button>
+          </div>
+          <!-- Font Size -->
+          <div class="inline-flex rounded-lg p-0.5 border" style="border-color: var(--border-main);">
+            <button type="button" id="focusSizeMinusBtn" class="px-2 py-0.5 rounded font-bold">A-</button>
+            <button type="button" id="focusSizeNormBtn" class="px-2 py-0.5 rounded font-bold">A</button>
+            <button type="button" id="focusSizePlusBtn" class="px-2 py-0.5 rounded font-bold">A+</button>
+          </div>
+          <!-- Print -->
+          <button type="button" id="focusPrintBtn" class="px-2.5 py-1 rounded-lg border hidden sm:inline-flex items-center gap-1" style="border-color: var(--border-main);" title="Print / PDF">
+            <span>🖨️</span>
+          </button>
+          <!-- Close -->
+          <button type="button" id="closeFocusModalBtn" class="px-2.5 py-1 rounded-lg font-bold text-sm bg-red-950/60 text-red-300 border border-red-800 hover:bg-red-900 transition">
+            ✕ <span class="hidden sm:inline text-xs font-normal">Tutup</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- Modal Reading Content Column -->
+    <div class="max-w-[70ch] mx-auto px-4 py-8 sm:py-12">
+      <div id="focusModalContent" class="markdown-body"></div>
+    </div>
+  </div>
+
   <!-- App Script -->
   <script>
     // State & i18n
     const STORAGE_KEY = "GEMINI_USER_API_KEY";
     const LANG_STORAGE_KEY = "GEMINI_APP_LANG";
+    const THEME_STORAGE_KEY = "GEMINI_APP_THEME";
+    const FONT_STORAGE_KEY = "GEMINI_APP_FONT";
+    const FONT_SIZE_STORAGE_KEY = "GEMINI_APP_FONT_SIZE";
+
     let currentLang = localStorage.getItem(LANG_STORAGE_KEY) || "en";
+    let currentTheme = localStorage.getItem(THEME_STORAGE_KEY) || "slate";
+    let currentFont = localStorage.getItem(FONT_STORAGE_KEY) || "sans";
+    let currentFontSize = localStorage.getItem(FONT_SIZE_STORAGE_KEY) || "normal";
     const langEnBtn = document.getElementById("langEnBtn");
     const langIdBtn = document.getElementById("langIdBtn");
+
+    function applyTheme(themeName) {
+      currentTheme = themeName;
+      localStorage.setItem(THEME_STORAGE_KEY, themeName);
+      document.documentElement.setAttribute("data-theme", themeName);
+
+      const metaColor = document.getElementById("metaThemeColor");
+      if (metaColor) {
+        const colors = {
+          sepia: "#F8F5EE",
+          slate: "#0B0F19",
+          light: "#F8FAFC",
+          oled: "#000000"
+        };
+        metaColor.setAttribute("content", colors[themeName] || "#0B0F19");
+      }
+
+      ["sepia", "slate", "light", "oled"].forEach(t => {
+        const btn = document.getElementById(`theme${t.charAt(0).toUpperCase() + t.slice(1)}Btn`);
+        if (btn) {
+          if (t === themeName) {
+            btn.className = "px-2 py-1 text-xs rounded-lg font-semibold transition bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm";
+          } else {
+            btn.className = "px-2 py-1 text-xs rounded-lg font-medium transition text-slate-400 hover:text-slate-200 border border-transparent";
+          }
+        }
+      });
+    }
+
+    function applyFont(fontName) {
+      currentFont = fontName;
+      localStorage.setItem(FONT_STORAGE_KEY, fontName);
+      document.documentElement.setAttribute("data-font-family", fontName);
+      syncToolbarFontButtons(fontName);
+    }
+
+    function applyFontSize(sizeName) {
+      currentFontSize = sizeName;
+      localStorage.setItem(FONT_SIZE_STORAGE_KEY, sizeName);
+      document.documentElement.setAttribute("data-font-size", sizeName);
+      syncToolbarSizeButtons(sizeName);
+    }
+
+    function syncToolbarFontButtons(fontName) {
+      document.querySelectorAll(".font-toggle-serif, #focusFontSerifBtn").forEach(btn => {
+        if (fontName === "serif") {
+          btn.className = "font-toggle-serif px-2 py-0.5 rounded font-serif text-cyan-400 bg-cyan-500/20 border border-cyan-500/40 font-bold transition";
+        } else {
+          btn.className = "font-toggle-serif px-2 py-0.5 rounded font-serif text-slate-400 hover:text-slate-200 transition border border-transparent";
+        }
+      });
+      document.querySelectorAll(".font-toggle-sans, #focusFontSansBtn").forEach(btn => {
+        if (fontName === "sans") {
+          btn.className = "font-toggle-sans px-2 py-0.5 rounded font-sans text-cyan-400 bg-cyan-500/20 border border-cyan-500/40 font-bold transition";
+        } else {
+          btn.className = "font-toggle-sans px-2 py-0.5 rounded font-sans text-slate-400 hover:text-slate-200 transition border border-transparent";
+        }
+      });
+    }
+
+    function syncToolbarSizeButtons(sizeName) {
+      const sizes = [
+        { id: "small", sel: ".size-toggle-small, #focusSizeMinusBtn" },
+        { id: "normal", sel: ".size-toggle-norm, #focusSizeNormBtn" },
+        { id: "large", sel: ".size-toggle-large, #focusSizePlusBtn" }
+      ];
+      sizes.forEach(({ id, sel }) => {
+        document.querySelectorAll(sel).forEach(btn => {
+          if (id === sizeName) {
+            btn.className = `${btn.className.split(" ")[0]} px-1.5 py-0.5 rounded text-cyan-400 bg-cyan-500/20 border border-cyan-500/40 font-bold transition`;
+          } else {
+            btn.className = `${btn.className.split(" ")[0]} px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-200 border border-transparent transition`;
+          }
+        });
+      });
+    }
+
+    // Citation Tooltip & Mobile Bottom Sheet Drawer Handlers
+    const citationTooltip = document.getElementById("citationTooltip");
+    const tooltipSourceBadge = document.getElementById("tooltipSourceBadge");
+    const tooltipYear = document.getElementById("tooltipYear");
+    const tooltipTitle = document.getElementById("tooltipTitle");
+    const tooltipAuthors = document.getElementById("tooltipAuthors");
+    const tooltipActionLink = document.getElementById("tooltipActionLink");
+
+    const citationDrawerBackdrop = document.getElementById("citationDrawerBackdrop");
+    const citationDrawer = document.getElementById("citationDrawer");
+    const drawerSourceBadge = document.getElementById("drawerSourceBadge");
+    const drawerYear = document.getElementById("drawerYear");
+    const drawerTitle = document.getElementById("drawerTitle");
+    const drawerAuthors = document.getElementById("drawerAuthors");
+    const drawerActionLink = document.getElementById("drawerActionLink");
+    const closeDrawerBtn = document.getElementById("closeDrawerBtn");
+
+    function closeCitationDrawer() {
+      if (!citationDrawer) return;
+      citationDrawer.classList.remove("drawer-open");
+      citationDrawer.classList.add("drawer-closed");
+      if (citationDrawerBackdrop) citationDrawerBackdrop.classList.add("hidden");
+    }
+
+    if (closeDrawerBtn) closeDrawerBtn.addEventListener("click", closeCitationDrawer);
+    if (citationDrawerBackdrop) citationDrawerBackdrop.addEventListener("click", closeCitationDrawer);
+
+    let tooltipTimeout = null;
+
+    function initCitationInteractions(container = document) {
+      const citations = container.querySelectorAll(".citation-ref");
+      citations.forEach(el => {
+        const title = el.getAttribute("data-citation-title") || "Paper Reference";
+        const authors = el.getAttribute("data-citation-authors") || "";
+        const source = el.getAttribute("data-citation-source") || "Source";
+        const url = el.getAttribute("data-citation-url") || el.getAttribute("href");
+        const num = el.getAttribute("data-citation-num") || "";
+
+        // Desktop Hover
+        el.addEventListener("mouseenter", () => {
+          if (window.innerWidth < 640) return;
+          clearTimeout(tooltipTimeout);
+          if (!citationTooltip) return;
+
+          tooltipSourceBadge.textContent = source;
+          tooltipTitle.textContent = title;
+          tooltipAuthors.textContent = authors;
+          tooltipActionLink.href = url;
+          tooltipActionLink.style.display = (url && url !== "#" && !url.startsWith("#ref-")) ? "inline-flex" : "none";
+
+          const rect = el.getBoundingClientRect();
+          citationTooltip.style.left = `${Math.min(window.innerWidth - 380, Math.max(10, rect.left - 20))}px`;
+          citationTooltip.style.top = `${rect.bottom + 8}px`;
+          citationTooltip.classList.remove("hidden");
+        });
+
+        el.addEventListener("mouseleave", () => {
+          if (window.innerWidth < 640) return;
+          tooltipTimeout = setTimeout(() => {
+            if (citationTooltip) citationTooltip.classList.add("hidden");
+          }, 300);
+        });
+
+        // Mobile Tap (and Click handling)
+        el.addEventListener("click", (e) => {
+          if (window.innerWidth < 640) {
+            e.preventDefault();
+            drawerSourceBadge.textContent = source;
+            drawerTitle.textContent = title;
+            drawerAuthors.textContent = authors;
+            drawerActionLink.href = url;
+            drawerActionLink.style.display = (url && url !== "#" && !url.startsWith("#ref-")) ? "flex" : "none";
+
+            citationDrawerBackdrop.classList.remove("hidden");
+            citationDrawer.classList.remove("drawer-closed");
+            citationDrawer.classList.add("drawer-open");
+          }
+        });
+      });
+    }
+
+    if (citationTooltip) {
+      citationTooltip.addEventListener("mouseenter", () => clearTimeout(tooltipTimeout));
+      citationTooltip.addEventListener("mouseleave", () => {
+        tooltipTimeout = setTimeout(() => {
+          citationTooltip.classList.add("hidden");
+        }, 200);
+      });
+    }
+
+    // Focus Reading Mode (Zen View)
+    const focusReadingModal = document.getElementById("focusReadingModal");
+    const focusModalContent = document.getElementById("focusModalContent");
+    const focusModalTitle = document.getElementById("focusModalTitle");
+    const closeFocusModalBtn = document.getElementById("closeFocusModalBtn");
+    const readingProgressBar = document.getElementById("readingProgressBar");
+    const focusPrintBtn = document.getElementById("focusPrintBtn");
+
+    function openFocusReadingMode(htmlContent, title = "Mode Baca Penuh") {
+      if (!focusReadingModal || !focusModalContent) return;
+      focusModalContent.innerHTML = htmlContent;
+      if (focusModalTitle) focusModalTitle.textContent = title;
+      focusReadingModal.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+      focusReadingModal.scrollTop = 0;
+
+      // Track Reading Progress
+      focusReadingModal.onscroll = () => {
+        const total = focusReadingModal.scrollHeight - focusReadingModal.clientHeight;
+        const current = focusReadingModal.scrollTop;
+        const pct = total > 0 ? (current / total) * 100 : 0;
+        if (readingProgressBar) readingProgressBar.style.width = `${pct}%`;
+      };
+
+      initCitationInteractions(focusModalContent);
+      syncToolbarFontButtons(currentFont);
+      syncToolbarSizeButtons(currentFontSize);
+    }
+
+    function closeFocusReadingMode() {
+      if (!focusReadingModal) return;
+      focusReadingModal.classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+
+    if (closeFocusModalBtn) closeFocusModalBtn.addEventListener("click", closeFocusReadingMode);
+    if (focusPrintBtn) focusPrintBtn.addEventListener("click", () => window.print());
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeFocusReadingMode();
+        closeCitationDrawer();
+      }
+    });
+
+    document.getElementById("focusFontSerifBtn")?.addEventListener("click", () => applyFont("serif"));
+    document.getElementById("focusFontSansBtn")?.addEventListener("click", () => applyFont("sans"));
+    document.getElementById("focusSizeMinusBtn")?.addEventListener("click", () => applyFontSize("small"));
+    document.getElementById("focusSizeNormBtn")?.addEventListener("click", () => applyFontSize("normal"));
+    document.getElementById("focusSizePlusBtn")?.addEventListener("click", () => applyFontSize("large"));
+
+    document.getElementById("themeSepiaBtn")?.addEventListener("click", () => applyTheme("sepia"));
+    document.getElementById("themeSlateBtn")?.addEventListener("click", () => applyTheme("slate"));
+    document.getElementById("themeLightBtn")?.addEventListener("click", () => applyTheme("light"));
+    document.getElementById("themeOledBtn")?.addEventListener("click", () => applyTheme("oled"));
 
     const I18N = {
       en: {
@@ -535,6 +1214,9 @@
       }
 
       updateHeaderPoweredBadge();
+      applyTheme(currentTheme);
+      applyFont(currentFont);
+      applyFontSize(currentFontSize);
     }
 
     langEnBtn.addEventListener("click", () => applyLanguage("en"));
@@ -595,10 +1277,35 @@
       }
     });
 
-    // Helper to enrich draft with clickable links in the References section and in-text citation anchors
+    // Helper to escape HTML attributes safely
+    function escapeHtmlAttr(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    // Helper to enrich draft with clickable links in the References section, in-text citation anchors, and micro-preview metadata
     function prepareDraftHtml(draftText, dossier = null) {
       if (!draftText) return "";
       let enriched = draftText;
+
+      const linkifyCitations = (str) => {
+        return str.replace(/\[(\d+)\]/g, (match, n) => {
+          const num = parseInt(n, 10);
+          const cit = dossier && dossier.citations ? (dossier.citations.find(c => c.num === num) || dossier.citations[num - 1]) : null;
+          const citTitle = cit ? escapeHtmlAttr(cit.title) : (currentLang === "id" ? `Referensi [${num}]` : `Reference [${num}]`);
+          const citAuthors = cit ? escapeHtmlAttr(cit.authors || cit.meta || "") : "";
+          const citSource = cit ? escapeHtmlAttr(cit.source || "") : (currentLang === "id" ? "Rujukan Ilmiah" : "Scholarly Source");
+          const citUrl = (cit && cit.url && cit.url !== "#") ? cit.url : `#ref-${num}`;
+          const tooltipTitle = cit ? `[${num}] ${cit.title}` : (currentLang === "id" ? `Lihat Referensi [${num}]` : `View Reference [${num}]`);
+
+          return `<a href="#ref-${num}" class="citation-ref" data-citation-num="${num}" data-citation-title="${citTitle}" data-citation-authors="${citAuthors}" data-citation-source="${citSource}" data-citation-url="${citUrl}" title="${tooltipTitle}">[${num}]</a>`;
+        });
+      };
 
       // 1. Enrich references section: Ensure each [n] entry has a clickable markdown link
       const refHeaderMatch = enriched.match(/(##+\s*(?:📚\s*)?(?:Referensi|References|Sumber Terkutip|Cited Sources|Daftar Rujukan|Daftar Referensi)[^\n]*\n)([\s\S]*)$/i);
@@ -629,19 +1336,23 @@
           return `<div id="ref-${num}" class="reference-item">\n\n**[${num}]** ${updatedContent}\n\n</div>`;
         });
 
-        enriched = enriched.substring(0, refHeaderMatch.index) + header + "\n" + refBody;
-      }
+        let bodyPart = enriched.substring(0, refHeaderMatch.index);
 
-      // 2. Linkify in-text citations [1], [2] to jump to #ref-1, #ref-2
-      if (refHeaderMatch) {
-        const bodyPart = enriched.substring(0, refHeaderMatch.index);
-        const refPart = enriched.substring(refHeaderMatch.index);
-
-        const linkedBody = bodyPart.replace(/\[(\d+)\]/g, (match, n) => {
-          return `<a href="#ref-${n}" class="citation-ref" title="Lihat Referensi [${n}] / Jump to Reference [${n}]">[${n}]</a>`;
+        // Highlight verbatim evidence quotes: wrap "..." [n] or “...” [n] in .verbatim-quote
+        bodyPart = bodyPart.replace(/(["“])([^"”\n\r]{8,})(["”])\s*(\[(\d+)\])/g, (m, openQ, quoteText, closeQ, citeBracket, citeNum) => {
+          return `<span class="verbatim-quote">&ldquo;${quoteText}&rdquo;</span> [${citeNum}]`;
         });
 
-        enriched = linkedBody + refPart;
+        // Linkify in-text citations [1], [2] with rich data-citation metadata
+        bodyPart = linkifyCitations(bodyPart);
+
+        enriched = bodyPart + header + "\n" + refBody;
+      } else {
+        // Fallback if no references section header is recognized
+        enriched = enriched.replace(/(["“])([^"”\n\r]{8,})(["”])\s*(\[(\d+)\])/g, (m, openQ, quoteText, closeQ, citeBracket, citeNum) => {
+          return `<span class="verbatim-quote">&ldquo;${quoteText}&rdquo;</span> [${citeNum}]`;
+        });
+        enriched = linkifyCitations(enriched);
       }
 
       return marked.parse(enriched);
@@ -1802,24 +2513,68 @@ You MUST respond ONLY with valid JSON conforming to this schema:
     }
 
     // UI Render Helpers
+    function createReadingToolbarHtml(cardId) {
+      const isId = currentLang === "id";
+      const zenText = isId ? "📖 Mode Baca" : "📖 Zen View";
+      return `
+        <div class="reading-toolbar flex items-center justify-between flex-wrap gap-2 pt-2.5 pb-3 mb-4 border-b border-slate-800/80 text-xs">
+          <div class="flex items-center gap-2 flex-wrap">
+            <!-- Font Selection -->
+            <div class="inline-flex rounded-lg p-0.5 border border-slate-800 bg-slate-950/70">
+              <button type="button" class="font-toggle-serif px-2 py-0.5 rounded font-serif text-slate-400 hover:text-slate-200 transition" title="Font Serif (Charter/Georgia)">Serif</button>
+              <button type="button" class="font-toggle-sans px-2 py-0.5 rounded font-sans text-cyan-400 bg-cyan-500/20 border border-cyan-500/40 font-bold transition" title="Font Sans (Inter/System)">Sans</button>
+            </div>
+            <!-- Font Sizing -->
+            <div class="inline-flex rounded-lg p-0.5 border border-slate-800 bg-slate-950/70">
+              <button type="button" class="size-toggle-small px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-200 transition font-bold" title="Font Kecil / Small (15px)">A-</button>
+              <button type="button" class="size-toggle-norm px-1.5 py-0.5 rounded text-cyan-400 bg-cyan-500/20 border border-cyan-500/40 font-bold transition" title="Font Normal (16.5px)">A</button>
+              <button type="button" class="size-toggle-large px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-200 transition font-bold" title="Font Besar / Large (18.5px)">A+</button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" class="zen-mode-btn inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-indigo-950/70 text-indigo-300 border border-indigo-800 hover:bg-indigo-900 hover:text-white transition shadow-sm font-medium">
+              <span>${zenText}</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
     function renderWriterCard(turn, draftText, dossier = null) {
       const card = document.createElement("div");
       card.className = "bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 shadow-xl transition";
       const title = currentLang === "id" ? `Agen Penulis &bull; Draf ${turn}` : `Writer Agent &bull; Draft ${turn}`;
       const statusLabel = currentLang === "id" ? "Selesai" : "Completed";
+      const draftHtml = prepareDraftHtml(draftText, dossier);
       card.innerHTML = `
-        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <div class="flex items-center justify-between mb-2 border-b border-slate-800 pb-3">
           <div class="flex items-center gap-2">
             <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
             <span class="font-bold text-emerald-400 text-sm">${title}</span>
           </div>
           <span class="text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-2.5 py-0.5 rounded-full font-mono">${statusLabel}</span>
         </div>
+        ${createReadingToolbarHtml(`writer-${turn}`)}
         <div class="markdown-body text-slate-200 text-sm">
-          ${prepareDraftHtml(draftText, dossier)}
+          ${draftHtml}
         </div>
       `;
       outputContainer.appendChild(card);
+
+      // Bind reading toolbar buttons
+      card.querySelector(".font-toggle-serif")?.addEventListener("click", () => applyFont("serif"));
+      card.querySelector(".font-toggle-sans")?.addEventListener("click", () => applyFont("sans"));
+      card.querySelector(".size-toggle-small")?.addEventListener("click", () => applyFontSize("small"));
+      card.querySelector(".size-toggle-norm")?.addEventListener("click", () => applyFontSize("normal"));
+      card.querySelector(".size-toggle-large")?.addEventListener("click", () => applyFontSize("large"));
+      card.querySelector(".zen-mode-btn")?.addEventListener("click", () => {
+        openFocusReadingMode(draftHtml, title.replace("&bull;", "•"));
+      });
+
+      // Bind citation interactions
+      initCitationInteractions(card);
+      syncToolbarFontButtons(currentFont);
+      syncToolbarSizeButtons(currentFontSize);
     }
 
     function renderCriticCard(turn, critique, targetScore) {
@@ -1942,9 +2697,10 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       const scoreLabel = currentLang === "id" ? "Skor Akhir:" : "Final Score:";
       const turnsLabel = currentLang === "id" ? "Selesai dalam:" : "Completed in:";
       const turnsUnit = currentLang === "id" ? "putaran" : "turn(s)";
+      const draftHtml = prepareDraftHtml(finalDraft, dossier);
 
       card.innerHTML = `
-        <div class="flex items-center justify-between mb-4 border-b border-cyan-800/60 pb-3">
+        <div class="flex items-center justify-between mb-2 border-b border-cyan-800/60 pb-3">
           <div class="flex items-center gap-2">
             <span class="text-xl">🏆</span>
             <span class="font-bold text-cyan-300 text-base">${title}</span>
@@ -1953,12 +2709,13 @@ You MUST respond ONLY with valid JSON conforming to this schema:
             ${copyBtnText}
           </button>
         </div>
-        <div class="text-xs text-slate-400 mb-4 flex gap-4">
+        <div class="text-xs text-slate-400 mb-2 flex gap-4">
           <span>${scoreLabel} <strong class="text-emerald-400 font-mono">${score.toFixed(1)}/10</strong></span>
           <span>${turnsLabel} <strong class="text-slate-200 font-mono">${turns} ${turnsUnit}</strong></span>
         </div>
+        ${createReadingToolbarHtml("final-approved")}
         <div class="markdown-body text-slate-100 text-sm">
-          ${prepareDraftHtml(finalDraft, dossier)}
+          ${draftHtml}
         </div>
       `;
       outputContainer.prepend(card);
@@ -1970,6 +2727,21 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           setTimeout(() => copyBtn.textContent = copyBtnText, 2000);
         });
       });
+
+      // Bind reading toolbar buttons
+      card.querySelector(".font-toggle-serif")?.addEventListener("click", () => applyFont("serif"));
+      card.querySelector(".font-toggle-sans")?.addEventListener("click", () => applyFont("sans"));
+      card.querySelector(".size-toggle-small")?.addEventListener("click", () => applyFontSize("small"));
+      card.querySelector(".size-toggle-norm")?.addEventListener("click", () => applyFontSize("normal"));
+      card.querySelector(".size-toggle-large")?.addEventListener("click", () => applyFontSize("large"));
+      card.querySelector(".zen-mode-btn")?.addEventListener("click", () => {
+        openFocusReadingMode(draftHtml, title);
+      });
+
+      // Bind citation interactions
+      initCitationInteractions(card);
+      syncToolbarFontButtons(currentFont);
+      syncToolbarSizeButtons(currentFontSize);
     }
 
     // Main Orchestration Loop

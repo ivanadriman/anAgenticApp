@@ -24,8 +24,13 @@ This guide provides end-users, students, researchers, technical writers, and con
    - [Writer Agent](#writer-agent)
    - [Critic Agent](#critic-agent)
    - [Iterative Loop & Approval Threshold](#iterative-refinement-loop)
-9. [CLI Usage & Command Reference](#-cli-usage--command-reference)
-10. [Troubleshooting & FAQs](#-troubleshooting--faqs)
+9. [Reading Ergonomics, Palettes & Focus Mode](#-reading-ergonomics-palettes--focus-mode)
+   - [Four Reading Color Palettes](#1-four-reading-color-palettes)
+   - [Typographic Ergonomics & Reader Toolbar](#2-typographic-ergonomics--reader-toolbar)
+   - [Interactive Citation Micro-Previews & Mobile Bottom Sheet Drawer](#3-interactive-citation-micro-previews--mobile-bottom-sheet-drawer)
+   - [Zen Mode Focus Reading Overlay](#4-zen-mode-focus-reading-overlay)
+10. [CLI Usage & Command Reference](#-cli-usage--command-reference)
+11. [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
 ---
 
@@ -206,6 +211,46 @@ sequenceDiagram
 Once approved:
 - Click **"📋 Copy Markdown"** to copy the full article and bibliography to your clipboard.
 - Paste directly into Obsidian, Notion, GitHub, Google Docs, or your Markdown editor of choice.
+
+---
+
+## 🎨 Reading Ergonomics, Palettes & Focus Mode
+
+Gemini Agentic Studio is designed for long-form reading comfort, scientific synthesis, and literature review. Readers can customize every visual and typographic aspect of their reading environment.
+
+### 1. Four Reading Color Palettes
+Switch between four tailored palettes in the top header:
+- **📜 Warm Sepia (Paper / Kindle Style)**: Amber parchment background (`#F8F5EE`), soft charcoal text (`#2D2820`), and warm chestnut headings. Ideal for daytime reading and reducing blue light fatigue.
+- **🌙 Midnight Slate (Soft Dark Mode)**: Deep blue-slate background (`#0B0F19`), high-contrast slate text (`#E2E8F0`), and electric cyan highlights. Perfect for low-light desk sessions.
+- **☀️ Nordic Daylight (Editorial Light)**: Crisp, clean editorial white (`#F8FAFC`) with deep navy typography (`#0F172A`). Inspired by modern academic journals and publishing houses.
+- **🖤 OLED Pure Black (AMOLED Battery Saver)**: True pitch black (`#000000`) with zinc typography (`#D4D4D8`). Maximizes OLED display power efficiency and eliminates screen glow at night.
+
+All palettes dynamically synchronize with the mobile device's system status bar via dynamic `<meta name="theme-color">` updates, creating a seamless native app-like experience.
+
+### 2. Typographic Ergonomics & Reader Toolbar
+Every Writer draft and approved article features an interactive reader toolbar:
+- **Serif vs. Sans Typeface**:
+  - **Serif**: Sets typography to classic editorial serif faces (`Charter`, `Georgia`, `Baskerville`, `Cambria`) for natural rhythmic cadence in long papers.
+  - **Sans**: Switches to clean, modern sans-serif typography (`Inter`, `system-ui`, `-apple-system`, `Roboto`).
+- **Font Size Stepper**:
+  - `A-` (Small, 15px): High data density.
+  - `A` (Normal, 16.5px): Standard optimal reading size.
+  - `A+` (Large, 18.5px): Enhanced legibility for long sessions or smaller screens.
+- **Optimal Measure**: Content is automatically constrained to a golden reading measure of 65–75 characters per line (`max-width: 72ch`) with generous 1.74 leading to prevent eye wandering.
+- **Verbatim Evidence Highlights**: Verbatim quotations `"..." [n]` are gently highlighted with custom accent borders and soft tinting, making verified empirical quotes visually distinct from general synthesis.
+
+### 3. Interactive Citation Micro-Previews & Mobile Bottom Sheet Drawer
+When reading through a draft:
+- **Desktop Hover Tooltip**: Hovering your cursor over any citation pill like `[1]` or `[4]` displays a floating preview card showing the paper title, author list, publishing venue/source, and a direct `🔗 Open Paper ↗` link without needing to scroll away from your reading position.
+- **Mobile Bottom Sheet Drawer**: On smartphones and touchscreens, tapping any citation pill slides up an elegant native-style bottom sheet drawer from the bottom of your screen. The drawer displays paper metadata and a large, comfortable 48px touch-target button `🔗 Buka Makalah / Open Paper ↗`. Tapping the backdrop or the close button smoothly dismisses the drawer.
+
+### 4. Zen Mode Focus Reading Overlay
+Click **`📖 Zen View`** (or **`📖 Mode Baca`** in Indonesian) on any card to enter a distraction-free, full-window reading modal:
+- Expands to full dynamic viewport height (`100dvh`).
+- Displays a real-time reading progress bar at the very top of the screen tracking your position through the paper.
+- Retains full typography controls (`Serif/Sans`, `A-/A/A+`).
+- Includes a one-click print/PDF button (`🖨️`) optimized for clean paper formatting.
+- Press <kbd>Esc</kbd> anytime to return to the studio dashboard.
 
 ---
 

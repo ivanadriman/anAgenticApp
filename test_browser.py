@@ -282,9 +282,155 @@ def run_browser_tests():
         assert target_attr == "_blank", "Expected target='_blank' on external paper link"
         print("  ✓ Clickable reference links and smooth jump anchors verified successfully!", flush=True)
 
-        final_screenshot = os.path.join(SCREENSHOTS_DIR, "20_full_indonesian_multilingual_session.png")
+        # -------------------------------------------------------------
+        # Test Case 7: Reading Palettes, Typography & Focus Reading Mode (Zen View)
+        # -------------------------------------------------------------
+        print("\n--- Test Case 7: Reading Palettes, Typography & Focus Mode ---", flush=True)
+        # 1. Palette Switcher Verification
+        sepia_btn = page.locator("#themeSepiaBtn")
+        slate_btn = page.locator("#themeSlateBtn")
+        light_btn = page.locator("#themeLightBtn")
+        oled_btn = page.locator("#themeOledBtn")
+
+        assert sepia_btn.count() > 0, "Missing #themeSepiaBtn"
+        assert slate_btn.count() > 0, "Missing #themeSlateBtn"
+        assert light_btn.count() > 0, "Missing #themeLightBtn"
+        assert oled_btn.count() > 0, "Missing #themeOledBtn"
+
+        # Click Sepia Palette
+        print("  • Switching to 📜 Warm Sepia Palette...", flush=True)
+        sepia_btn.click()
+        time.sleep(0.5)
+        theme_attr = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        meta_color = page.evaluate("() => document.getElementById('metaThemeColor')?.getAttribute('content')")
+        print(f"    - html[data-theme]: '{theme_attr}', meta[theme-color]: '{meta_color}'", flush=True)
+        assert theme_attr == "sepia"
+        assert meta_color == "#F8F5EE"
+        page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "21_theme_sepia.png"))
+
+        # Click OLED Palette
+        print("  • Switching to 🖤 OLED Pure Black Palette...", flush=True)
+        oled_btn.click()
+        time.sleep(0.5)
+        theme_attr = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        meta_color = page.evaluate("() => document.getElementById('metaThemeColor')?.getAttribute('content')")
+        print(f"    - html[data-theme]: '{theme_attr}', meta[theme-color]: '{meta_color}'", flush=True)
+        assert theme_attr == "oled"
+        assert meta_color == "#000000"
+        page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "22_theme_oled.png"))
+
+        # Click Light Palette
+        print("  • Switching to ☀️ Nordic Daylight Palette...", flush=True)
+        light_btn.click()
+        time.sleep(0.5)
+        theme_attr = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        assert theme_attr == "light"
+        page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "23_theme_light.png"))
+
+        # Return to Slate Palette
+        print("  • Returning to 🌙 Midnight Slate Palette...", flush=True)
+        slate_btn.click()
+        time.sleep(0.5)
+        theme_attr = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+        assert theme_attr == "slate"
+
+        # 2. Reading Typography & Toolbar Toggles
+        print("  • Testing Font Face and Sizing Controls on Writer Card...", flush=True)
+        serif_btn = page.locator(".font-toggle-serif").first
+        sans_btn = page.locator(".font-toggle-sans").first
+        size_large = page.locator(".size-toggle-large").first
+        size_small = page.locator(".size-toggle-small").first
+        size_norm = page.locator(".size-toggle-norm").first
+
+        serif_btn.click()
+        time.sleep(0.3)
+        font_attr = page.evaluate("() => document.documentElement.getAttribute('data-font-family')")
+        print(f"    - html[data-font-family]: '{font_attr}'", flush=True)
+        assert font_attr == "serif"
+
+        size_large.click()
+        time.sleep(0.3)
+        size_attr = page.evaluate("() => document.documentElement.getAttribute('data-font-size')")
+        print(f"    - html[data-font-size]: '{size_attr}'", flush=True)
+        assert size_attr == "large"
+
+        # 3. Focus Reading Mode (Zen View)
+        print("  • Testing Zen Mode Fullscreen Reader Overlay...", flush=True)
+        zen_btn = page.locator(".zen-mode-btn").first
+        assert zen_btn.count() > 0, "Missing .zen-mode-btn in reading toolbar"
+        zen_btn.click()
+        time.sleep(0.5)
+
+        modal = page.locator("#focusReadingModal")
+        assert not modal.is_hidden(), "Expected #focusReadingModal to be visible"
+        print("    ✓ Focus Reading Modal opened successfully!", flush=True)
+        page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "24_focus_zen_reading_mode.png"))
+
+        # Close Zen Mode
+        close_modal_btn = page.locator("#closeFocusModalBtn")
+        close_modal_btn.click()
+        time.sleep(0.3)
+        assert modal.is_hidden(), "Expected #focusReadingModal to be hidden after close"
+        print("    ✓ Focus Reading Modal closed successfully!", flush=True)
+
+        # -------------------------------------------------------------
+        # Test Case 8: Mobile Browser Experience & Citation Bottom Sheet Drawer
+        # -------------------------------------------------------------
+        print("\n--- Test Case 8: Mobile Browser Emulation & Bottom Sheet Drawer ---", flush=True)
+        # Emulate iPhone 14 / Pixel 7 viewport (390 x 844)
+        print("  • Resizing viewport to 390x844 (Mobile Emulation)...", flush=True)
+        page.set_viewport_size({"width": 390, "height": 844})
+        time.sleep(1)
+
+        # Verify no horizontal scroll/overflow
+        has_horizontal_overflow = page.evaluate("() => document.documentElement.scrollWidth > document.documentElement.clientWidth")
+        print(f"  • Horizontal overflow on mobile screen: {has_horizontal_overflow}", flush=True)
+        assert not has_horizontal_overflow, "Horizontal overflow detected on mobile viewport!"
+
+        # Tap on the first in-text citation pill
+        first_citation = page.locator("a.citation-ref").first
+        assert first_citation.count() > 0, "Missing citation ref for mobile tap"
+        cit_num = first_citation.get_attribute("data-citation-num")
+        print(f"  • Tapping citation pill [{cit_num}] on mobile touch viewport...", flush=True)
+        first_citation.click()
+        time.sleep(0.5)
+
+        drawer = page.locator("#citationDrawer")
+        backdrop = page.locator("#citationDrawerBackdrop")
+        drawer_class = drawer.get_attribute("class") or ""
+        print(f"  • Mobile Drawer class: '{drawer_class}'", flush=True)
+        assert "drawer-open" in drawer_class, "Expected drawer to have .drawer-open class"
+        assert not backdrop.is_hidden(), "Expected drawer backdrop to be visible"
+
+        drawer_title = page.locator("#drawerTitle").text_content() or ""
+        drawer_source = page.locator("#drawerSourceBadge").text_content() or ""
+        print(f"  • Mobile Drawer Content: Source='{drawer_source}', Title='{drawer_title[:50]}...'", flush=True)
+        assert len(drawer_title) > 0, "Drawer title should not be empty"
+
+        # Verify touch-target action button
+        drawer_action = page.locator("#drawerActionLink")
+        if drawer_action.is_visible():
+            action_text = drawer_action.text_content().strip()
+            print(f"  • Mobile Action Touch Button: '{action_text}'", flush=True)
+            assert "Buka Makalah" in action_text or "Open Paper" in action_text or "↗" in action_text
+
+        page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "25_mobile_citation_bottom_sheet.png"))
+
+        # Close drawer via close button
+        print("  • Closing Mobile Bottom Sheet Drawer...", flush=True)
+        page.locator("#closeDrawerBtn").click()
+        time.sleep(0.3)
+        drawer_class_after = drawer.get_attribute("class") or ""
+        assert "drawer-closed" in drawer_class_after
+        print("  ✓ Mobile Drawer closed cleanly!", flush=True)
+
+        # Restore desktop viewport
+        page.set_viewport_size({"width": 1280, "height": 950})
+        time.sleep(0.5)
+
+        final_screenshot = os.path.join(SCREENSHOTS_DIR, "26_full_reading_experience_session.png")
         page.screenshot(path=final_screenshot, full_page=True)
-        print(f"\nAll multilingual & language switch tests passed! Saved to {final_screenshot}", flush=True)
+        print(f"\nAll reading mode & mobile test cases passed! Saved to {final_screenshot}", flush=True)
 
         browser.close()
 

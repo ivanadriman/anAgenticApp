@@ -294,6 +294,69 @@ Navigate to `http://localhost:8000/`.
 
 ---
 
+## 🎨 Reading System, Color Palettes & Mobile Ergonomics Architecture
+
+Gemini Agentic Studio implements a comprehensive reader-first design system optimized for long-form synthesis, technical reports, and mobile consumption.
+
+### 1. Semantic CSS Custom Properties & Theme Token Design
+The design system defines four reading palettes driven entirely by CSS custom properties on `:root` and `[data-theme]`:
+
+| Semantic Token | Warm Sepia (`sepia`) | Midnight Slate (`slate`) | Nordic Daylight (`light`) | OLED Charcoal (`oled`) |
+| :--- | :--- | :--- | :--- | :--- |
+| `--bg-page` | `#F8F5EE` | `#0B0F19` | `#F8FAFC` | `#000000` |
+| `--bg-card` | `#F2EDE2` | `#0F172A` | `#FFFFFF` | `#09090B` |
+| `--bg-card-secondary` | `#EBE5D8` | `#1E293B` | `#F1F5F9` | `#000000` |
+| `--text-main` | `#2D2820` | `#E2E8F0` | `#0F172A` | `#D4D4D8` |
+| `--text-muted` | `#6E6455` | `#94A3B8` | `#64748B` | `#71717A` |
+| `--text-heading` | `#1E1912` | `#F8FAFC` | `#020617` | `#FAFAFA` |
+| `--accent-color` | `#8B4513` | `#22D3EE` | `#0284C7` | `#22D3EE` |
+| `--meta-theme` | `#F8F5EE` | `#0B0F19` | `#F8FAFC` | `#000000` |
+
+### 2. Dynamic Mobile System Bar Sync (`<meta name="theme-color">`)
+When themes change via `applyTheme(themeName)`, the application dynamically updates `<meta name="theme-color" id="metaThemeColor">`. This colors the mobile browser's top chrome (address bar and OS status bar) to match the selected background (e.g. warm parchment on Sepia or pure pitch black on OLED), preventing jarring contrast boundaries.
+
+### 3. Typographic Ergonomics & Golden Measure
+- **Measure**: The text column is strictly clamped to `max-width: 72ch` with `margin: 0 auto`, maintaining the golden 65–75 character measure to minimize saccadic eye fatigue.
+- **Fluid Sizing**: Base typography uses `clamp(0.975rem, 0.95rem + 0.35vw, 1.1rem)` with `line-height: 1.74`.
+- **Typeface Families**:
+  - `[data-font-family="serif"]`: Editorial serif cascade (`Charter, Georgia, 'Times New Roman', Cambria, serif`).
+  - `[data-font-family="sans"]`: Clean modern sans cascade (`ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`).
+- **Scale Stepper**: `data-font-size="small"` (15px / 1.62 leading), `data-font-size="normal"` (16.5px / 1.74 leading), `data-font-size="large"` (18.5px / 1.84 leading).
+- User preferences are automatically persisted in `localStorage` (`GEMINI_APP_THEME`, `GEMINI_APP_FONT`, `GEMINI_APP_FONT_SIZE`).
+
+### 4. In-Text Citation Pipeline & Dual-Mode Micro-Previews
+During rendering, `prepareDraftHtml` inspects the research dossier and enriches each `[n]` citation anchor:
+```html
+<a href="#ref-1" 
+   class="citation-ref" 
+   data-citation-num="1" 
+   data-citation-title="Title of Academic Paper" 
+   data-citation-authors="Author Name et al." 
+   data-citation-source="arXiv API" 
+   data-citation-url="https://arxiv.org/abs/..." 
+   title="[1] Title of Academic Paper">[1]</a>
+```
+
+The application provides a responsive dual-mode interaction model:
+1. **Desktop Viewport (`>= 640px`)**:
+   - `mouseenter` / `mouseleave` events trigger `#citationTooltip`, a floating micro-preview card positioned adjacent to the cursor showing title, author, venue, and a quick-open button.
+2. **Mobile Viewport (`< 640px`)**:
+   - Touch tap events intercept the navigation (`e.preventDefault()`) and trigger `#citationDrawer`, a sliding bottom sheet drawer styled with `transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)`.
+   - The drawer presents a large 48px touch-target button: `🔗 Buka Makalah / Open Paper ↗`.
+   - Backdrop tap or clicking the close button smoothly slides the drawer down.
+
+### 5. Focus Reading Mode (Zen View)
+`#focusReadingModal` provides an immersive reading overlay:
+- Rendered using modern dynamic viewport height (`100dvh`) to prevent mobile address bar layout shifts.
+- Uses `onscroll` listener to dynamically calculate reading progress percentage:
+  ```javascript
+  const pct = (focusReadingModal.scrollTop / (focusReadingModal.scrollHeight - focusReadingModal.clientHeight)) * 100;
+  readingProgressBar.style.width = `${pct}%`;
+  ```
+- Print styling (`@media print`) hides studio controls, sidebars, and buttons, rendering black-and-white clean typography for high-quality PDF exports.
+
+---
+
 ## 🧪 Test Automation Suite (Playwright)
 
 The project includes an end-to-end automated browser test suite in [`test_browser.py`](file:///c:/Users/kiris/OneDrive/Documents/AI%20Projects/anAgenticApp/test_browser.py).
@@ -303,15 +366,27 @@ The project includes an end-to-end automated browser test suite in [`test_browse
 python test_browser.py
 ```
 
-### Test Assertions
+### Test Assertions & Test Cases
 1. **Test Case 1**: Toggles language switcher (`🇬🇧 EN` ↔ `🇮🇩 ID`) and verifies localized labels.
-2. **Test Case 2**: Injects test API key, selects all 6 literature sources, and fills an Indonesian topic.
-3. **Test Case 3**: Executes the pipeline and monitors the live research progression card.
+2. **Test Case 2**: Injects test API key, selects all 6 literature sources, tests dynamic `#headerPoweredBadge` model updates, and fills an Indonesian topic.
+3. **Test Case 3**: Executes the pipeline and monitors the live research progression card across all 6 sources.
 4. **Test Case 4**: Verifies global STEM translations, Indonesian Writer Card count, and clickable scholarly links.
 5. **Test Case 5**:
    - Asserts quotes match `r'["“][^"”]{8,}["”]\s*\[\d+\]'`.
    - Asserts the presence of the ending references section.
    - Asserts all citation numbers `[n]` in quotes map to numbered entries in the bibliography.
+6. **Test Case 6**: Verifies clickable reference links inside `.reference-item a` and in-text jump anchors `a.citation-ref[href^='#ref-']`.
+7. **Test Case 7 (Reading Mode & Palettes)**:
+   - Verifies palette switching across 📜 Sepia, 🖤 OLED, ☀️ Light, and 🌙 Slate.
+   - Verifies dynamic `<meta name="theme-color">` updates matching OS system bar colors.
+   - Verifies font face toggle (`serif` ↔ `sans`) and font size stepping (`small`, `normal`, `large`).
+   - Verifies Focus Reading Mode Zen View modal opening, progress bar, and clean closure.
+8. **Test Case 8 (Mobile Browser Emulation)**:
+   - Resizes viewport to 390×844 (emulating iPhone 14 / Pixel 7).
+   - Verifies zero horizontal overflow (`scrollWidth <= clientWidth`).
+   - Simulates touch tap on in-text citation pill, asserting that `#citationDrawer` slides up with `.drawer-open`.
+   - Verifies drawer metadata and 48px touch-target button `🔗 Buka Makalah / Open Paper ↗`.
+   - Closes drawer via close button and verifies `.drawer-closed`.
 
 Screenshots of every stage are captured and stored in `test_screenshots/`.
 
