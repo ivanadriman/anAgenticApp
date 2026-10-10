@@ -221,7 +221,8 @@
 
     // Helper: Call Gemini REST API directly from browser
     async function callGemini(apiKey, systemInstruction, prompt, model = "gemini-3.8-flash") {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const cleanKey = apiKey.trim();
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
 
       const payload = {
         system_instruction: {
@@ -238,20 +239,37 @@
         }
       };
 
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      let res;
+      try {
+        res = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+      } catch (networkErr) {
+        // "Load failed" is Safari/iOS WebKit's generic message for network block, adblocker, or invalid key character
+        console.error("Network fetch failed:", networkErr);
+        throw new Error(
+          `Network connection to Google Gemini API failed ("${networkErr.message}"). ` +
+          `Common causes: content blocker / Safari Private Browsing blocking third-party API calls, ` +
+          `or an invalid API key. Please verify your internet connection, disable content blockers on this page, and check your key.`
+        );
+      }
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error?.message || `Gemini API error (Status ${res.status})`);
+        const msg = errJson.error?.message || `HTTP ${res.status} (${res.statusText})`;
+        throw new Error(`Gemini API Error: ${msg}`);
       }
 
       const data = await res.json();
       const candidate = data.candidates?.[0];
       const text = candidate?.content?.parts?.[0]?.text || "";
+      if (!text) {
+        throw new Error("Received empty response from Gemini model.");
+      }
       return text;
     }
 
