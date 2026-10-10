@@ -16,6 +16,10 @@ PAGE_URL = "https://ivanadriman.github.io/anAgenticApp/"
 SCREENSHOTS_DIR = os.path.join(os.getcwd(), "test_screenshots")
 os.makedirs(SCREENSHOTS_DIR, exist_ok=True)
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 def run_browser_tests():
     print(f"Launching automated browser to visit: {PAGE_URL}")
     with sync_playwright() as p:
@@ -47,8 +51,15 @@ def run_browser_tests():
         print(f"Stored key in localStorage matches API_KEY: {bool(stored_key and stored_key == API_KEY)}")
 
         # Test Case 2: Select Model and Options
-        print("\n--- Test Case 2: Setting Parameters & Toggles ---", flush=True)
+        print("\n--- Test Case 2: Setting Parameters, Thinking Mode & Toggles ---", flush=True)
         page.select_option("#modelSelect", "gemini-3.5-flash-lite")
+        
+        # Test Thinking Mode selection
+        thinking_box = page.locator("#thinkingLevelSelect")
+        print(f"Thinking Mode selector present: {thinking_box.count() > 0}", flush=True)
+        page.select_option("#thinkingLevelSelect", "high")
+        print(f"Selected thinking mode: {thinking_box.input_value()}", flush=True)
+
         page.select_option("#maxTurnsSelect", "2")
         page.locator("#targetScoreInput").fill("9.2")
         
