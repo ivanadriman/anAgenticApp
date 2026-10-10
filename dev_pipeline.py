@@ -41,33 +41,41 @@ class CritiqueResult(BaseModel):
     actionable_revisions: list[str] = Field(description="Clear, numbered instructions for the writer to improve the next draft")
 
 
-def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str = DEFAULT_MODEL) -> str:
+def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str = DEFAULT_MODEL, enable_search: bool = False) -> str:
     """Writer agent creates the first draft."""
     system_prompt = (
         "You are an expert, engaging, and articulate Writer Agent. "
         "Your goal is to produce well-structured, clear, and compelling content based on the user's prompt. "
         "Use Markdown formatting with headings and bullet points where appropriate."
     )
+    if enable_search:
+        system_prompt += " Use Google Search to look up up-to-date facts, data points, and references."
+
     user_prompt = f"Topic/Goal: {topic}\n"
     if instructions:
         user_prompt += f"Special Instructions: {instructions}\n"
     user_prompt += "Please write Draft 1."
 
+    tools = [{"type": "google_search"}] if enable_search else None
     response = client.interactions.create(
         model=model,
         system_instruction=system_prompt,
-        input=user_prompt
+        input=user_prompt,
+        tools=tools
     )
     return response.output_text or ""
 
 
-def run_writer_revision(original_topic: str, previous_draft: str, critique: CritiqueResult, turn: int, model: str = DEFAULT_MODEL) -> str:
+def run_writer_revision(original_topic: str, previous_draft: str, critique: CritiqueResult, turn: int, model: str = DEFAULT_MODEL, enable_search: bool = False) -> str:
     """Writer agent revises the draft incorporating the critic's points."""
     system_prompt = (
         "You are an expert Writer Agent in an iterative feedback loop. "
         "Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly "
         "while retaining the strengths of your previous draft. Deliver the updated draft in full."
     )
+    if enable_search:
+        system_prompt += " Use Google Search to look up up-to-date information for the Critic's points."
+
     revisions_formatted = "\n".join(f"- {item}" for item in critique.actionable_revisions)
     prompt = f"""
 Original Topic: {original_topic}
@@ -86,10 +94,12 @@ Required Improvements:
 
 Please write the complete revised version (Draft {turn + 1}) addressing all feedback.
 """
+    tools = [{"type": "google_search"}] if enable_search else None
     response = client.interactions.create(
         model=model,
         system_instruction=system_prompt,
-        input=prompt
+        input=prompt,
+        tools=tools
     )
     return response.output_text or ""
 
@@ -139,9 +149,10 @@ Analyze the draft thoroughly and output your evaluation as a valid JSON object o
     return CritiqueResult(**data)
 
 
-def orchestrate_pipeline(topic: str, max_turns: int = 2, target_score: float = 8.5, model: str = DEFAULT_MODEL) -> dict:
+def orchestrate_pipeline(topic: str, max_turns: int = 2, target_score: float = 8.5, model: str = DEFAULT_MODEL, web_search: bool = False) -> dict:
     """Coordinates the interaction loop between Writer and Critic."""
-    console.print(Panel(f"[bold cyan]Two-Agent Pipeline Initialized[/bold cyan]\n[white]Topic:[/white] {topic}\n[white]Model:[/white] {model}", border_style="cyan"))
+    search_label = " (🌐 Web Search Enabled)" if web_search else ""
+    console.print(Panel(f"[bold cyan]Two-Agent Pipeline Initialized[/bold cyan]\n[white]Topic:[/white] {topic}\n[white]Model:[/white] {model}{search_label}", border_style="cyan"))
 
     history = []
     current_draft = ""
@@ -153,10 +164,10 @@ def orchestrate_pipeline(topic: str, max_turns: int = 2, target_score: float = 8
         # 1. Writer Turn
         console.print("[bold green]>>> Writer Agent is thinking & composing...[/bold green]")
         if turn == 1:
-            current_draft = run_writer_draft(topic, model=model)
+            current_draft = run_writer_draft(topic, model=model, enable_search=web_search)
         else:
             assert latest_critique is not None
-            current_draft = run_writer_revision(topic, current_draft, latest_critique, turn - 1, model=model)
+            current_draft = run_writer_revision(topic, current_draft, latest_critique, turn - 1, model=model, enable_search=web_search)
 
         console.print(Panel(Markdown(current_draft), title=f"[bold green]Writer Agent - Draft {turn}[/bold green]", border_style="green"))
 
@@ -198,6 +209,7 @@ def orchestrate_pipeline(topic: str, max_turns: int = 2, target_score: float = 8
     with open(filename, "w", encoding="utf-8") as f:
         f.write(f"# Final Draft: {topic}\n\n")
         f.write(f"**Model:** `{model}`\n")
+        f.write(f"**Web Search:** `{'Enabled' if web_search else 'Disabled'}`\n")
         f.write(f"**Final Score:** {latest_critique.score:.1f}/10.0\n")
         f.write(f"**Total Iterations:** {len(history)}\n\n")
         f.write("## Content\n\n")
@@ -224,8 +236,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Two-Agent Writer & Critic pipeline")
     parser.add_argument("--topic", type=str, default="Explain how Agentic AI architectures work to software engineers with a concrete example", help="Prompt or topic for content")
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL, choices=["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview", "gemini-flash-latest"], help="Gemini model to use")
+    parser.add_argument("--web-search", action="store_true", help="Enable Google Search grounding for research")
     parser.add_argument("--max-turns", type=int, default=2, help="Maximum number of refinement iterations")
     parser.add_argument("--target-score", type=float, default=8.5, help="Score threshold for approval (1-10)")
 
     args = parser.parse_args()
-    orchestrate_pipeline(topic=args.topic, max_turns=args.max_turns, target_score=args.target_score, model=args.model)
+    orchestrate_pipeline(topic=args.topic, max_turns=args.max_turns, target_score=args.target_score, model=args.model, web_search=args.web_search)

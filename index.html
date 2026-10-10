@@ -136,10 +136,14 @@
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500"
           />
         </div>
-        <div class="flex items-center gap-2 mb-2 sm:mb-0">
+        <div class="flex flex-col gap-2 mb-2 sm:mb-0">
           <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
             <input type="checkbox" id="forceAllTurnsCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
-            <span>Force all turns (don't stop early on approval)</span>
+            <span>Force all turns (don't stop early)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
+            <input type="checkbox" id="webSearchCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
+            <span>🌐 Live Google Web Search Grounding</span>
           </label>
         </div>
         <div class="flex items-end">
@@ -225,7 +229,7 @@
     });
 
     // Helper: Call Gemini REST API directly from browser
-    async function callGemini(apiKey, systemInstruction, prompt, model = "gemini-3.8-flash") {
+    async function callGemini(apiKey, systemInstruction, prompt, model = "gemini-3.8-flash", enableSearch = false) {
       const cleanKey = apiKey.trim();
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(cleanKey)}`;
 
@@ -244,6 +248,10 @@
         }
       };
 
+      if (enableSearch) {
+        payload.tools = [{ google_search: {} }];
+      }
+
       let res;
       try {
         res = await fetch(url, {
@@ -254,7 +262,6 @@
           body: JSON.stringify(payload)
         });
       } catch (networkErr) {
-        // "Load failed" is Safari/iOS WebKit's generic message for network block, adblocker, or invalid key character
         console.error("Network fetch failed:", networkErr);
         throw new Error(
           `Network connection to Google Gemini API failed ("${networkErr.message}"). ` +
@@ -271,18 +278,30 @@
 
       const data = await res.json();
       const candidate = data.candidates?.[0];
-      const text = candidate?.content?.parts?.[0]?.text || "";
+      let text = candidate?.content?.parts?.[0]?.text || "";
       if (!text) {
         throw new Error("Received empty response from Gemini model.");
       }
+
+      // Append Google Search Grounding sources if present
+      const chunks = candidate?.groundingMetadata?.groundingChunks || [];
+      const sources = chunks.filter(c => c.web?.uri && c.web?.title).map(c => `- [${c.web.title}](${c.web.uri})`);
+      if (sources.length > 0) {
+        const uniqueSources = [...new Set(sources)];
+        text += `\n\n---\n**🌐 Live Web Research Sources:**\n` + uniqueSources.join("\n");
+      }
+
       return text;
     }
 
     // Agent Functions
-    async function runWriterDraft(apiKey, topic, model) {
-      const sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
+    async function runWriterDraft(apiKey, topic, model, enableSearch = false) {
+      let sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
+      if (enableSearch) {
+        sys += " Use the Google Search tool to find and incorporate up-to-date facts, current developments, and accurate references.";
+      }
       const prompt = `Topic/Goal: ${topic}\nPlease write Draft 1.`;
-      return await callGemini(apiKey, sys, prompt, model);
+      return await callGemini(apiKey, sys, prompt, model, enableSearch);
     }
 
     async function runCriticReview(apiKey, topic, draft, turn, model) {
@@ -299,7 +318,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 }`;
 
       const prompt = `Goal: ${topic}\nIteration Turn: ${turn}\n\nDraft to review:\n\"\"\"\n${draft}\n\"\"\"\n\nReturn ONLY the JSON object.`;
-      const raw = await callGemini(apiKey, sys, prompt, model);
+      const raw = await callGemini(apiKey, sys, prompt, model, false);
 
       let clean = raw.trim();
       if (clean.startsWith("```")) {
@@ -308,10 +327,13 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       return JSON.parse(clean);
     }
 
-    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model) {
-      const sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
+    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model, enableSearch = false) {
+      let sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
+      if (enableSearch) {
+        sys += " Use Google Search to look up any missing facts, latest data, or references requested by the Critic.";
+      }
       const prompt = `Original Topic: ${topic}\n\nPrevious Draft (Draft ${turn}):\n\"\"\"\n${prevDraft}\n\"\"\"\n\nCritic Score: ${critique.score}/10\nWeaknesses:\n${critique.weaknesses.map(w => `- ${w}`).join("\n")}\n\nRequired Improvements:\n${critique.actionable_revisions.map(r => `- ${r}`).join("\n")}\n\nPlease write Draft ${turn + 1} addressing all feedback.`;
-      return await callGemini(apiKey, sys, prompt, model);
+      return await callGemini(apiKey, sys, prompt, model, enableSearch);
     }
 
     // UI Render Helpers
@@ -433,6 +455,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       if (isNaN(targetScore)) targetScore = 9.5;
 
       const forceAllTurns = document.getElementById("forceAllTurnsCheck")?.checked || false;
+      const enableWebSearch = document.getElementById("webSearchCheck")?.checked || false;
 
       // Reset UI
       outputContainer.innerHTML = "";
@@ -449,11 +472,11 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           stepCounter.textContent = `Turn ${turn} of ${maxTurns}`;
 
           // Step 1: Writer
-          statusText.textContent = `Turn ${turn}: Writer Agent (${selectedModel}) is composing...`;
+          statusText.textContent = `Turn ${turn}: Writer Agent (${selectedModel}${enableWebSearch ? " + 🌐 Web Search" : ""}) is composing...`;
           if (turn === 1) {
-            currentDraft = await runWriterDraft(apiKey, topic, selectedModel);
+            currentDraft = await runWriterDraft(apiKey, topic, selectedModel, enableWebSearch);
           } else {
-            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel);
+            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel, enableWebSearch);
           }
           renderWriterCard(turn, currentDraft);
 
