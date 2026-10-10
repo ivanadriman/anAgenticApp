@@ -9,6 +9,15 @@ An autonomous multi-agent pipeline built with Python and Google's official `goog
 
 ---
 
+## Supported Gemini Models
+The app is configured to use Google's latest models:
+- **`gemini-3.8-flash`** *(Default / Recommended)* — Ultra-fast, highly capable reasoning and agentic workflows.
+- **`gemini-3.5-flash-lite`** — Ultra-fast, cost-efficient high-throughput execution.
+- **`gemini-flash-latest`** — Always uses the latest production flash checkpoint.
+- **`gemini-3.1-pro-preview`** — For deep reasoning and complex critique.
+
+---
+
 ## Quickstart
 
 ### 1. Requirements
@@ -27,13 +36,17 @@ pip install -r requirements.txt
 ```
 
 ### 3. Run
-Execute the pipeline:
+
+#### Web App (GitHub Pages or Local Browser)
+Simply open `index.html` in any web browser or deploy directly to GitHub Pages! You can select your model from the dropdown.
+
+#### Python CLI Pipeline
 ```bash
-# Default topic
+# Default (gemini-3.8-flash)
 python dev_pipeline.py
 
-# Custom topic with options
-python dev_pipeline.py --topic "Guide to Git branching strategies for teams" --max-turns 3 --target-score 8.8
+# Specify model and options
+python dev_pipeline.py --model gemini-3.8-flash --topic "Guide to Git branching strategies" --max-turns 3 --target-score 8.8
 ```
 
 Output reports and revision logs are automatically saved to `output/<topic_slug>.md`.

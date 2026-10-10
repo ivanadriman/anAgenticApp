@@ -41,7 +41,7 @@
       </div>
       <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700/60 w-fit">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Model: <strong>gemini-2.5-flash</strong> / <strong>gemini-1.5-flash</strong></span>
+        <span>Powered by: <strong>Gemini 3.8 Flash</strong></span>
       </div>
     </div>
   </header>
@@ -101,7 +101,18 @@
         >Explain how Agentic AI architectures work to software engineers with a concrete example</textarea>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <label for="modelSelect" class="block text-xs font-medium text-slate-300 mb-1">
+            Gemini Model:
+          </label>
+          <select id="modelSelect" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-cyan-500">
+            <option value="gemini-3.8-flash" selected>gemini-3.8-flash (Recommended)</option>
+            <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite (Ultra Fast)</option>
+            <option value="gemini-flash-latest">gemini-flash-latest</option>
+            <option value="gemini-3.1-pro-preview">gemini-3.1-pro-preview (Deep Reasoning)</option>
+          </select>
+        </div>
         <div>
           <label for="maxTurnsSelect" class="block text-xs font-medium text-slate-300 mb-1">
             Max Iteration Turns:
@@ -168,6 +179,7 @@
     const saveKeyBtn = document.getElementById("saveKeyBtn");
     const toggleKeyVisibility = document.getElementById("toggleKeyVisibility");
     const topicInput = document.getElementById("topicInput");
+    const modelSelect = document.getElementById("modelSelect");
     const maxTurnsSelect = document.getElementById("maxTurnsSelect");
     const targetScoreInput = document.getElementById("targetScoreInput");
     const startPipelineBtn = document.getElementById("startPipelineBtn");
@@ -208,9 +220,7 @@
     });
 
     // Helper: Call Gemini REST API directly from browser
-    async function callGemini(apiKey, systemInstruction, prompt) {
-      // Models supported in standard v1beta REST endpoint: gemini-2.5-flash / gemini-1.5-flash
-      const model = "gemini-2.5-flash";
+    async function callGemini(apiKey, systemInstruction, prompt, model = "gemini-3.8-flash") {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
       const payload = {
@@ -246,13 +256,13 @@
     }
 
     // Agent Functions
-    async function runWriterDraft(apiKey, topic) {
+    async function runWriterDraft(apiKey, topic, model) {
       const sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
       const prompt = `Topic/Goal: ${topic}\nPlease write Draft 1.`;
-      return await callGemini(apiKey, sys, prompt);
+      return await callGemini(apiKey, sys, prompt, model);
     }
 
-    async function runCriticReview(apiKey, topic, draft, turn) {
+    async function runCriticReview(apiKey, topic, draft, turn, model) {
       const sys = `You are a meticulous Senior Editor and Critic Agent. 
 Evaluate drafts strictly on clarity, depth, coherence, tone, and practical examples.
 Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.
@@ -266,7 +276,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 }`;
 
       const prompt = `Goal: ${topic}\nIteration Turn: ${turn}\n\nDraft to review:\n\"\"\"\n${draft}\n\"\"\"\n\nReturn ONLY the JSON object.`;
-      const raw = await callGemini(apiKey, sys, prompt);
+      const raw = await callGemini(apiKey, sys, prompt, model);
 
       let clean = raw.trim();
       if (clean.startsWith("```")) {
@@ -275,10 +285,10 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       return JSON.parse(clean);
     }
 
-    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn) {
+    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model) {
       const sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
       const prompt = `Original Topic: ${topic}\n\nPrevious Draft (Draft ${turn}):\n\"\"\"\n${prevDraft}\n\"\"\"\n\nCritic Score: ${critique.score}/10\nWeaknesses:\n${critique.weaknesses.map(w => `- ${w}`).join("\n")}\n\nRequired Improvements:\n${critique.actionable_revisions.map(r => `- ${r}`).join("\n")}\n\nPlease write Draft ${turn + 1} addressing all feedback.`;
-      return await callGemini(apiKey, sys, prompt);
+      return await callGemini(apiKey, sys, prompt, model);
     }
 
     // UI Render Helpers
@@ -391,6 +401,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
         return;
       }
 
+      const selectedModel = modelSelect.value || "gemini-3.8-flash";
       const maxTurns = parseInt(maxTurnsSelect.value, 10) || 2;
       const targetScore = parseFloat(targetScoreInput.value) || 8.5;
 
@@ -409,17 +420,17 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           stepCounter.textContent = `Turn ${turn} of ${maxTurns}`;
 
           // Step 1: Writer
-          statusText.textContent = `Turn ${turn}: Writer Agent is composing...`;
+          statusText.textContent = `Turn ${turn}: Writer Agent (${selectedModel}) is composing...`;
           if (turn === 1) {
-            currentDraft = await runWriterDraft(apiKey, topic);
+            currentDraft = await runWriterDraft(apiKey, topic, selectedModel);
           } else {
-            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1);
+            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel);
           }
           renderWriterCard(turn, currentDraft);
 
           // Step 2: Critic
-          statusText.textContent = `Turn ${turn}: Critic Agent is evaluating...`;
-          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn);
+          statusText.textContent = `Turn ${turn}: Critic Agent (${selectedModel}) is evaluating...`;
+          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel);
           renderCriticCard(turn, latestCritique, targetScore);
 
           // Check approval condition
