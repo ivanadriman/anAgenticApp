@@ -204,18 +204,26 @@ To ensure citations can be audited without friction, the agents follow strict fo
    ```
 2. **Character-for-Character Verbatim**:
    The text inside the quotation marks MUST match the source abstract character-for-character. Paraphrasing within quotation marks is strictly prohibited.
-3. **Bibliography Structure**:
-   At the end of the text, a numbered bibliography must be provided:
+3. **Bibliography Structure & Direct Clickable Links**:
+   At the end of the text, a numbered bibliography must be provided with valid links:
    ```markdown
    ## 📚 Referensi & Sumber Terkutip
-   [1] Author A, Author B (Year). *Title*. Venue. [Link](url)
-   [2] Author C (Year). *Title*. Venue. [Link](url)
+   [1] Author A, Author B (Year). *Title*. Venue. [🔗 Buka Makalah / Sumber](https://arxiv.org/abs/...)
+   [2] Author C (Year). *Title*. Venue. [🔗 Buka Makalah / Sumber](https://doi.org/...)
    ```
-4. **Critic Audit**:
+4. **Auto-Enrichment & Interactive Rendering Engine**:
+   - **Web UI (`index.html`)**: `prepareDraftHtml(draftText, dossier)` transforms raw markdown before rendering:
+     - Replaces in-text `[n]` citations with interactive jump anchors: `<a href="#ref-n" class="citation-ref">[n]</a>`.
+     - Formats reference entries into individual cards: `<div id="ref-n" class="reference-item">`.
+     - Injects verified URLs from `dossier.citations` if omitted by the LLM.
+     - Custom Marked.js renderer automatically sets `target="_blank" rel="noopener noreferrer"` and renders styled cyan action pills with `🔗` and `↗`.
+   - **CLI Pipeline (`dev_pipeline.py`)**: `enrich_references_with_links(draft_text, citations, lang)` ensures all terminal output and exported Markdown artifacts (`output/<topic>.md`) contain verified clickable Markdown links.
+5. **Critic Audit**:
    The Critic Agent explicitly scans for:
    - Quotation format compliance (`"..." [n]`)
    - Exact match against the dossier abstracts
    - Inclusion of all cited numbers in the ending bibliography
+   - Valid clickable paper links `[🔗 Buka Makalah](url)` for every reference entry
 
 ---
 

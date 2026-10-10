@@ -226,6 +226,27 @@ def run_browser_tests():
             assert q_num in bib_nums or int(q_num) <= len(bib_entries) + 2, f"Quoted citation [{q_num}] missing from bibliography"
         print("  ✓ All quotes match format '\"...\" [n]' and are listed in the ending references bibliography!", flush=True)
 
+        # -------------------------------------------------------------
+        # Test Case 6: Verify Clickable Links & In-Text Jump Anchors
+        # -------------------------------------------------------------
+        print("\n--- Test Case 6: Inspecting Clickable Reference Links & In-Text Navigation ---", flush=True)
+        # Check clickable reference paper action links
+        ref_links = page.locator(".reference-item a[href^='http']").count()
+        print(f"  • Clickable paper action links in references section (.reference-item a): {ref_links}", flush=True)
+        assert ref_links > 0, f"Expected clickable external links inside .reference-item, found {ref_links}"
+
+        # Check in-text citation jump anchor links
+        jump_links = page.locator("a.citation-ref[href^='#ref-']").count()
+        print(f"  • In-text clickable jump anchors (a.citation-ref): {jump_links}", flush=True)
+        assert jump_links > 0, f"Expected in-text citation jump anchors matching a.citation-ref, found {jump_links}"
+
+        # Check first reference link target attribute
+        first_ref_link = page.locator(".reference-item a[href^='http']").first
+        target_attr = first_ref_link.get_attribute("target")
+        print(f"  • First reference link target: '{target_attr}' (opens safely in external tab)", flush=True)
+        assert target_attr == "_blank", "Expected target='_blank' on external paper link"
+        print("  ✓ Clickable reference links and smooth jump anchors verified successfully!", flush=True)
+
         final_screenshot = os.path.join(SCREENSHOTS_DIR, "20_full_indonesian_multilingual_session.png")
         page.screenshot(path=final_screenshot, full_page=True)
         print(f"\nAll multilingual & language switch tests passed! Saved to {final_screenshot}", flush=True)

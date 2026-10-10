@@ -657,12 +657,13 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
         "   (Catatan: Jika menulis dalam Bahasa Indonesia dan sumber dalam Bahasa Inggris, biarkan kutipan bukti di dalam tanda petik persis dalam bahasa aslinya, lalu berikan ulasan, konteks, atau terjemahan Anda dalam Bahasa Indonesia sebelum atau sesudah kutipan tersebut).\n"
         "3. PENOMORAN SITASI URUT:\n"
         "   Beri nomor kutipan secara berurutan sesuai kemunculan pertamanya di dalam teks: [1], [2], [3], dst.\n"
-        "4. DAFTAR SUMBER RUJUKAN DI AKHIR NASKAH:\n"
+        "4. DAFTAR SUMBER RUJUKAN DI AKHIR NASKAH (TAUTAN AKTIF KLIK / CLICKABLE LINKS MANDATORY):\n"
         "   Di bagian paling akhir naskah, Anda WAJIB menyertakan daftar sumber rujukan bernomor yang cocok persis dengan nomor kutipan di teks:\n"
         f"   {'## 📚 Referensi & Sumber Terkutip' if lang == 'id' else '## 📚 References & Cited Sources'}\n"
-        "   Format setiap entri:\n"
-        "   [1] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [Tautan / DOI](url)\n"
-        "   [2] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [Tautan / DOI](url)\n"
+        "   Format setiap entri WAJIB menyertakan tautan markdown yang dapat langsung diklik oleh pembaca:\n"
+        f"   {'   [1] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [🔗 Buka Makalah](url_lengkap)' if lang == 'id' else '   [1] Authors (Year). *Paper Title*. Venue. [🔗 Open Paper](full_url)'}\n"
+        f"   {'   [2] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [🔗 Buka Makalah](url_lengkap)' if lang == 'id' else '   [2] Authors (Year). *Paper Title*. Venue. [🔗 Open Paper](full_url)'}\n"
+        "   Salin URL asli secara lengkap (http://... atau https://...) dari berkas riset ke dalam tanda kurung [🔗 Buka Makalah](url) agar pembaca dapat langsung mengklik tautan tersebut untuk membuka artikel aslinya!\n"
         "   Setiap nomor [n] yang dikutip dalam teks WAJIB ada di daftar akhir ini!"
     )
     system_prompt += quotation_rules
@@ -682,9 +683,9 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
     if instructions:
         user_prompt += f"Special Instructions: {instructions}\n"
     if lang == "id":
-        user_prompt += "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir."
+        user_prompt += "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir lengkap dengan tautan [🔗 Buka Makalah](url)."
     else:
-        user_prompt += "Please write Draft 1 grounded in the topic and research, using exact verbatim quotes \"... ...\" [n] and the numbered references list at the end."
+        user_prompt += "Please write Draft 1 grounded in the topic and research, using exact verbatim quotes \"... ...\" [n] and the numbered references list at the end with clickable links [🔗 Open Paper](url)."
 
     tools = [{"type": "google_search"}] if enable_search else None
     response = client.interactions.create(
@@ -715,9 +716,7 @@ def run_writer_revision(original_topic: str, previous_draft: str, critique: Crit
         "\n\nATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n"
         "1. KUTIPAN & NOMOR SITASI: Seluruh kutipan bukti harus diapit tanda petik ganda dan nomor sitasi: \"... bla bla bla ...\" [n].\n"
         "2. PERSIS SAMA UNTUK CTRL+F: Teks di dalam tanda petik HARUS persis sama huruf-demi-huruf dengan sumber aslinya di dossier agar bisa dicari dengan CTRL+F di sumber aslinya.\n"
-        "3. DAFTAR RUJUKAN DI AKHIR: Pertahankan dan lengkapi daftar bernomor di bagian akhir:\n"
-        f"   {'## 📚 Referensi & Sumber Terkutip' if lang == 'id' else '## 📚 References & Cited Sources'}\n"
-        "   yang memetakan setiap [n] ke judul, penulis, tahun, dan tautan/DOI."
+        "3. DAFTAR RUJUKAN DI AKHIR DENGAN TAUTAN KLIK: Pertahankan dan lengkapi daftar bernomor di bagian akhir dengan tautan markdown yang dapat langsung diklik pembaca: [🔗 Buka Makalah](url) yang memetakan setiap [n] ke judul, penulis, tahun, dan tautan/DOI asli."
     )
     system_prompt += quotation_rules
 
@@ -746,9 +745,9 @@ Required Improvements:
         prompt += f"\nResearch Dossier Reference:\n{scholarly_dossier}\n"
 
     if lang == "id":
-        prompt += f"\nSilakan tulis revisi lengkap (Draf {turn + 1}) dalam Bahasa Indonesia yang menindaklanjuti seluruh evaluasi di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir."
+        prompt += f"\nSilakan tulis revisi lengkap (Draf {turn + 1}) dalam Bahasa Indonesia yang menindaklanjuti seluruh evaluasi di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir lengkap dengan tautan [🔗 Buka Makalah](url)."
     else:
-        prompt += f"\nPlease write the complete revised version (Draft {turn + 1}) addressing all feedback with exact verbatim quotes \"... ...\" [n] and the numbered references list at the end."
+        prompt += f"\nPlease write the complete revised version (Draft {turn + 1}) addressing all feedback with exact verbatim quotes \"... ...\" [n] and the numbered references list at the end with clickable links [🔗 Open Paper](url)."
 
     tools = [{"type": "google_search"}] if enable_search else None
     response = client.interactions.create(
@@ -778,7 +777,7 @@ def run_critic_review(topic: str, draft: str, turn: int, model: str = DEFAULT_MO
         "\nAUDIT KUTIPAN KATA-DEMI-KATA & REFERENSI (VERBATIM QUOTATION & CITATION AUDIT):\n"
         "1. Format Kutipan: Periksa apakah setiap kutipan fakta/bukti diapit tanda petik \"... bla bla bla ...\" dan diikuti nomor sitasi dalam kurung siku seperti [1], [2].\n"
         "2. Verifikasi CTRL+F: Periksa apakah kutipan di dalam \"... ...\" persis sama kata-demi-kata dengan teks sumber/abstrak di berkas riset sehingga pembaca dapat mencarinya dengan CTRL+F di sumber aslinya. Jika ada kutipan yang diparafrasekan di dalam tanda petik, tandai sebagai KELEMAHAN (Weakness).\n"
-        "3. Daftar Referensi Akhir: Periksa apakah di akhir naskah terdapat daftar rujukan bernomor ([1], [2], ...) yang memetakan nomor kutipan ke judul makalah, penulis, tahun, dan tautan/DOI.\n"
+        "3. Daftar Referensi Akhir & Tautan Klik: Periksa apakah di akhir naskah terdapat daftar rujukan bernomor ([1], [2], ...) yang memetakan nomor kutipan ke judul makalah, penulis, tahun, dan TAUTAN KLIK YANG VALID [🔗 Buka Makalah](url). Jika rujukan tidak memiliki tautan klik yang valid, tandai sebagai KELEMAHAN.\n"
         "Jika aturan kutipan dan referensi ini belum terpenuhi dengan sempurna, status WAJIB 'NEEDS_REVISION'.\n"
     )
 
@@ -824,6 +823,45 @@ Analyze the draft thoroughly and output your evaluation as a valid JSON object o
     
     data = json.loads(cleaned)
     return CritiqueResult(**data)
+
+
+def enrich_references_with_links(draft_text: str, citations: List[Dict[str, Any]], lang: str = "en") -> str:
+    """Ensure all entries in ## 📚 References & Cited Sources provide clean, clickable markdown links."""
+    if not draft_text:
+        return ""
+
+    ref_match = re.search(r'(##+\s*(?:📚\s*)?(?:Referensi|References|Sumber Terkutip|Cited Sources)[^\n]*\n)([\s\S]*?)(?=\n##|\Z)', draft_text, flags=re.IGNORECASE)
+    if not ref_match:
+        return draft_text
+
+    header = ref_match.group(1)
+    ref_body = ref_match.group(2)
+    lines = ref_body.splitlines()
+    new_lines = []
+
+    link_label = "🔗 Buka Makalah / Sumber" if lang == "id" else "🔗 Open Paper / Source"
+
+    for line in lines:
+        stripped = line.strip()
+        entry_match = re.match(r'^(?:[-*]\s*)?(\[(\d+)\]|\b(\d+)\.)\s+(.*)$', stripped)
+        if entry_match:
+            num = int(entry_match.group(2) or entry_match.group(3))
+            content = entry_match.group(4)
+            has_markdown_link = bool(re.search(r'\[[^\]]+\]\((https?://[^\s)]+)\)', content))
+            raw_url_match = re.search(r'(https?://[^\s<)]+)', content)
+
+            if not has_markdown_link and raw_url_match:
+                raw_url = raw_url_match.group(1)
+                line = line.replace(raw_url, f"[{link_label}]({raw_url})")
+            elif not has_markdown_link and not raw_url_match and citations:
+                matching = next((c for c in citations if c.get("num") == num), None)
+                if not matching and 0 <= num - 1 < len(citations):
+                    matching = citations[num - 1]
+                if matching and matching.get("url") and matching["url"] != "#":
+                    line = f"{line.rstrip()} [{link_label}]({matching['url']})"
+        new_lines.append(line)
+
+    return draft_text[:ref_match.start()] + header + "\n".join(new_lines) + draft_text[ref_match.end():]
 
 
 # ==============================================================================
@@ -892,6 +930,8 @@ def orchestrate_pipeline(
         else:
             assert latest_critique is not None
             current_draft = run_writer_revision(topic, current_draft, latest_critique, turn - 1, model=model, enable_search=web_search, thinking_level=thinking_level, scholarly_dossier=dossier_text, lang=lang)
+
+        current_draft = enrich_references_with_links(current_draft, citations, lang=lang)
 
         console.print(Panel(Markdown(current_draft), title=f"[bold green]Writer Agent - Draft {turn}[/bold green]", border_style="green"))
 

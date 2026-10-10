@@ -154,13 +154,13 @@ Often, AI summaries paraphrase findings in ways that make it difficult or imposs
    "While the perception task dynamically uses all frequencies with more prominent peaks..." [4]
    ```
 2. The bracketed number `[n]` directly indicates the citation.
-3. **Instant CTRL+F Verification**:
-   - Open the source link provided in the bibliography.
-   - Press <kbd>Ctrl</kbd> + <kbd>F</kbd> (or <kbd>Cmd</kbd> + <kbd>F</kbd> on macOS).
-   - Paste the quoted text into the search bar.
-   - You will land directly on that exact sentence in the published paper.
+3. **Instant CTRL+F Verification & Direct Clickable Links**:
+   - **In-Text Citation Navigation**: Every in-text citation `[n]` is an interactive jump anchor. Clicking `[n]` smoothly navigates down to card `#ref-n` in the references section and highlights it in glowing cyan.
+   - **Direct External Paper Buttons**: Every entry in the bibliography contains a prominent clickable action button: `🔗 Open Paper / Source ↗` (or `🔗 Buka Makalah / Sumber ↗`).
+   - Clicking this button opens the original academic paper, publisher DOI, arXiv preprint, or PubMed article in a new tab (`target="_blank" rel="noopener noreferrer"`).
+   - Press <kbd>Ctrl</kbd> + <kbd>F</kbd> (or <kbd>Cmd</kbd> + <kbd>F</kbd> on macOS) in the opened paper, paste the quoted sentence, and immediately verify the statement in its full original context.
 4. **Ending References Section**:
-   - At the bottom of the article, every number `[1]`, `[2]`, `[3]` is listed with author names, year, paper title, journal/source venue, and direct hyperlink/DOI.
+   - At the bottom of the article, every number `[1]`, `[2]`, `[3]` is listed with author names, year, paper title, journal/source venue, and direct clickable hyperlink/DOI.
 
 ---
 

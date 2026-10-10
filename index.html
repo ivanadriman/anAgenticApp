@@ -24,6 +24,50 @@
     .markdown-body pre { background: #0f172a; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
     .markdown-body pre code { background: transparent; padding: 0; color: #e2e8f0; }
     .markdown-body blockquote { border-left: 3px solid #38bdf8; padding-left: 1rem; color: #94a3b8; font-style: italic; }
+    .markdown-body a {
+      color: #38bdf8;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .markdown-body a:hover {
+      color: #7dd3fc;
+      text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+    }
+    .markdown-body .citation-ref {
+      color: #38bdf8;
+      background: rgba(8, 51, 68, 0.7);
+      border: 1px solid rgba(14, 116, 144, 0.7);
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-family: ui-monospace, monospace;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+      margin: 0 0.15rem;
+      transition: all 0.15s ease;
+    }
+    .markdown-body .citation-ref:hover {
+      background: rgba(14, 116, 144, 0.9);
+      color: #ffffff;
+      border-color: #38bdf8;
+      transform: translateY(-1px);
+    }
+    .markdown-body .reference-item {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(51, 65, 85, 0.8);
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.6rem;
+      transition: all 0.2s ease;
+    }
+    .markdown-body .reference-item:hover, .markdown-body .reference-item:target {
+      border-color: rgba(56, 189, 248, 0.7);
+      background: rgba(15, 23, 42, 0.95);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
@@ -479,6 +523,94 @@
     const statusSpinner = document.getElementById("statusSpinner");
     const stepCounter = document.getElementById("stepCounter");
     const outputContainer = document.getElementById("outputContainer");
+
+    // Configure Marked.js with clickable links and safe target="_blank"
+    marked.use({
+      gfm: true,
+      breaks: true,
+      renderer: {
+        link(arg1, arg2, arg3) {
+          let href = "";
+          let title = "";
+          let text = "";
+          if (typeof arg1 === "object" && arg1 !== null) {
+            href = arg1.href || "";
+            title = arg1.title || "";
+            text = arg1.text || href;
+          } else {
+            href = arg1 || "";
+            title = arg2 || "";
+            text = arg3 || href;
+          }
+          const isExternal = href.startsWith("http://") || href.startsWith("https://") || href.startsWith("//");
+          const targetAttr = isExternal ? ' target="_blank" rel="noopener noreferrer"' : '';
+          const titleAttr = title ? ` title="${title}"` : '';
+
+          // Check if this is a link to an external paper or reference action
+          const isPaperAction = /buka|open|paper|makalah|doi|arxiv|pmc|pubmed|link|tautan|source|sumber/i.test(text) ||
+                                href.includes("doi.org") || href.includes("arxiv.org") || href.includes("ncbi.nlm.nih.gov") || href.includes("semanticscholar.org");
+
+          if (isPaperAction) {
+            const cleanText = text.replace(/^🔗\s*/, "");
+            return `<a href="${href}"${targetAttr}${titleAttr} class="inline-flex items-center gap-1.5 px-3 py-1 my-1 text-xs font-semibold rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-700/80 hover:bg-cyan-900 hover:text-white hover:border-cyan-400 transition shadow-sm no-underline group"><span class="text-cyan-400 group-hover:scale-110 transition-transform">🔗</span> <span>${cleanText}</span> <span class="text-[10px] text-cyan-400 opacity-80">↗</span></a>`;
+          }
+
+          return `<a href="${href}"${targetAttr}${titleAttr} class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2 hover:underline transition inline-flex items-center gap-1 font-medium">${text} <span class="text-[10px] text-cyan-500 no-underline">↗</span></a>`;
+        }
+      }
+    });
+
+    // Helper to enrich draft with clickable links in the References section and in-text citation anchors
+    function prepareDraftHtml(draftText, dossier = null) {
+      if (!draftText) return "";
+      let enriched = draftText;
+
+      // 1. Enrich references section: Ensure each [n] entry has a clickable markdown link
+      const refHeaderMatch = enriched.match(/(##+\s*(?:📚\s*)?(?:Referensi|References|Sumber Terkutip|Cited Sources|Daftar Rujukan|Daftar Referensi)[^\n]*\n)([\s\S]*)$/i);
+      if (refHeaderMatch) {
+        const header = refHeaderMatch[1];
+        let refBody = refHeaderMatch[2];
+
+        // Format each reference line: [1] ... or 1. ... or - [1] ...
+        refBody = refBody.replace(/^(?:[-*]\s*)?(\[(\d+)\]|\b(\d+)\.)\s+([^\n]+)$/gm, (fullLine, prefix, num1, num2, content) => {
+          const num = parseInt(num1 || num2, 10);
+          let updatedContent = content;
+
+          // Check if markdown link already exists [text](url)
+          const hasMarkdownLink = /\[[^\]]+\]\((https?:\/\/[^\s)]+)\)/.test(updatedContent);
+          const rawUrlMatch = updatedContent.match(/(https?:\/\/[^\s<)]+)/);
+          const linkLabel = currentLang === "id" ? "Buka Makalah / Sumber" : "Open Paper / Source";
+
+          if (!hasMarkdownLink && rawUrlMatch) {
+            const rawUrl = rawUrlMatch[1];
+            updatedContent = updatedContent.replace(rawUrl, `[🔗 ${linkLabel}](${rawUrl})`);
+          } else if (!hasMarkdownLink && !rawUrlMatch && dossier && dossier.citations) {
+            const matchingCitation = dossier.citations.find(c => c.num === num) || dossier.citations[num - 1];
+            if (matchingCitation && matchingCitation.url && matchingCitation.url !== "#") {
+              updatedContent += ` [🔗 ${linkLabel}](${matchingCitation.url})`;
+            }
+          }
+
+          return `<div id="ref-${num}" class="reference-item">\n\n**[${num}]** ${updatedContent}\n\n</div>`;
+        });
+
+        enriched = enriched.substring(0, refHeaderMatch.index) + header + "\n" + refBody;
+      }
+
+      // 2. Linkify in-text citations [1], [2] to jump to #ref-1, #ref-2
+      if (refHeaderMatch) {
+        const bodyPart = enriched.substring(0, refHeaderMatch.index);
+        const refPart = enriched.substring(refHeaderMatch.index);
+
+        const linkedBody = bodyPart.replace(/\[(\d+)\]/g, (match, n) => {
+          return `<a href="#ref-${n}" class="citation-ref" title="Lihat Referensi [${n}] / Jump to Reference [${n}]">[${n}]</a>`;
+        });
+
+        enriched = linkedBody + refPart;
+      }
+
+      return marked.parse(enriched);
+    }
 
     // Scholarly & Reference Grounding Elements
     const arxivCheck = document.getElementById("arxivCheck");
@@ -1537,12 +1669,14 @@ Respond ONLY with valid JSON:
         "   (Catatan: Jika menulis dalam Bahasa Indonesia dan sumber dalam Bahasa Inggris, biarkan kutipan bukti di dalam tanda petik persis dalam bahasa aslinya, lalu berikan ulasan, konteks, atau terjemahan Anda dalam Bahasa Indonesia sebelum atau sesudah kutipan tersebut).\n" +
         "3. PENOMORAN SITASI URUT:\n" +
         "   Beri nomor kutipan secara berurutan sesuai kemunculan pertamanya di dalam teks: [1], [2], [3], dst.\n" +
-        "4. DAFTAR SUMBER RUJUKAN DI AKHIR NASKAH:\n" +
+        "4. DAFTAR SUMBER RUJUKAN DI AKHIR NASKAH (TAUTAN AKTIF KLIK / CLICKABLE LINKS MANDATORY):\n" +
         "   Di bagian paling akhir naskah, Anda WAJIB menyertakan daftar sumber rujukan bernomor yang cocok persis dengan nomor kutipan di teks:\n" +
         (currentLang === "id" ? "   '## 📚 Referensi & Sumber Terkutip'\n" : "   '## 📚 References & Cited Sources'\n") +
-        "   Format setiap entri:\n" +
-        "   [1] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [Tautan / DOI](url)\n" +
-        "   [2] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [Tautan / DOI](url)\n" +
+        "   Setiap entri WAJIB menyertakan tautan markdown yang dapat langsung diklik oleh pembaca:\n" +
+        (currentLang === "id" 
+          ? "   [1] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [🔗 Buka Makalah](url_lengkap)\n   [2] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [🔗 Buka Makalah](url_lengkap)\n" 
+          : "   [1] Authors (Year). *Paper Title*. Venue. [🔗 Open Paper](full_url)\n   [2] Authors (Year). *Paper Title*. Venue. [🔗 Open Paper](full_url)\n") +
+        "   Salin URL asli secara lengkap (http://... atau https://...) dari berkas riset ke dalam tanda kurung [🔗 Buka Makalah](url) agar pembaca dapat langsung mengklik tautan tersebut untuk membuka artikel aslinya!\n" +
         "   Setiap nomor [n] yang dikutip dalam teks WAJIB ada di daftar akhir ini!";
 
       if (enableSearch) {
@@ -1556,8 +1690,8 @@ Respond ONLY with valid JSON:
         prompt += `\n${scholarlyDossier.text}\n`;
       }
       prompt += currentLang === "id" 
-        ? "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir."
-        : "Please write Draft 1 grounded in the topic and research, using exact verbatim quotes \"... ...\" [n] and the numbered references list at the end.";
+        ? "Silakan tulis Draf 1 yang mendalam dan komprehensif dalam Bahasa Indonesia berlandaskan topik dan rujukan riset di atas dengan kutipan \"... ...\" [n] persis sama kata-demi-kata dan daftar referensi bernomor di akhir lengkap dengan tautan [🔗 Buka Makalah](url)."
+        : "Please write Draft 1 grounded in the topic and research, using exact verbatim quotes \"... ...\" [n] and the numbered references list at the end with clickable links [🔗 Open Paper](url).";
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
@@ -1572,7 +1706,7 @@ Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.`;
 AUDIT KUTIPAN KATA-DEMI-KATA & REFERENSI (VERBATIM QUOTATION & CITATION AUDIT):
 1. Format Kutipan: Periksa apakah setiap kutipan fakta/bukti diapit tanda petik "... bla bla bla ..." dan diikuti nomor sitasi dalam kurung siku seperti [1], [2].
 2. Verifikasi CTRL+F: Periksa apakah kutipan di dalam "... ..." persis sama kata-demi-kata dengan teks sumber/abstrak di berkas riset sehingga pembaca dapat mencarinya dengan CTRL+F di sumber aslinya. Jika ada kutipan yang diparafrasekan di dalam tanda petik, tandai sebagai KELEMAHAN (Weakness).
-3. Daftar Referensi Akhir: Periksa apakah di akhir naskah terdapat daftar rujukan bernomor ([1], [2], ...) yang memetakan nomor kutipan ke judul makalah, penulis, tahun, dan tautan/DOI.
+3. Daftar Referensi Akhir & Tautan Klik: Periksa apakah di akhir naskah terdapat daftar rujukan bernomor ([1], [2], ...) yang memetakan nomor kutipan ke judul makalah, penulis, tahun, dan TAUTAN KLIK YANG VALID [🔗 Buka Makalah](url). Jika rujukan tidak memiliki tautan klik yang valid, tandai sebagai KELEMAHAN.
 Jika aturan kutipan dan referensi ini belum terpenuhi dengan sempurna, status WAJIB 'NEEDS_REVISION'.
 `;
       if (scholarlyDossier) {
@@ -1613,9 +1747,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
         "ATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n" +
         "1. KUTIPAN & NOMOR SITASI: Seluruh kutipan bukti harus diapit tanda petik ganda dan nomor sitasi: \"... bla bla bla ...\" [n].\n" +
         "2. PERSIS SAMA UNTUK CTRL+F: Teks di dalam tanda petik HARUS persis sama huruf-demi-huruf dengan sumber aslinya di dossier agar bisa dicari dengan CTRL+F di sumber aslinya.\n" +
-        "3. DAFTAR RUJUKAN DI AKHIR: Pertahankan dan lengkapi daftar bernomor di bagian akhir:\n" +
-        (currentLang === "id" ? "   '## 📚 Referensi & Sumber Terkutip'\n" : "   '## 📚 References & Cited Sources'\n") +
-        "   yang memetakan setiap [n] ke judul, penulis, tahun, dan tautan/DOI.";
+        "3. DAFTAR RUJUKAN DI AKHIR DENGAN TAUTAN KLIK: Pertahankan dan lengkapi daftar bernomor di bagian akhir dengan tautan markdown yang dapat langsung diklik pembaca: [🔗 Buka Makalah](url) yang memetakan setiap [n] ke judul, penulis, tahun, dan tautan/DOI asli.";
 
       if (enableSearch) {
         sys += " Use Google Search to look up any missing facts, latest data, or references requested by the Critic.";
@@ -1634,7 +1766,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
     }
 
     // UI Render Helpers
-    function renderWriterCard(turn, draftText) {
+    function renderWriterCard(turn, draftText, dossier = null) {
       const card = document.createElement("div");
       card.className = "bg-slate-900 border border-emerald-500/40 rounded-2xl p-6 shadow-xl transition";
       const title = currentLang === "id" ? `Agen Penulis &bull; Draf ${turn}` : `Writer Agent &bull; Draft ${turn}`;
@@ -1648,7 +1780,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           <span class="text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-2.5 py-0.5 rounded-full font-mono">${statusLabel}</span>
         </div>
         <div class="markdown-body text-slate-200 text-sm">
-          ${marked.parse(draftText)}
+          ${prepareDraftHtml(draftText, dossier)}
         </div>
       `;
       outputContainer.appendChild(card);
@@ -1766,7 +1898,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       outputContainer.appendChild(card);
     }
 
-    function renderFinalApprovedCard(finalDraft, score, turns) {
+    function renderFinalApprovedCard(finalDraft, score, turns, dossier = null) {
       const card = document.createElement("div");
       card.className = "bg-gradient-to-b from-cyan-950/40 to-slate-900 border-2 border-cyan-400/80 rounded-2xl p-6 shadow-2xl transition";
       const title = currentLang === "id" ? "Hasil Akhir Disetujui" : "Final Polish Approved";
@@ -1790,7 +1922,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           <span>${turnsLabel} <strong class="text-slate-200 font-mono">${turns} ${turnsUnit}</strong></span>
         </div>
         <div class="markdown-body text-slate-100 text-sm">
-          ${marked.parse(finalDraft)}
+          ${prepareDraftHtml(finalDraft, dossier)}
         </div>
       `;
       outputContainer.prepend(card);
@@ -1877,7 +2009,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           } else {
             currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier);
           }
-          renderWriterCard(turn, currentDraft);
+          renderWriterCard(turn, currentDraft, scholarlyDossier);
 
           // Step 2: Critic
           statusText.textContent = currentLang === "id"
@@ -1894,13 +2026,13 @@ You MUST respond ONLY with valid JSON conforming to this schema:
             statusText.textContent = currentLang === "id"
               ? `Disetujui! Skor Pengkritik ${latestCritique.score.toFixed(1)} mencapai target ${targetScore.toFixed(1)}.`
               : `Approved! Critic score ${latestCritique.score.toFixed(1)} reached target ${targetScore.toFixed(1)}.`;
-            renderFinalApprovedCard(currentDraft, latestCritique.score, turn);
+            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier);
             break;
           } else if (turn === maxTurns) {
             statusText.textContent = currentLang === "id"
               ? `Menyelesaikan seluruh ${maxTurns} putaran (Skor akhir: ${latestCritique.score.toFixed(1)}).`
               : `Completed all ${maxTurns} iterations (Final score: ${latestCritique.score.toFixed(1)}).`;
-            renderFinalApprovedCard(currentDraft, latestCritique.score, turn);
+            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier);
           } else if (isApproved && forceAllTurns) {
             statusText.textContent = currentLang === "id"
               ? `Putaran ${turn} bernilai ${latestCritique.score.toFixed(1)} (>= ${targetScore.toFixed(1)}), lanjut ke putaran berikutnya (Mode paksa aktif)...`
