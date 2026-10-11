@@ -14,6 +14,7 @@ Built with dual implementations:
 
 | Document | Purpose & Audience |
 | :--- | :--- |
+| 🎯 **[Use Cases Guide (USE_CASES.md)](USE_CASES.md)** | Real-world applications, user personas, recommended pipeline configurations, prompt examples, and chatbot comparison matrix. |
 | 📖 **[User Guide (USER_GUIDE.md)](USER_GUIDE.md)** | Step-by-step user manual covering features, language switching, model quotas, literature grounding, exact quoting, and CTRL+F verification. |
 | 🛠️ **[Developer Guide (DEVELOPER_GUIDE.md)](DEVELOPER_GUIDE.md)** | Technical reference for developers covering architecture, open API integrations, inverted index reconstruction, agent prompts, and Playwright test automation. |
 

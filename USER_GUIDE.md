@@ -4,6 +4,8 @@ Welcome to **Gemini Agentic Studio** — an autonomous, iterative multi-agent re
 
 This guide provides end-users, students, researchers, technical writers, and content creators with comprehensive instructions on how to use the web application and the Python command-line interface (CLI).
 
+> 💡 **Looking for practical scenarios, sample prompts, and configuration recommendations?** See the dedicated **[Real-World Use Cases Guide (USE_CASES.md)](USE_CASES.md)** for detailed walkthroughs of Academic Reviews, Technical Whitepapers, Executive Briefs, Educational Modules, and Confidential PDF Audits.
+
 ---
 
 ## 🌟 Table of Contents
