@@ -420,23 +420,27 @@ Smaller, high-throughput models (such as `gemini-3.5-flash-lite`) can experience
 
 ## 🔗 Deep Text-Fragment Highlighting & Verbatim Quote Verification
 
-Gemini Agentic Studio bridges the gap between AI synthesis and primary literature through deep link resolution adhering to the **W3C Scroll-to-Text Fragment standard** (`#:~:text=start,end`).
+Gemini Agentic Studio bridges the gap between AI synthesis and primary literature through deep link resolution adhering strictly to the **W3C Scroll-to-Text Fragment standard** (`#:~:text=start,end`) and an integrated **Source & Evidence Verification Inspector**.
 
 ### 1. How Deep Highlighting Works
 When you click **"🔗 Buka Makalah / Open Paper"** (or click a paper link in the references bibliography):
-1. The app takes the verbatim quote cited in the text and encodes a resilient W3C text fragment URL:
-   - For long quotes (> 8 words): `https://doi.org/...#:~:text=${encode(startWords)},${encode(endWords)}`
-   - For short quotes: `https://doi.org/...#:~:text=${encode(phrase)}`
-2. When the link opens in modern Chromium, Edge, or Safari browsers, the browser automatically **scrolls directly to the exact sentence** inside the original journal article and **highlights it in bright yellow**.
-3. Readers can immediately confirm that the cited evidence is authentic without having to manually search the PDF or webpage.
+1. The app sanitizes the verbatim quote and encodes spec-compliant W3C text fragment directives:
+   - **Protocol Enforcement**: Enforces `https://` to prevent 301/302 redirects from dropping the URL fragment.
+   - **Reserved Delimiter Encoding**: Hyphens are encoded as `%2D`, commas as `%2C`, and ampersands as `%26`. In Chromium's text fragment engine, unencoded hyphens (`-`) abort the parser because `-` is the reserved prefix/suffix delimiter (`[prefix-,]start[,end][,-suffix]`).
+   - **Boundary Range Matching**: Uses clean, alphanumeric 3-word start and 3-word end tokens (`startWords,endWords`) for quotes > 6 words.
+2. In supported Chromium and Safari browsers, visiting the URL automatically scrolls to the excerpt and highlights it in purple or yellow.
 
-### 2. Verbatim Quote Inspection on Mobile & Desktop
-- **Mobile Bottom Sheet Drawer**: Tapping any in-text citation pill (e.g., `[1]`, `[24]`) slides up an ergonomic bottom sheet containing:
-  - Source venue badge and complete paper title.
-  - The exact verbatim quotation highlighted in a dark amber quote card.
-  - A 48px touch button **"🔗 Buka Makalah / Open Paper ↗"** with the deep text-fragment URL.
-  - A **"📋 Salin Kutipan / Copy Quote"** button with instantaneous `"✓ Tersalin! / ✓ Copied!"` feedback.
-- **Desktop Tooltip**: Hovering over citation anchors displays a rich floating card with the quote snippet, verified authors, and a 1-click clipboard copy button.
+### 2. In-Context Source & Evidence Verification Inspector (Modal & Drawer)
+To guarantee 100% verification even when external journals are behind paywalls or cross-origin DOI redirects strip URL fragments, clicking **any in-text citation `[n]`** or **"🔍 Periksa Bukti / Inspect Evidence"** opens the **Source & Evidence Verification Inspector**:
+- **Desktop**: Renders as an elegant centered dialog modal with backdrop blur.
+- **Mobile**: Slides up as an ergonomic bottom sheet drawer.
+- **What the Inspector Displays**:
+  1. **Primary Bibliographic Details**: Title, verified authors, publication year, and source database badge.
+  2. **Cited Verbatim Quote**: The exact quote cited in the article in quotation marks.
+  3. **In-Context Verbatim Abstract Verification**: Displays the official source abstract directly inside the app, with the exact quoted sentence highlighted in `<mark class="bg-amber-400 ...">` and a `✓ 100% Verbatim Match` badge. Readers can verify authenticity instantly without leaving the app!
+  4. **1-Click "📋 Salin untuk CTRL+F"**: Copies the exact quote to clipboard with instant checkmark feedback, allowing instant finding if you open an external PDF.
+  5. **1-Click "🔎 Google Scholar"**: Performs an exact phrase search (`https://scholar.google.com/scholar?q="quote"`) locating open-access preprints, institutional mirrors, and PDF repositories where the quote exists.
+  6. **"🔗 Buka Makalah (Deep Highlight)"**: Directly navigates to the external publication landing page.
 
 ---
 

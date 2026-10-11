@@ -516,41 +516,53 @@ flowchart TD
 To enable 1-click verification of cited passages in primary literature, the engine generates deep links adhering to the W3C Scroll-to-Text Fragment standard (`#:~:text=start,end`):
 
 ```typescript
+function encodeFragmentToken(token: string): string {
+  if (!token) return "";
+  return encodeURIComponent(token)
+    .replace(/-/g, "%2D")
+    .replace(/,/g, "%2C")
+    .replace(/&/g, "%26");
+}
+
 function buildTextFragmentUrl(rawUrl: string, quoteText: string): string {
   if (!rawUrl || rawUrl === "#" || rawUrl.startsWith("#ref-")) return rawUrl;
   if (!quoteText || typeof quoteText !== "string") return rawUrl;
+
+  // Enforce https to avoid 301/302 redirects dropping fragments
+  const baseUrl = rawUrl.split("#")[0].trim().replace(/^http:\/\//i, "https://");
 
   let clean = quoteText
     .replace(/^["“'”]+|["“'”]+$/g, "")
     .replace(/\[\d+\]/g, "")
     .replace(/\s+/g, " ")
-    .replace(/^[.,;:!?'"“”—-]+\s*/, "")
-    .replace(/\s*[.,;:!?'"“”—-]+$/, "")
     .trim();
+  if (!clean || clean.length < 5) return baseUrl;
 
-  const words = clean.split(/\s+/).filter(Boolean);
-  if (words.length === 0) return rawUrl;
+  // Extract clean alphanumeric token words, stripping edge punctuation
+  const rawWords = clean.split(/\s+/).filter(Boolean);
+  const cleanWords = rawWords
+    .map(w => w.replace(/^[^\w\u00C0-\u024F]+|[^\w\u00C0-\u024F]+$/g, "").trim())
+    .filter(w => w.length > 0);
+  if (cleanWords.length === 0) return baseUrl;
 
   let textParam = "";
-  if (words.length > 8) {
-    // Range syntax for long quotes: startWords,endWords
-    const startWords = words.slice(0, 4).join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
-    const endWords = words.slice(-4).join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
-    textParam = encodeURIComponent(startWords) + "," + encodeURIComponent(endWords);
+  if (cleanWords.length <= 6) {
+    textParam = encodeFragmentToken(cleanWords.join(" "));
   } else {
-    // Exact syntax for short phrases
-    const phrase = words.join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
-    textParam = encodeURIComponent(phrase);
+    // 3 clean boundary words for robust matching across layout shifts
+    const startWords = cleanWords.slice(0, 3).join(" ");
+    const endWords = cleanWords.slice(-3).join(" ");
+    textParam = `${encodeFragmentToken(startWords)},${encodeFragmentToken(endWords)}`;
   }
 
-  const baseUrl = rawUrl.split("#")[0];
   return `${baseUrl}#:~:text=${textParam}`;
 }
 ```
 
 - **Dual-Engine Parity**: Implemented identically in JavaScript (`index.html`) and Python (`dev_pipeline.py`).
-- **Resilient Range Matching**: Long quotes (> 8 words) use the `startWords,endWords` comma range syntax. This circumvents formatting differences (e.g. linebreaks, hyphens, italic tags) inside the original publisher PDF/HTML.
-- **Micro-Preview & Clipboard Integration**: Bound directly to desktop hovering cards (`#tooltipQuoteContainer`) and mobile bottom sheets (`#drawerQuoteContainer`), with 1-click clipboard copy (`#drawerCopyQuoteBtn`).
+- **W3C Syntax Compliance**: Explicitly percent-encodes hyphens (`%2D`), commas (`%2C`), and ampersands (`%26`) because `-` is the reserved prefix/suffix delimiter in the W3C spec (`[prefix-,]start[,end][,-suffix]`), which causes Chromium parsers to abort if unencoded.
+- **In-Context Evidence Inspector**: Tapping or clicking any in-text citation opens the Inspector dialog modal (desktop) or bottom sheet (mobile), rendering the complete verified source abstract with `<mark>` highlight tags, 1-click clipboard copy (`#drawerCopyQuoteBtn`), deep highlight navigation (`#drawerActionLink`), and Google Scholar search fallback (`#drawerScholarBtn`).
+- **Zero-Hallucination Grounding**: Dossier sources lacking abstract text are explicitly tagged `[Bibliographic Metadata Only - No Excerpt Available]`, and LLM prompts strictly forbid fabricating quotes for metadata-only citations.
 
 ---
 

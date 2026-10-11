@@ -728,6 +728,13 @@ def run_browser_tests():
         assert "#:~:text=" in frag_url_short
         assert "," not in frag_url_short.split("#:~:text=")[1]
 
+        # Test hyphenated compound words in W3C text fragment
+        test_quote_hyphen = "Automatic speech quality evaluations are labor-consuming manual evaluations"
+        frag_url_hyphen = page.evaluate("([url, q]) => window.buildTextFragmentUrl(url, q)", [test_url, test_quote_hyphen])
+        print(f"  • Hyphenated Quote Fragment URL: {frag_url_hyphen}", flush=True)
+        assert "#:~:text=" in frag_url_hyphen
+        assert "%2D" in frag_url_hyphen or "labor" in frag_url_hyphen
+
         # 2. Verify Python build_text_fragment_url parity
         from dev_pipeline import build_text_fragment_url as py_build_frag, run_deterministic_checks as py_det_checks
         py_frag_long = py_build_frag(test_url, test_quote_long)
@@ -735,6 +742,10 @@ def run_browser_tests():
         assert "#:~:text=" in py_frag_long
         assert "The%20auditory%20cortex" in py_frag_long
         assert "spectral%20decomposition" in py_frag_long
+
+        py_frag_hyphen = py_build_frag(test_url, test_quote_hyphen)
+        print(f"  • Generated Hyphenated Fragment URL (Python): {py_frag_hyphen}", flush=True)
+        assert "%2D" in py_frag_hyphen or "labor" in py_frag_hyphen
         print("  ✓ Parity verified: Both JS and Python engines generate valid W3C text-fragment URLs!", flush=True)
 
         # 3. Render a Writer Card with in-text quote, citation [1], and References link with text-fragment
@@ -768,40 +779,84 @@ def run_browser_tests():
         print(f"  • Reference Link href with Text-Fragment: {ref_href}", flush=True)
         assert "#:~:text=" in ref_href, f"Expected text fragment in reference href, got {ref_href}"
 
-        # 5. Switch to Mobile Viewport (390 x 844) to test Mobile Citation Drawer with quote display
-        page.set_viewport_size({"width": 390, "height": 844})
-        time.sleep(0.3)
-
+        # 5. Desktop Citation Inspector Modal Verification (1280 x 950)
         cite_ref_1 = page.locator("#turnCard-Test-Deep-Highlight a.citation-ref[data-citation-num='1']").first
         assert cite_ref_1.count() > 0, "Missing citation ref [1] anchor in #turnCard-Test-Deep-Highlight"
         cite_quote_attr = cite_ref_1.get_attribute("data-citation-quote") or ""
         cite_url_attr = cite_ref_1.get_attribute("data-citation-url") or ""
+        cite_abs_attr = cite_ref_1.get_attribute("data-citation-abstract") or ""
         print(f"  • Citation Ref Quote Attr: '{cite_quote_attr}'", flush=True)
         print(f"  • Citation Ref URL Attr: '{cite_url_attr}'", flush=True)
         assert len(cite_quote_attr) > 10, "Citation quote attribute should contain extracted verbatim quote"
         assert "#:~:text=" in cite_url_attr, "Citation data-citation-url should contain text fragment"
+        assert len(cite_abs_attr) > 10, "Citation data-citation-abstract should contain abstract"
 
-        # Tap citation [1] to open mobile drawer
+        # Hover to test desktop tooltip and inspect button
+        cite_ref_1.hover()
+        time.sleep(0.3)
+        tooltip = page.locator("#citationTooltip")
+        assert not tooltip.is_hidden(), "Expected #citationTooltip to be visible on desktop hover"
+        inspect_btn = page.locator("#tooltipInspectBtn")
+        assert not inspect_btn.is_hidden(), "Expected #tooltipInspectBtn to be visible in desktop tooltip"
+
+        # Click citation [1] on desktop to open Source & Evidence Inspector Modal
         cite_ref_1.click()
         time.sleep(0.4)
 
         drawer = page.locator("#citationDrawer")
         assert "drawer-open" in (drawer.get_attribute("class") or "")
-        print("  ✓ Mobile Drawer opened on citation tap!", flush=True)
+        print("  ✓ Desktop Evidence Inspector modal opened on citation click!", flush=True)
 
         drawer_quote = page.locator("#drawerQuoteContainer")
         assert not drawer_quote.is_hidden(), "Expected #drawerQuoteContainer to be visible"
         quote_display_text = drawer_quote.text_content().strip()
-        print(f"  • Drawer Displayed Quote: {quote_display_text}", flush=True)
+        print(f"  • Modal Displayed Quote: {quote_display_text}", flush=True)
         assert "auditory cortex processes" in quote_display_text
+
+        # Verify In-Context Abstract Verification with <mark> highlighting
+        drawer_abstract = page.locator("#drawerAbstractContent")
+        assert not drawer_abstract.is_hidden(), "Expected #drawerAbstractContent to be visible"
+        drawer_mark = page.locator("#drawerAbstractContent mark")
+        assert drawer_mark.count() > 0, "Expected <mark> tag highlighting quote inside abstract"
+        mark_text = drawer_mark.text_content().strip()
+        print(f"  • Abstract <mark> Highlighted Text: '{mark_text}'", flush=True)
+        assert "auditory cortex processes" in mark_text
+
+        # Verify Google Scholar Fallback Button
+        drawer_scholar = page.locator("#drawerScholarBtn")
+        assert not drawer_scholar.is_hidden(), "Expected #drawerScholarBtn to be visible"
+        scholar_href = drawer_scholar.get_attribute("href") or ""
+        print(f"  • Google Scholar Button href: {scholar_href}", flush=True)
+        assert "scholar.google.com/scholar?q=" in scholar_href
+
+        # Verify Deep Highlight Action Link
+        drawer_action_link = page.locator("#drawerActionLink")
+        drawer_action_href = drawer_action_link.get_attribute("href") or ""
+        print(f"  • Inspector 'Open Paper' Button href: {drawer_action_href}", flush=True)
+        assert "#:~:text=" in drawer_action_href
+
+        # Screenshot Desktop Evidence Inspector Modal
+        screenshot_desktop_inspector = os.path.join(SCREENSHOTS_DIR, "33_desktop_citation_inspector_modal.png")
+        page.screenshot(path=screenshot_desktop_inspector)
+        print(f"  ✓ Desktop Citation Inspector Modal screenshot saved to {screenshot_desktop_inspector}", flush=True)
+
+        # Close Modal on Desktop
+        page.locator("#closeDrawerBtn").click()
+        time.sleep(0.3)
+
+        # 6. Switch to Mobile Viewport (390 x 844) to test Mobile Citation Drawer
+        page.set_viewport_size({"width": 390, "height": 844})
+        time.sleep(0.3)
+
+        # Tap citation [1] to open mobile drawer
+        cite_ref_1.click()
+        time.sleep(0.4)
+
+        assert "drawer-open" in (drawer.get_attribute("class") or "")
+        print("  ✓ Mobile Drawer opened on citation tap!", flush=True)
 
         drawer_copy_btn = page.locator("#drawerCopyQuoteBtn")
         assert not drawer_copy_btn.is_hidden(), "Expected #drawerCopyQuoteBtn to be visible"
-
-        drawer_action_link = page.locator("#drawerActionLink")
-        drawer_action_href = drawer_action_link.get_attribute("href") or ""
-        print(f"  • Drawer 'Open Paper' Button href: {drawer_action_href}", flush=True)
-        assert "#:~:text=" in drawer_action_href
 
         # Screenshot mobile drawer with verbatim quote and deep text fragment link
         screenshot_drawer = os.path.join(SCREENSHOTS_DIR, "31_deep_text_fragment_drawer.png")

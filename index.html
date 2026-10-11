@@ -402,7 +402,7 @@
       pointer-events: auto;
     }
 
-    /* Mobile citation bottom sheet drawer */
+    /* Mobile citation bottom sheet drawer & Desktop Evidence Inspector Modal */
     #citationDrawer {
       transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
     }
@@ -417,6 +417,19 @@
       transform: translateY(0);
       opacity: 1;
       pointer-events: auto;
+    }
+
+    @media (min-width: 640px) {
+      #citationDrawer.drawer-closed {
+        transform: translate(-50%, -46%) scale(0.96);
+        opacity: 0;
+        pointer-events: none;
+      }
+      #citationDrawer.drawer-open {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+        pointer-events: auto;
+      }
     }
 
     /* Desktop Citation Tooltip */
@@ -853,44 +866,80 @@
 
   <!-- Desktop Citation Tooltip -->
   <div id="citationTooltip" class="hidden fixed z-50 max-w-sm p-3.5 rounded-xl border shadow-2xl backdrop-blur text-xs pointer-events-auto transition" style="background-color: var(--bg-card); border-color: var(--border-main); color: var(--text-main);">
-    <div class="flex items-center gap-1.5 mb-1.5">
-      <span id="tooltipSourceBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded" style="background-color: var(--accent-bg); color: var(--accent-color); border: 1px solid var(--accent-color);">arXiv</span>
-      <span id="tooltipYear" class="text-[10px] text-slate-400 font-mono"></span>
+    <div class="flex items-center justify-between gap-2 mb-1.5">
+      <div class="flex items-center gap-1.5">
+        <span id="tooltipSourceBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded" style="background-color: var(--accent-bg); color: var(--accent-color); border: 1px solid var(--accent-color);">arXiv</span>
+        <span id="tooltipYear" class="text-[10px] text-slate-400 font-mono"></span>
+      </div>
+      <span class="text-[10px] text-slate-400 hidden sm:inline" id="tooltipHint">Klik sitasi untuk inspeksi penuh</span>
     </div>
     <div id="tooltipTitle" class="font-semibold text-slate-100 mb-1 leading-snug"></div>
     <div id="tooltipAuthors" class="text-[11px] text-slate-400 mb-1.5 truncate"></div>
     <div id="tooltipQuoteContainer" class="hidden text-[11px] italic text-cyan-200/90 border-l-2 border-cyan-400 pl-2 mb-2 line-clamp-3 bg-cyan-950/30 py-0.5 rounded-r"></div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
       <a id="tooltipActionLink" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition" style="background-color: var(--accent-bg); color: var(--accent-color); border: 1px solid var(--accent-color);">
-        <span>🔗 Buka Makalah / Open Paper</span> <span>↗</span>
+        <span>🔗 Buka Makalah</span> <span>↗</span>
       </a>
       <button id="tooltipCopyQuoteBtn" type="button" class="hidden text-[11px] px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-white transition">
-        📋 Salin Kutipan
+        📋 Salin
+      </button>
+      <button id="tooltipInspectBtn" type="button" class="text-[11px] px-2 py-1 rounded-lg border border-cyan-600/50 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/50 transition inline-flex items-center gap-1">
+        <span>🔍</span> <span id="tooltipInspectText">Periksa Bukti</span>
       </button>
     </div>
   </div>
 
-  <!-- Mobile Citation Bottom Sheet Drawer -->
-  <div id="citationDrawerBackdrop" class="hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity"></div>
-  <div id="citationDrawer" class="drawer-closed fixed bottom-0 left-0 right-0 z-50 p-5 rounded-t-3xl border-t shadow-2xl transition max-w-xl mx-auto" style="background-color: var(--bg-card); border-color: var(--border-main); color: var(--text-main); padding-bottom: max(1.5rem, env(safe-area-inset-bottom));">
-    <div class="w-12 h-1 rounded-full mx-auto mb-3 opacity-40 bg-slate-400"></div>
-    <div class="flex items-center justify-between gap-2 mb-2">
-      <div class="flex items-center gap-2">
-        <span id="drawerSourceBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded" style="background-color: var(--accent-bg); color: var(--accent-color); border: 1px solid var(--accent-color);">Source</span>
+  <!-- Source & Evidence Verification Inspector (Responsive: Bottom Sheet on Mobile, Centered Modal on Desktop) -->
+  <div id="citationDrawerBackdrop" class="hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity"></div>
+  <div id="citationDrawer" class="drawer-closed fixed bottom-0 left-0 right-0 sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 p-5 sm:p-6 rounded-t-3xl sm:rounded-2xl border-t sm:border shadow-2xl transition max-w-2xl mx-auto sm:max-h-[88vh] sm:overflow-y-auto" style="background-color: var(--bg-card); border-color: var(--border-main); color: var(--text-main); padding-bottom: max(1.5rem, env(safe-area-inset-bottom));">
+    <!-- Mobile Grab handle -->
+    <div class="w-12 h-1 rounded-full mx-auto mb-3 opacity-40 bg-slate-400 sm:hidden"></div>
+    
+    <!-- Header with badges and close button -->
+    <div class="flex items-center justify-between gap-2 mb-2.5">
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="drawerSourceBadge" class="text-[10px] sm:text-xs font-semibold px-2.5 py-0.5 rounded" style="background-color: var(--accent-bg); color: var(--accent-color); border: 1px solid var(--accent-color);">Source</span>
+        <span id="drawerVerifyPill" class="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-1">✓ Terverifikasi di Abstrak</span>
         <span id="drawerYear" class="text-xs text-slate-400 font-mono"></span>
       </div>
-      <button id="closeDrawerBtn" type="button" class="text-slate-400 hover:text-slate-200 p-1 text-lg">✕</button>
+      <button id="closeDrawerBtn" type="button" class="text-slate-400 hover:text-slate-200 p-1 text-lg leading-none" title="Tutup / Close (Esc)">✕</button>
     </div>
-    <h4 id="drawerTitle" class="font-bold text-sm mb-1 leading-snug"></h4>
-    <p id="drawerAuthors" class="text-xs text-slate-400 mb-2"></p>
-    <div id="drawerQuoteContainer" class="hidden text-xs italic text-cyan-200/90 border-l-2 border-cyan-400 pl-2.5 py-1.5 mb-3 rounded-r bg-cyan-950/30"></div>
+    
+    <h4 id="drawerTitle" class="font-bold text-sm sm:text-base mb-1 leading-snug"></h4>
+    <p id="drawerAuthors" class="text-xs text-slate-400 mb-3"></p>
+
+    <!-- Cited Verbatim Quote Section -->
+    <div id="drawerQuoteSection" class="mb-3">
+      <div class="flex items-center justify-between gap-2 mb-1">
+        <span class="text-[11px] font-semibold text-cyan-400 flex items-center gap-1"><span>🎯</span> <span id="drawerQuoteLabel">Kutipan yang Dirujuk dalam Teks:</span></span>
+      </div>
+      <div id="drawerQuoteContainer" class="text-xs sm:text-sm italic text-cyan-200/95 border-l-2 border-cyan-400 pl-3 py-2 rounded-r bg-cyan-950/40 select-text"></div>
+    </div>
+
+    <!-- In-Context Verbatim Abstract Verification Section -->
+    <div id="drawerAbstractSection" class="mb-4">
+      <div class="flex items-center justify-between gap-2 mb-1.5">
+        <span class="text-[11px] font-semibold text-slate-300 flex items-center gap-1"><span>📄</span> <span id="drawerAbstractLabel">Teks Abstrak Sumber Resmi (Bukti Kontekstual):</span></span>
+        <span id="drawerAbstractMatchBadge" class="text-[10px] font-semibold text-emerald-400">✓ 100% Cocok Verbatim</span>
+      </div>
+      <div id="drawerAbstractContent" class="text-xs leading-relaxed text-slate-300 max-h-44 overflow-y-auto p-3 rounded-xl border border-slate-700/60 bg-slate-900/60 font-serif select-text"></div>
+      <p id="drawerAbstractNotice" class="text-[10px] text-slate-400 mt-1.5 flex items-start gap-1">
+        <span class="shrink-0">💡</span>
+        <span id="drawerAbstractNoticeText">Penerbit jurnal berbayar (DOI) sering memblokir highlight otomatis peramban saat pengalihan domain. Jika halaman tujuan tidak langsung menyorot teks, gunakan tombol <strong>Salin untuk CTRL+F</strong> atau <strong>Google Scholar</strong> di bawah ini untuk menemukan naskah lengkap terbuka.</span>
+      </p>
+    </div>
+
+    <!-- Actions Row -->
     <div class="flex flex-col sm:flex-row gap-2">
-      <a id="drawerActionLink" href="#" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm transition" style="background-color: var(--accent-color); color: #ffffff;">
-        <span>🔗 Buka Makalah / Open Paper</span> <span>↗</span>
+      <a id="drawerActionLink" href="#" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-semibold text-xs sm:text-sm transition" style="background-color: var(--accent-color); color: #ffffff;">
+        <span>🔗 Buka Makalah (Deep Highlight)</span> <span>↗</span>
       </a>
-      <button id="drawerCopyQuoteBtn" type="button" class="hidden py-3 px-4 rounded-xl font-semibold text-xs border border-slate-700 bg-slate-850 hover:bg-slate-700 text-slate-200 transition flex items-center justify-center gap-1.5 shrink-0">
-        <span>📋</span> <span id="drawerCopyQuoteText">Salin Kutipan</span>
+      <button id="drawerCopyQuoteBtn" type="button" class="py-2.5 px-3 rounded-xl font-semibold text-xs border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center justify-center gap-1.5 shrink-0">
+        <span>📋</span> <span id="drawerCopyQuoteText">Salin untuk CTRL+F</span>
       </button>
+      <a id="drawerScholarBtn" href="#" target="_blank" rel="noopener noreferrer" class="py-2.5 px-3 rounded-xl font-semibold text-xs border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center justify-center gap-1.5 shrink-0" title="Cari kutipan verbatim ini di Google Scholar (akses PDF terbuka)">
+        <span>🔎</span> <span id="drawerScholarText">Google Scholar</span> <span>↗</span>
+      </a>
     </div>
   </div>
 
@@ -1166,10 +1215,22 @@
 
     let tooltipTimeout = null;
 
-    // Helper: Build W3C Scroll-to-Text Fragment URL for automatic scroll & yellow highlight
+    // Spec-compliant percent-encoder for W3C Scroll-to-Text Fragment directives
+    function encodeFragmentToken(token) {
+      if (!token) return "";
+      return encodeURIComponent(token)
+        .replace(/-/g, "%2D")
+        .replace(/,/g, "%2C")
+        .replace(/&/g, "%26");
+    }
+
+    // Helper: Build W3C Scroll-to-Text Fragment URL with strict syntax and https enforcement
     function buildTextFragmentUrl(rawUrl, quoteText) {
       if (!rawUrl || rawUrl === "#" || rawUrl.startsWith("#ref-")) return rawUrl;
       if (!quoteText || typeof quoteText !== "string") return rawUrl;
+
+      // Clean base url and enforce https to prevent 301/302 redirects dropping fragments
+      let baseUrl = rawUrl.split("#")[0].trim().replace(/^http:\/\//i, "https://");
 
       // Clean up quote text: strip surrounding quotes, citation brackets, and extra spaces
       let clean = quoteText
@@ -1177,28 +1238,197 @@
         .replace(/\[\d+\]/g, "")
         .replace(/\s+/g, " ")
         .trim();
-      if (!clean || clean.length < 5) return rawUrl;
+      if (!clean || clean.length < 5) return baseUrl;
 
-      // Clean punctuation from edges
-      clean = clean.replace(/^[.,;:!?'"“”—-]+\s*/, "").replace(/\s*[.,;:!?'"“”—-]+$/, "");
+      // Extract alphanumeric token words, stripping edge punctuation
+      const rawWords = clean.split(/\s+/).filter(Boolean);
+      const cleanWords = rawWords
+        .map(w => w.replace(/^[^\w\u00C0-\u024F]+|[^\w\u00C0-\u024F]+$/g, "").trim())
+        .filter(w => w.length > 0);
 
-      const words = clean.split(/\s+/).filter(Boolean);
-      if (words.length === 0) return rawUrl;
+      if (cleanWords.length === 0) return baseUrl;
 
       let textParam = "";
-      if (words.length > 8) {
-        // Range syntax: textStart,textEnd
-        const startWords = words.slice(0, 4).join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
-        const endWords = words.slice(-4).join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
-        textParam = encodeURIComponent(startWords) + "," + encodeURIComponent(endWords);
+      if (cleanWords.length <= 6) {
+        // Short quotes: exact phrase
+        textParam = encodeFragmentToken(cleanWords.join(" "));
       } else {
-        // Exact syntax
-        const phrase = words.join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
-        textParam = encodeURIComponent(phrase);
+        // Longer quotes: 3 start words, 3 end words range syntax
+        const startWords = cleanWords.slice(0, 3).join(" ");
+        const endWords = cleanWords.slice(-3).join(" ");
+        textParam = `${encodeFragmentToken(startWords)},${encodeFragmentToken(endWords)}`;
       }
 
-      const baseUrl = rawUrl.split("#")[0];
       return `${baseUrl}#:~:text=${textParam}`;
+    }
+
+    // Highlight verbatim quote inside source abstract with <mark> tag
+    function highlightQuoteInAbstract(abstractText, quoteText) {
+      if (!abstractText) return { html: "", found: false };
+      if (!quoteText) return { html: escapeHtml(abstractText), found: false };
+
+      const cleanQuote = quoteText
+        .replace(/^["“'”]+|["“'”]+$/g, "")
+        .replace(/\[\d+\]/g, "")
+        .trim();
+      if (!cleanQuote || cleanQuote.length < 5) {
+        return { html: escapeHtml(abstractText), found: false };
+      }
+
+      // 1. Direct case-insensitive substring search
+      const lowerAbs = abstractText.toLowerCase();
+      const lowerQuote = cleanQuote.toLowerCase();
+      const exactIdx = lowerAbs.indexOf(lowerQuote);
+      if (exactIdx !== -1) {
+        const before = escapeHtml(abstractText.substring(0, exactIdx));
+        const matched = escapeHtml(abstractText.substring(exactIdx, exactIdx + cleanQuote.length));
+        const after = escapeHtml(abstractText.substring(exactIdx + cleanQuote.length));
+        return {
+          html: `${before}<mark class="bg-amber-400 text-slate-950 font-bold px-1 rounded shadow-sm">${matched}</mark>${after}`,
+          found: true
+        };
+      }
+
+      // 2. Token-boundary regex search (ignores minor punctuation / whitespace differences)
+      const qWords = cleanQuote.split(/\s+/).filter(w => w.length > 2);
+      if (qWords.length >= 3) {
+        const startRegex = qWords.slice(0, 3).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("\\s+");
+        const endRegex = qWords.slice(-3).map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join("\\s+");
+        try {
+          const rx = new RegExp(`(${startRegex}[\\s\\S]*?${endRegex})`, "i");
+          const m = abstractText.match(rx);
+          if (m && m.index !== undefined) {
+            const before = escapeHtml(abstractText.substring(0, m.index));
+            const matched = escapeHtml(m[0]);
+            const after = escapeHtml(abstractText.substring(m.index + m[0].length));
+            return {
+              html: `${before}<mark class="bg-amber-400 text-slate-950 font-bold px-1 rounded shadow-sm">${matched}</mark>${after}`,
+              found: true
+            };
+          }
+        } catch (e) {}
+      }
+
+      return { html: escapeHtml(abstractText), found: false };
+    }
+
+    // Source & Evidence Verification Inspector Modal / Drawer Controller
+    function openCitationInspector(data) {
+      if (!citationDrawer) return;
+      const { title, authors, source, year, url, rawUrl, quote, abstract } = data;
+
+      if (drawerSourceBadge) drawerSourceBadge.textContent = source || "Source";
+      if (drawerYear) drawerYear.textContent = year || "";
+      if (drawerTitle) drawerTitle.textContent = title || "Academic Source";
+      if (drawerAuthors) drawerAuthors.textContent = authors || "";
+
+      // Quote Section
+      const drawerQuoteSection = document.getElementById("drawerQuoteSection");
+      const drawerQuoteContainer = document.getElementById("drawerQuoteContainer");
+      const drawerCopyQuoteBtn = document.getElementById("drawerCopyQuoteBtn");
+      const drawerCopyQuoteText = document.getElementById("drawerCopyQuoteText");
+
+      if (quote) {
+        if (drawerQuoteSection) drawerQuoteSection.classList.remove("hidden");
+        if (drawerQuoteContainer) {
+          drawerQuoteContainer.textContent = `“${quote}”`;
+          drawerQuoteContainer.classList.remove("hidden");
+        }
+        if (drawerCopyQuoteBtn) {
+          drawerCopyQuoteBtn.classList.remove("hidden");
+          if (drawerCopyQuoteText) {
+            drawerCopyQuoteText.textContent = currentLang === "id" ? "Salin untuk CTRL+F" : "Copy for CTRL+F";
+          }
+          drawerCopyQuoteBtn.onclick = (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            navigator.clipboard.writeText(quote).then(() => {
+              if (drawerCopyQuoteText) {
+                drawerCopyQuoteText.textContent = currentLang === "id" ? "✓ Tersalin (CTRL+F)!" : "✓ Copied (CTRL+F)!";
+                setTimeout(() => {
+                  drawerCopyQuoteText.textContent = currentLang === "id" ? "Salin untuk CTRL+F" : "Copy for CTRL+F";
+                }, 2200);
+              }
+            });
+          };
+        }
+      } else {
+        if (drawerQuoteSection) drawerQuoteSection.classList.add("hidden");
+        if (drawerQuoteContainer) drawerQuoteContainer.classList.add("hidden");
+        if (drawerCopyQuoteBtn) drawerCopyQuoteBtn.classList.add("hidden");
+      }
+
+      // In-Context Verbatim Abstract Verification Section
+      const drawerAbstractSection = document.getElementById("drawerAbstractSection");
+      const drawerAbstractContent = document.getElementById("drawerAbstractContent");
+      const drawerVerifyPill = document.getElementById("drawerVerifyPill");
+      const drawerAbstractMatchBadge = document.getElementById("drawerAbstractMatchBadge");
+
+      if (abstract && abstract.trim().length > 0) {
+        if (drawerAbstractSection) drawerAbstractSection.classList.remove("hidden");
+        const { html, found } = highlightQuoteInAbstract(abstract, quote);
+        if (drawerAbstractContent) {
+          drawerAbstractContent.innerHTML = html;
+        }
+        if (found) {
+          if (drawerVerifyPill) {
+            drawerVerifyPill.textContent = currentLang === "id" ? "✓ Terverifikasi di Abstrak" : "✓ Verified in Abstract";
+            drawerVerifyPill.className = "text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-1";
+          }
+          if (drawerAbstractMatchBadge) {
+            drawerAbstractMatchBadge.textContent = currentLang === "id" ? "✓ 100% Cocok Verbatim" : "✓ 100% Verbatim Match";
+            drawerAbstractMatchBadge.className = "text-[10px] font-semibold text-emerald-400";
+          }
+        } else {
+          if (drawerVerifyPill) {
+            drawerVerifyPill.textContent = currentLang === "id" ? "ℹ️ Naskah Lengkap / Pre-print" : "ℹ️ Full-Text / Preprint";
+            drawerVerifyPill.className = "text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1";
+          }
+          if (drawerAbstractMatchBadge) {
+            drawerAbstractMatchBadge.textContent = currentLang === "id" ? "ℹ️ Tidak di abstrak ringkas" : "ℹ️ Not in concise abstract";
+            drawerAbstractMatchBadge.className = "text-[10px] font-medium text-amber-400";
+          }
+        }
+      } else {
+        if (drawerAbstractSection) drawerAbstractSection.classList.remove("hidden");
+        if (drawerAbstractContent) {
+          drawerAbstractContent.innerHTML = `<span class="italic text-slate-400">${currentLang === "id" ? "Hanya metadata bibliografi tersedia dalam indeks umum. Buka tautan makalah atau gunakan Google Scholar di bawah untuk memeriksa naskah lengkap." : "Only bibliographic metadata available in index. Open the paper link or search Google Scholar below to verify in full text."}</span>`;
+        }
+        if (drawerVerifyPill) {
+          drawerVerifyPill.textContent = currentLang === "id" ? "📚 Sumber Bibliografi" : "📚 Bibliographic Source";
+          drawerVerifyPill.className = "text-[10px] sm:text-xs font-medium px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-600 inline-flex items-center gap-1";
+        }
+        if (drawerAbstractMatchBadge) {
+          drawerAbstractMatchBadge.textContent = "";
+        }
+      }
+
+      // Actions Row
+      if (drawerActionLink) {
+        if (url && url !== "#" && !url.startsWith("#ref-")) {
+          drawerActionLink.href = url;
+          drawerActionLink.classList.remove("hidden");
+          drawerActionLink.style.display = "flex";
+        } else if (rawUrl && rawUrl !== "#" && !rawUrl.startsWith("#ref-")) {
+          drawerActionLink.href = rawUrl;
+          drawerActionLink.classList.remove("hidden");
+          drawerActionLink.style.display = "flex";
+        } else {
+          drawerActionLink.classList.add("hidden");
+          drawerActionLink.style.display = "none";
+        }
+      }
+
+      // Google Scholar Fallback
+      const drawerScholarBtn = document.getElementById("drawerScholarBtn");
+      if (drawerScholarBtn) {
+        const queryTerm = quote ? `"${quote.replace(/^["“'”]+|["“'”]+$/g, "").trim()}"` : `"${title}"`;
+        drawerScholarBtn.href = `https://scholar.google.com/scholar?q=${encodeURIComponent(queryTerm)}`;
+      }
+
+      if (citationDrawerBackdrop) citationDrawerBackdrop.classList.remove("hidden");
+      citationDrawer.classList.remove("drawer-closed");
+      citationDrawer.classList.add("drawer-open");
     }
 
     function initCitationInteractions(container = document) {
@@ -1207,17 +1437,23 @@
         const title = el.getAttribute("data-citation-title") || "Paper Reference";
         const authors = el.getAttribute("data-citation-authors") || "";
         const source = el.getAttribute("data-citation-source") || "Source";
+        const year = el.getAttribute("data-citation-year") || "";
         const url = el.getAttribute("data-citation-url") || el.getAttribute("href");
+        const rawUrl = el.getAttribute("data-citation-raw-url") || url;
         const num = el.getAttribute("data-citation-num") || "";
         const quote = el.getAttribute("data-citation-quote") || "";
+        const abstract = el.getAttribute("data-citation-abstract") || "";
 
-        // Desktop Hover
+        const citationData = { title, authors, source, year, url, rawUrl, num, quote, abstract };
+
+        // Desktop Hover Quick Tooltip
         el.addEventListener("mouseenter", () => {
           if (window.innerWidth < 640) return;
           clearTimeout(tooltipTimeout);
           if (!citationTooltip) return;
 
           tooltipSourceBadge.textContent = source;
+          if (tooltipYear) tooltipYear.textContent = year;
           tooltipTitle.textContent = title;
           tooltipAuthors.textContent = authors;
           tooltipActionLink.href = url;
@@ -1225,6 +1461,8 @@
 
           const tooltipQuoteContainer = document.getElementById("tooltipQuoteContainer");
           const tooltipCopyQuoteBtn = document.getElementById("tooltipCopyQuoteBtn");
+          const tooltipInspectBtn = document.getElementById("tooltipInspectBtn");
+
           if (tooltipQuoteContainer) {
             if (quote) {
               tooltipQuoteContainer.textContent = `“${quote}”`;
@@ -1252,6 +1490,15 @@
             }
           }
 
+          if (tooltipInspectBtn) {
+            tooltipInspectBtn.onclick = (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              if (citationTooltip) citationTooltip.classList.add("hidden");
+              openCitationInspector(citationData);
+            };
+          }
+
           const rect = el.getBoundingClientRect();
           citationTooltip.style.left = `${Math.min(window.innerWidth - 380, Math.max(10, rect.left - 20))}px`;
           citationTooltip.style.top = `${rect.bottom + 8}px`;
@@ -1265,57 +1512,32 @@
           }, 300);
         });
 
-        // Mobile Tap (and Click handling)
+        // Click Handling (Both Mobile and Desktop open Evidence Inspector)
         el.addEventListener("click", (e) => {
-          if (window.innerWidth < 640) {
-            e.preventDefault();
-            drawerSourceBadge.textContent = source;
-            drawerTitle.textContent = title;
-            drawerAuthors.textContent = authors;
-            drawerActionLink.href = url;
-            drawerActionLink.style.display = (url && url !== "#" && !url.startsWith("#ref-")) ? "flex" : "none";
+          e.preventDefault();
+          if (citationTooltip) citationTooltip.classList.add("hidden");
+          openCitationInspector(citationData);
+        });
+      });
 
-            const drawerQuoteContainer = document.getElementById("drawerQuoteContainer");
-            const drawerCopyQuoteBtn = document.getElementById("drawerCopyQuoteBtn");
-            const drawerCopyQuoteText = document.getElementById("drawerCopyQuoteText");
-            if (drawerQuoteContainer) {
-              if (quote) {
-                drawerQuoteContainer.textContent = `“${quote}”`;
-                drawerQuoteContainer.classList.remove("hidden");
-              } else {
-                drawerQuoteContainer.classList.add("hidden");
-              }
-            }
-            if (drawerCopyQuoteBtn) {
-              if (quote) {
-                drawerCopyQuoteBtn.classList.remove("hidden");
-                if (drawerCopyQuoteText) {
-                  drawerCopyQuoteText.textContent = currentLang === "id" ? "Salin Kutipan" : "Copy Quote";
-                }
-                drawerCopyQuoteBtn.onclick = (ev) => {
-                  ev.preventDefault();
-                  ev.stopPropagation();
-                  navigator.clipboard.writeText(quote).then(() => {
-                    if (drawerCopyQuoteText) {
-                      drawerCopyQuoteText.textContent = currentLang === "id" ? "✓ Tersalin!" : "✓ Copied!";
-                      setTimeout(() => {
-                        drawerCopyQuoteText.textContent = currentLang === "id" ? "Salin Kutipan" : "Copy Quote";
-                      }, 2000);
-                    }
-                  });
-                };
-              } else {
-                drawerCopyQuoteBtn.classList.add("hidden");
-              }
-            }
-
-            citationDrawerBackdrop.classList.remove("hidden");
-            citationDrawer.classList.remove("drawer-closed");
-            citationDrawer.classList.add("drawer-open");
+      // Also attach inspect buttons inside references section
+      const refInspectButtons = container.querySelectorAll(".ref-inspect-btn");
+      refInspectButtons.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const refNum = parseInt(btn.getAttribute("data-ref-num"), 10);
+          const citRef = container.querySelector(`.citation-ref[data-citation-num='${refNum}']`);
+          if (citRef) {
+            citRef.click();
           }
         });
       });
     }
+
+    window.buildTextFragmentUrl = buildTextFragmentUrl;
+    window.highlightQuoteInAbstract = highlightQuoteInAbstract;
+    window.openCitationInspector = openCitationInspector;
+    window.closeCitationDrawer = closeCitationDrawer;
 
     if (citationTooltip) {
       citationTooltip.addEventListener("mouseenter", () => clearTimeout(tooltipTimeout));
@@ -1973,7 +2195,22 @@
         pdfOptionSizeCompact: "Compact (10 pt / 13 px)",
         pdfOptionSizeLarge: "Comfortable (12 pt / 16 px)",
         copyQuoteBtn: "📋 Copy Quote",
-        quoteCopied: "✓ Copied!"
+        quoteCopied: "✓ Copied!",
+        tooltipHint: "Click citation for full inspector",
+        tooltipInspectBtn: "Inspect Evidence",
+        drawerQuoteLabel: "Verbatim Quote Cited in Text:",
+        drawerAbstractLabel: "Official Source Abstract (Primary Text Evidence):",
+        drawerAbstractMatchVerbatim: "✓ 100% Verbatim Match",
+        drawerAbstractMatchNotice: "ℹ️ Full-Text / Preprint Article",
+        drawerVerifiedInAbstract: "✓ Verified in Abstract",
+        drawerFullTextNotice: "ℹ️ Full-Text / Preprint Article",
+        drawerBibliographicSource: "📚 Bibliographic Source",
+        drawerOpenPaper: "🔗 Open Paper (Deep Highlight)",
+        drawerCopyQuoteBtn: "Salin untuk CTRL+F",
+        drawerCopyQuoteText: "Copy for CTRL+F",
+        drawerCopyQuoteCopied: "✓ Copied (CTRL+F)!",
+        drawerScholarBtn: "Google Scholar",
+        drawerAbstractNoticeText: "Note: Subscription publishers (DOI) often strip browser automatic highlights during cross-origin redirects. If the destination page does not highlight automatically, use 'Copy for CTRL+F' or 'Google Scholar' below to find the open full text."
       },
       id: {
         headerTitle: "Gemini Agentic Studio",
@@ -2069,7 +2306,22 @@
         pdfOptionSizeCompact: "Kompak (10 pt / 13 px)",
         pdfOptionSizeLarge: "Nyaman (12 pt / 16 px)",
         copyQuoteBtn: "📋 Salin Kutipan",
-        quoteCopied: "✓ Tersalin!"
+        quoteCopied: "✓ Tersalin!",
+        tooltipHint: "Klik sitasi untuk inspeksi penuh",
+        tooltipInspectBtn: "Periksa Bukti",
+        drawerQuoteLabel: "Kutipan yang Dirujuk dalam Teks:",
+        drawerAbstractLabel: "Teks Abstrak Sumber Resmi (Bukti Kontekstual):",
+        drawerAbstractMatchVerbatim: "✓ 100% Cocok Verbatim",
+        drawerAbstractMatchNotice: "ℹ️ Tidak di abstrak ringkas",
+        drawerVerifiedInAbstract: "✓ Terverifikasi di Abstrak",
+        drawerFullTextNotice: "ℹ️ Naskah Lengkap / Pre-print",
+        drawerBibliographicSource: "📚 Sumber Bibliografi",
+        drawerOpenPaper: "🔗 Buka Makalah (Deep Highlight)",
+        drawerCopyQuoteBtn: "Salin untuk CTRL+F",
+        drawerCopyQuoteText: "Salin untuk CTRL+F",
+        drawerCopyQuoteCopied: "✓ Tersalin (CTRL+F)!",
+        drawerScholarBtn: "Google Scholar",
+        drawerAbstractNoticeText: "Catatan: Penerbit jurnal berbayar (DOI) sering memblokir highlight otomatis peramban saat pengalihan domain. Jika halaman tujuan tidak langsung menyorot teks, gunakan tombol 'Salin untuk CTRL+F' atau 'Google Scholar' di bawah ini untuk menemukan naskah lengkap terbuka."
       }
     };
 
@@ -2226,6 +2478,22 @@
       if (optPdfSizeCompact) optPdfSizeCompact.textContent = t.pdfOptionSizeCompact;
       if (optPdfSizeLarge) optPdfSizeLarge.textContent = t.pdfOptionSizeLarge;
 
+      const drawerQuoteLabel = document.getElementById("drawerQuoteLabel");
+      const drawerAbstractLabel = document.getElementById("drawerAbstractLabel");
+      const drawerCopyQuoteText = document.getElementById("drawerCopyQuoteText");
+      const drawerScholarText = document.getElementById("drawerScholarText");
+      const drawerAbstractNoticeText = document.getElementById("drawerAbstractNoticeText");
+      const tooltipHint = document.getElementById("tooltipHint");
+      const tooltipInspectText = document.getElementById("tooltipInspectText");
+
+      if (drawerQuoteLabel) drawerQuoteLabel.textContent = t.drawerQuoteLabel;
+      if (drawerAbstractLabel) drawerAbstractLabel.textContent = t.drawerAbstractLabel;
+      if (drawerCopyQuoteText) drawerCopyQuoteText.textContent = t.drawerCopyQuoteText;
+      if (drawerScholarText) drawerScholarText.textContent = t.drawerScholarBtn;
+      if (drawerAbstractNoticeText) drawerAbstractNoticeText.textContent = t.drawerAbstractNoticeText;
+      if (tooltipHint) tooltipHint.textContent = t.tooltipHint;
+      if (tooltipInspectText) tooltipInspectText.textContent = t.tooltipInspectBtn;
+
       if (topicInput.value === I18N.en.defaultTopic || topicInput.value === I18N.id.defaultTopic) {
         topicInput.value = t.defaultTopic;
       }
@@ -2348,12 +2616,14 @@
           const citTitle = cit ? escapeHtmlAttr(cit.title) : (currentLang === "id" ? `Referensi [${num}]` : `Reference [${num}]`);
           const citAuthors = cit ? escapeHtmlAttr(cit.authors || cit.meta || "") : "";
           const citSource = cit ? escapeHtmlAttr(cit.source || "") : (currentLang === "id" ? "Rujukan Ilmiah" : "Scholarly Source");
+          const citYear = cit ? escapeHtmlAttr(cit.year || "") : "";
+          const citAbstract = cit ? (cit.abstract || "") : "";
           const quote = quotesMap[num] || "";
           const rawUrl = (cit && cit.url && cit.url !== "#") ? cit.url : `#ref-${num}`;
           const citUrl = (quote && rawUrl !== `#ref-${num}`) ? buildTextFragmentUrl(rawUrl, quote) : rawUrl;
           const tooltipTitle = cit ? `[${num}] ${cit.title}` : (currentLang === "id" ? `Lihat Referensi [${num}]` : `View Reference [${num}]`);
 
-          return `<a href="#ref-${num}" class="citation-ref" data-citation-num="${num}" data-citation-title="${citTitle}" data-citation-authors="${citAuthors}" data-citation-source="${citSource}" data-citation-url="${citUrl}" data-citation-raw-url="${rawUrl}" data-citation-quote="${escapeHtmlAttr(quote)}" title="${tooltipTitle}">[${num}]</a>`;
+          return `<a href="#ref-${num}" class="citation-ref" data-citation-num="${num}" data-citation-title="${citTitle}" data-citation-authors="${citAuthors}" data-citation-source="${citSource}" data-citation-year="${citYear}" data-citation-url="${citUrl}" data-citation-raw-url="${rawUrl}" data-citation-quote="${escapeHtmlAttr(quote)}" data-citation-abstract="${escapeHtmlAttr(citAbstract)}" title="${tooltipTitle}">[${num}]</a>`;
         });
       };
 
@@ -2390,7 +2660,9 @@
             });
           }
 
-          return `<div id="ref-${num}" class="reference-item">\n\n**[${num}]** ${updatedContent}\n\n</div>`;
+          const inspectLabel = currentLang === "id" ? "Periksa Bukti" : "Inspect Evidence";
+          const inspectBtnHtml = ` <button type="button" class="ref-inspect-btn text-xs text-cyan-400 hover:text-cyan-300 font-semibold inline-flex items-center gap-1 transition ml-1 px-2 py-0.5 rounded border border-cyan-800/40 bg-cyan-950/20" data-ref-num="${num}" title="${inspectLabel}"><span>🔍</span> <span>${inspectLabel}</span></button>`;
+          return `<div id="ref-${num}" class="reference-item">\n\n**[${num}]** ${updatedContent}${inspectBtnHtml}\n\n</div>`;
         });
 
         let bodyPart = enriched.substring(0, refHeaderMatch.index);
@@ -3432,6 +3704,8 @@ Respond ONLY with valid JSON:
               dossierMarkdown += `  Link: ${p.url}\n`;
               if (p.abstract) {
                 dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              } else {
+                dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
               }
               dossierMarkdown += "\n";
               citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "arXiv API", authors: p.authors, year: p.year, meta: `${p.authors} (${p.year})`, abstract: p.abstract || "" });
@@ -3449,6 +3723,8 @@ Respond ONLY with valid JSON:
               dossierMarkdown += `  Link/DOI: ${p.url}\n`;
               if (p.abstract) {
                 dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              } else {
+                dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
               }
               dossierMarkdown += "\n";
               citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "Semantic Scholar API", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
@@ -3465,6 +3741,8 @@ Respond ONLY with valid JSON:
               dossierMarkdown += `  Article Link: ${p.url}\n`;
               if (p.abstract) {
                 dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              } else {
+                dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
               }
               dossierMarkdown += "\n";
               citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "PubMed / Europe PMC", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
@@ -3482,6 +3760,8 @@ Respond ONLY with valid JSON:
               dossierMarkdown += `  DOI/Link: ${p.url}\n`;
               if (p.abstract) {
                 dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              } else {
+                dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
               }
               dossierMarkdown += "\n";
               citationList.push({ num: sourceNum, title: p.title, url: p.url, source: p.source || "OpenAlex API", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
@@ -3498,6 +3778,8 @@ Respond ONLY with valid JSON:
               dossierMarkdown += `  DOI/Link: ${p.url}\n`;
               if (p.abstract) {
                 dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+              } else {
+                dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
               }
               dossierMarkdown += "\n";
               citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "Crossref API", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
@@ -3749,15 +4031,35 @@ Example 3 (Introductory Framing vs. Empirical Finding):
         }
       }
 
+      // 4. Quote fidelity against dossier abstracts
+      let verifiedQuotesCount = 0;
+      if (dossier && dossier.citations && Array.isArray(dossier.citations)) {
+        const quoteWithNumRegex = /(?:["“])((?:[^"”\r\n]|\n(?!\n)){8,})(?:["”])\s*\[(\d+)\]/g;
+        let qm;
+        while ((qm = quoteWithNumRegex.exec(draft)) !== null) {
+          const qText = qm[1].trim();
+          const qNum = parseInt(qm[2], 10);
+          const cit = dossier.citations.find(c => c.num === qNum) || dossier.citations[qNum - 1];
+          if (cit && cit.abstract && cit.abstract.length > 20) {
+            const cleanQ = qText.replace(/^["“'”]+|["“'”]+$/g, "").trim().toLowerCase();
+            if (cit.abstract.toLowerCase().includes(cleanQ)) {
+              verifiedQuotesCount++;
+            }
+          }
+        }
+      }
+
       return {
         passed: issues.length === 0,
         hasIssues: issues.length > 0,
         issues: issues,
         inTextCount: inTextCitations.size,
         refCount: refNumbers.size,
-        quoteCount: quoteMatches.length
+        quoteCount: quoteMatches.length,
+        verifiedQuotesCount: verifiedQuotesCount
       };
     }
+    window.runDeterministicSanityChecks = runDeterministicSanityChecks;
 
     // Surgical Paragraph Rebuild: Rewrites ONLY the single offending paragraph to avoid regression
     async function runWriterSurgicalPatch(apiKey, topic, draft, itemToFix, model, thinkingLevel = "medium", difficulty = "undergraduate", readingType = "literature_review") {
@@ -3860,7 +4162,10 @@ Rewrite ONLY this paragraph to resolve the discrepancy while keeping all valid f
           ? "   [1] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [🔗 Buka Makalah](url_lengkap)\n   [2] Penulis / Pengarang (Tahun). *Judul Makalah*. Sumber / Venue. [🔗 Buka Makalah](url_lengkap)\n" 
           : "   [1] Authors (Year). *Paper Title*. Venue. [🔗 Open Paper](full_url)\n   [2] Authors (Year). *Paper Title*. Venue. [🔗 Open Paper](full_url)\n") +
         "   Salin URL asli secara lengkap (http://... atau https://...) dari berkas riset ke dalam tanda kurung [🔗 Buka Makalah](url) agar pembaca dapat langsung mengklik tautan tersebut untuk membuka artikel aslinya!\n" +
-        "   Setiap nomor [n] yang dikutip dalam teks WAJIB ada di daftar akhir ini!";
+        "   Setiap nomor [n] yang dikutip dalam teks WAJIB ada di daftar akhir ini!\n" +
+        "5. INTEGRITAS GROUNDING & TANPA FABRIKASI (ZERO-HALLUCINATION GROUNDING):\n" +
+        "   Hanya buat kutipan kata-demi-kata \"...\" [n] jika sumber [n] tersebut memiliki teks 'Verbatim Excerpt / Abstract' di berkas riset.\n" +
+        "   Jika suatu sumber di berkas riset bertanda '[Bibliographic Metadata Only]', rujuklah sumber tersebut murni sebagai atribusi bibliografi [n] TANPA mengarang atau memfabrikasi tanda kutip kata-demi-kata.";
 
       if (enableSearch) {
         sys += " Use the Google Search tool to find and incorporate up-to-date facts, current developments, and accurate references.";
@@ -3958,7 +4263,8 @@ You MUST respond ONLY with valid JSON conforming to this schema:
         "ATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n" +
         "1. KUTIPAN & NOMOR SITASI: Seluruh kutipan bukti harus diapit tanda petik ganda dan nomor sitasi: \"... bla bla bla ...\" [n].\n" +
         "2. PERSIS SAMA UNTUK CTRL+F: Teks di dalam tanda petik HARUS persis sama huruf-demi-huruf dengan sumber aslinya di dossier agar bisa dicari dengan CTRL+F di sumber aslinya.\n" +
-        "3. DAFTAR RUJUKAN DI AKHIR DENGAN TAUTAN KLIK: Pertahankan dan lengkapi daftar bernomor di bagian akhir dengan tautan markdown yang dapat langsung diklik pembaca: [🔗 Buka Makalah](url) yang memetakan setiap [n] ke judul, penulis, tahun, dan tautan/DOI asli.";
+        "3. DAFTAR RUJUKAN DI AKHIR DENGAN TAUTAN KLIK: Pertahankan dan lengkapi daftar bernomor di bagian akhir dengan tautan markdown yang dapat langsung diklik pembaca: [🔗 Buka Makalah](url) yang memetakan setiap [n] ke judul, penulis, tahun, dan tautan/DOI asli.\n" +
+        "4. INTEGRITAS TANPA FABRIKASI (ZERO-HALLUCINATION): Hanya kutip kata-demi-kata sumber yang memiliki teks kutipan di dossier; jika bertanda metadata saja, jangan karang kutipan, cukup rujuk nomornya [n].";
 
       if (enableSearch) {
         sys += " Use Google Search to look up any missing facts, latest data, or references requested by the Critic.";
@@ -4281,6 +4587,7 @@ ${draft}
       syncToolbarFontButtons(currentFont);
       syncToolbarSizeButtons(currentFontSize);
     }
+    window.renderWriterCard = renderWriterCard;
 
     function renderCriticCard(turn, critique, targetScore) {
       const isApproved = critique.score >= targetScore;

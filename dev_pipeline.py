@@ -542,6 +542,8 @@ def build_scholarly_dossier(
                 p_text += f"[Source {source_num}] arXiv: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
                 if p.get("abstract"):
                     p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
                 p_text += "\n"
                 citations.append({"num": source_num, "source": "arXiv", "title": p["title"], "url": p["url"], "meta": f"{p['authors']} ({p['year']})", "abstract": p.get("abstract", "")})
                 source_num += 1
@@ -559,6 +561,8 @@ def build_scholarly_dossier(
                 p_text += f"[Source {source_num}] Crossref: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  DOI: {p['url']}\n"
                 if p.get("abstract"):
                     p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
                 p_text += "\n"
                 citations.append({"num": source_num, "source": "Crossref", "title": p["title"], "url": p["url"], "meta": p["meta"], "abstract": p.get("abstract", "")})
                 source_num += 1
@@ -576,6 +580,8 @@ def build_scholarly_dossier(
                 p_text += f"[Source {source_num}] Semantic Scholar: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Citations: {p['citations']:,}\n  DOI/Link: {p['url']}\n"
                 if p.get("abstract"):
                     p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
                 p_text += "\n"
                 citations.append({"num": source_num, "source": "Semantic Scholar", "title": p["title"], "url": p["url"], "meta": p["meta"], "abstract": p.get("abstract", "")})
                 source_num += 1
@@ -593,6 +599,8 @@ def build_scholarly_dossier(
                 p_text += f"[Source {source_num}] OpenAlex: \"{p['title']}\" ({p['year']})\n  Venue: {p['venue']}\n  Authors: {p['authors']}\n  DOI: {p['url']}\n"
                 if p.get("abstract"):
                     p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
                 p_text += "\n"
                 citations.append({"num": source_num, "source": p.get("source", "OpenAlex"), "title": p["title"], "url": p["url"], "meta": p["meta"], "abstract": p.get("abstract", "")})
                 source_num += 1
@@ -610,6 +618,8 @@ def build_scholarly_dossier(
                 p_text += f"[Source {source_num}] PubMed: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Article Link: {p['url']}\n"
                 if p.get("abstract"):
                     p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
                 p_text += "\n"
                 citations.append({"num": source_num, "source": p.get("source", "PubMed Central"), "title": p["title"], "url": p["url"], "meta": p["meta"], "abstract": p.get("abstract", "")})
                 source_num += 1
@@ -694,27 +704,41 @@ READING_TYPE_GUIDELINES = {
 }
 
 
+def encode_fragment_token(token: str) -> str:
+    """Spec-compliant percent-encoder for W3C text fragment directives."""
+    if not token:
+        return ""
+    encoded = urllib.parse.quote(token, safe="")
+    return encoded.replace("-", "%2D").replace(",", "%2C").replace("&", "%26")
+
+
 def build_text_fragment_url(raw_url: str, quote_text: str) -> str:
-    """Build W3C Scroll-to-Text Fragment URL for automatic scroll & yellow highlight."""
+    """Build W3C Scroll-to-Text Fragment URL with strict spec encoding and https enforcement."""
     if not raw_url or raw_url == "#" or not quote_text:
         return raw_url
+
+    # Enforce https to prevent 301/302 redirects dropping fragments
+    base_url = re.sub(r'^http://', 'https://', raw_url.split("#")[0].strip(), flags=re.IGNORECASE)
+
     clean = re.sub(r'^["“\'”]+|["“\'”]+$', '', quote_text)
     clean = re.sub(r'\[\d+\]', '', clean)
     clean = re.sub(r'\s+', ' ', clean).strip()
-    clean = re.sub(r'^[.,;:!?\'"“”—-]+\s*', '', clean)
-    clean = re.sub(r'\s*[.,;:!?\'"“”—-]+$', '', clean)
-    words = [w for w in clean.split() if w]
-    if not words:
-        return raw_url
+    if not clean or len(clean) < 5:
+        return base_url
 
-    if len(words) > 8:
-        start_words = " ".join(words[:4])
-        end_words = " ".join(words[-4:])
-        param = f"{urllib.parse.quote(start_words)},{urllib.parse.quote(end_words)}"
+    raw_words = [w for w in clean.split() if w]
+    clean_words = [re.sub(r'^[^\w\u00C0-\u024F]+|[^\w\u00C0-\u024F]+$', '', w).strip() for w in raw_words]
+    clean_words = [w for w in clean_words if w]
+    if not clean_words:
+        return base_url
+
+    if len(clean_words) <= 6:
+        param = encode_fragment_token(" ".join(clean_words))
     else:
-        param = urllib.parse.quote(" ".join(words))
+        start_words = " ".join(clean_words[:3])
+        end_words = " ".join(clean_words[-3:])
+        param = f"{encode_fragment_token(start_words)},{encode_fragment_token(end_words)}"
 
-    base_url = raw_url.split("#")[0]
     return f"{base_url}#:~:text={param}"
 
 
@@ -752,7 +776,7 @@ Example 3 (Introductory Framing vs. Empirical Finding):
 
 
 def run_deterministic_checks(draft: str, dossier_text: str = "") -> Dict[str, Any]:
-    """Run fast heuristic checks for citation parity, quote presence, and causal triggers."""
+    """Run fast heuristic checks for citation parity, quote presence, causal triggers, and excerpt grounding."""
     issues = []
     in_text = set(int(m) for m in re.findall(r'\[(\d+)\]', draft))
     ref_entries = set(int(m) for m in re.findall(r'(?:^|\n)(?:[-*]\s*)?\[(\d+)\]', draft))
@@ -776,13 +800,24 @@ def run_deterministic_checks(draft: str, dossier_text: str = "") -> Dict[str, An
             issues.append(f"Heuristic causal verb pattern detected near citation: '{match.group(0).strip()}' - Verify on Verb Ladder.")
             break
 
+    # Check quote fidelity against dossier text if provided
+    verified_quotes_count = 0
+    if dossier_text:
+        dossier_lower = dossier_text.lower()
+        for q in quotes:
+            clean_q = re.sub(r'^["“\'”]+|["“\'”]+$', '', q)
+            clean_q = re.sub(r'\[\d+\]', '', clean_q).strip().lower()
+            if clean_q and len(clean_q) > 15 and clean_q in dossier_lower:
+                verified_quotes_count += 1
+
     return {
         "passed": not bool(issues),
         "has_issues": bool(issues),
         "issues": issues,
         "in_text_count": len(in_text),
         "ref_count": len(ref_entries),
-        "quote_count": len(quotes)
+        "quote_count": len(quotes),
+        "verified_quotes_count": verified_quotes_count
     }
 
 
