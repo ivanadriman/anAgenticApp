@@ -75,4 +75,6 @@ def test_build_text_fragment_url_hyphen_encoding():
     raw_url = "https://example.com/paper"
     quote = "Labor-intensive manual evaluations are conducted across multiple cohorts."
     frag_url = build_text_fragment_url(raw_url, quote)
-    assert "%2D" in frag_url or "Labor" in frag_url
+    # W3C text fragment directive requires '-' in words to be percent-encoded as %2D
+    assert "%2D" in frag_url
+    assert "Labor%2Dintensive" in frag_url

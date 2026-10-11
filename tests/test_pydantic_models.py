@@ -87,3 +87,50 @@ def test_source_audit_result_valid():
     assert result.score_percentage == 50.0
     assert len(result.items) == 2
     assert result.items[1].offending_text == "directly causes performance gain"
+
+
+def test_critique_result_score_clamping_and_status_reconciliation():
+    # Overly high score clamped to 10.0 and status auto-reconciled
+    c1 = CritiqueResult(
+        score=42.0,
+        status="INVALID_STATUS",
+        strengths=[],
+        weaknesses=[],
+        actionable_revisions=[]
+    )
+    assert c1.score == 10.0
+    assert c1.status == "APPROVED"
+
+    # Low score clamped to 1.0 and status auto-reconciled
+    c2 = CritiqueResult(
+        score=-5.0,
+        status="",
+        strengths=[],
+        weaknesses=[],
+        actionable_revisions=[]
+    )
+    assert c2.score == 1.0
+    assert c2.status == "NEEDS_REVISION"
+
+
+def test_source_audit_item_answer_normalization():
+    item_ya = SourceAuditItem(
+        id="q1", layer=1, title="T", question="Q", answer="YA", reason="R"
+    )
+    assert item_ya.answer == "YES"
+
+    item_true = SourceAuditItem(
+        id="q2", layer=1, title="T", question="Q", answer="true", reason="R"
+    )
+    assert item_true.answer == "YES"
+
+    item_maybe = SourceAuditItem(
+        id="q3", layer=1, title="T", question="Q", answer="MAYBE", reason="R"
+    )
+    assert item_maybe.answer == "NO"
+
+    item_tidak = SourceAuditItem(
+        id="q4", layer=1, title="T", question="Q", answer="TIDAK", reason="R"
+    )
+    assert item_tidak.answer == "NO"
+

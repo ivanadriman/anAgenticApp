@@ -17,7 +17,7 @@ import urllib.parse
 import urllib.error
 from typing import Optional, List, Dict, Any, Tuple
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from google import genai
 from rich.console import Console
 from rich.panel import Panel
@@ -142,6 +142,24 @@ class CritiqueResult(BaseModel):
     weaknesses: list[str] = Field(description="List of weak areas or flaws found")
     actionable_revisions: list[str] = Field(description="Clear, numbered instructions for the writer to improve the next draft")
 
+    @field_validator("score", mode="before")
+    @classmethod
+    def clamp_score(cls, v):
+        try:
+            val = float(v)
+            return max(1.0, min(10.0, val))
+        except (ValueError, TypeError):
+            return 5.0
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def reconcile_status(cls, v, info):
+        val_str = str(v).strip().upper() if v else ""
+        if val_str in ("APPROVED", "NEEDS_REVISION"):
+            return val_str
+        score = info.data.get("score", 5.0) if hasattr(info, "data") else 5.0
+        return "APPROVED" if score >= 8.5 else "NEEDS_REVISION"
+
 
 class SourceAuditItem(BaseModel):
     id: str = Field(description="Unique criterion ID from source-checking-guide.md")
@@ -151,6 +169,16 @@ class SourceAuditItem(BaseModel):
     answer: str = Field(description="'YES' or 'NO'")
     reason: str = Field(description="Diagnostic justification and evidence")
     offending_text: Optional[str] = Field(default="", description="Offending passage or citation snippet if NO, else empty")
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def normalize_answer(cls, v):
+        if not v:
+            return "NO"
+        clean = str(v).strip().upper()
+        if clean in ("YES", "YA", "TRUE", "Y"):
+            return "YES"
+        return "NO"
 
 
 class SourceAuditResult(BaseModel):
@@ -903,11 +931,32 @@ Example 3 (Introductory Framing vs. Empirical Finding):
 def run_deterministic_checks(draft: str, dossier_text: str = "") -> Dict[str, Any]:
     """Run fast heuristic checks for citation parity, quote presence, causal triggers, and excerpt grounding."""
     issues = []
-    in_text = set(int(m) for m in re.findall(r'\[(\d+)\]', draft))
-    ref_entries = set(int(m) for m in re.findall(r'(?:^|\n)(?:[-*]\s*)?\[(\d+)\]', draft))
+
+    # Separate body text and references section if header exists
+    ref_header = re.search(
+        r'(?:^|\n)##+\s*(?:📚\s*)?(?:Referensi|References|Sumber Terkutip|Cited Sources|Daftar Rujukan|Daftar Referensi)[^\n]*\n',
+        draft,
+        re.IGNORECASE
+    )
+    if ref_header:
+        body_text = draft[:ref_header.start()]
+        ref_text = draft[ref_header.end():]
+    else:
+        body_text = draft
+        ref_text = draft
+
+    # Count only plausible citation numbers (1-3 digits) from body to ignore publication years like [2023]
+    in_text = set(int(m) for m in re.findall(r'\[(\d{1,3})\]', body_text))
+    # Match both [1] and 1. style bibliography lines from references
+    ref_matches = re.findall(r'(?:^|\n)(?:[-*]\s*)?(?:\[(\d{1,3})\]|(\d{1,3})\.)', ref_text)
+    ref_entries = set(int(m[0] or m[1]) for m in ref_matches)
     missing = in_text - ref_entries
     if missing:
         issues.append(f"In-text citation numbers missing in references bibliography: [{', '.join(str(n) for n in sorted(missing))}]")
+
+    # Non-blocking warning for bibliography items not cited in text
+    uncited = ref_entries - in_text
+    warnings = [f"Reference [{n}] in bibliography is not cited in text" for n in sorted(uncited)]
 
     quotes = re.findall(r'(?:["“])[^"”\r\n]{8,}(?:["”])\s*\[\d+\]', draft)
     if not quotes:
@@ -939,6 +988,7 @@ def run_deterministic_checks(draft: str, dossier_text: str = "") -> Dict[str, An
         "passed": not bool(issues),
         "has_issues": bool(issues),
         "issues": issues,
+        "warnings": warnings,
         "in_text_count": len(in_text),
         "ref_count": len(ref_entries),
         "quote_count": len(quotes),

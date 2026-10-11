@@ -37,7 +37,7 @@ if sys.platform == "win32":
 def run_browser_tests():
     print("Launching Chromium browser for Multilingual & Grounding validation...", flush=True)
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=True, args=["--allow-file-access-from-files"])
         context = browser.new_context(viewport={"width": 1280, "height": 950})
         page = context.new_page()
 
@@ -218,24 +218,36 @@ def run_browser_tests():
         malicious_payload = (
             "# Security Test Document\n\n"
             "Untrusted markdown input with attack vectors:\n\n"
-            "<img src='nonexistent-image.jpg' onerror='window.__xss_fired=true;'>\n\n"
-            "<script>window.__xss_fired=true;</script>\n\n"
-            "[Malicious Link](javascript:window.__xss_fired=true)\n\n"
-            "<a href='javascript:window.__xss_fired=true'>Direct JS Link</a>\n\n"
-            "<a href='data:text/html;base64,PHNjcmlwdD53aW5kb3cuX3hzc19maXJlZD10cnVlOzwvc2NyaXB0Pg=='>Data URL Link</a>\n\n"
-            "Legitimate empirical claim: \"the auditory cortex processes phonetic tokens through hierarchical spectral decomposition\" [1].\n\n"
+            "1. Image onerror: <img src='nonexistent-image.jpg' onerror='window.__xss_fired=true;'>\n\n"
+            "2. Raw script tag: <script>window.__xss_fired=true;</script>\n\n"
+            "3. Markdown JS link: [Malicious Link](javascript:window.__xss_fired=true)\n\n"
+            "4. Obfuscated JS link: [Obfuscated Link](java\tscript:window.__xss_fired=true)\n\n"
+            "5. VBScript link: [VBScript Link](vbscript:window.__xss_fired=true)\n\n"
+            "6. Direct HTML anchor: <a href='javascript:window.__xss_fired=true'>Direct JS Link</a>\n\n"
+            "7. Data URL anchor: <a href='data:text/html;base64,PHNjcmlwdD53aW5kb3cuX3hzc19maXJlZD10cnVlOzwvc2NyaXB0Pg=='>Data URL Link</a>\n\n"
+            "8. In-text quote HTML injection: \"quoted vector <img src=x onerror=window.__xss_fired=true>\" [1].\n\n"
+            "Non-malicious test case: \"neural attention paradigm\" [2].\n\n"
             "## References\n"
-            "[1] Liberman, A. M. (1967). Some results on speech perception. https://doi.org/10.1121/1.1910402"
+            "[1] Liberman, A. M. (1967). Some results on speech perception. https://doi.org/10.1121/1.1910402\n"
+            "[2] Vaswani, A. (2017). The \"Attention\" Paradigm. https://doi.org/10.48550/arXiv.1706.03762"
         )
         sample_security_dossier = {
             "citations": [
                 {
                     "num": 1,
-                    "title": "Some results on speech perception",
+                    "title": "Some results <script>window.__xss_fired=true;</script> on speech",
                     "authors": "Liberman, A. M. (1967)",
                     "source": "J. Acoust. Soc. Am.",
-                    "url": "https://doi.org/10.1121/1.1910402",
+                    "url": "javascript:window.__xss_fired=true",
                     "abstract": "The auditory cortex processes phonetic tokens through hierarchical spectral decomposition."
+                },
+                {
+                    "num": 2,
+                    "title": "The \"Attention\" Paradigm: Neural Mechanisms",
+                    "authors": "Vaswani, A. et al. (2017)",
+                    "source": "NeurIPS",
+                    "url": "https://doi.org/10.48550/arXiv.1706.03762",
+                    "abstract": "Neural attention mechanisms provide sequence transduction without recurrence."
                 }
             ]
         }
@@ -261,13 +273,26 @@ def run_browser_tests():
         print(f"  • Images with onerror handlers: {onerror_count}", flush=True)
         assert onerror_count == 0, "SECURITY REGRESSION: img[onerror] attribute remained in rendered DOM!"
 
-        # 4. Assert that javascript: and data: links are sanitized
-        bad_links = page.locator("#turnCard-XSS-Security-Test a[href^='javascript:'], #turnCard-XSS-Security-Test a[href^='data:']").count()
-        print(f"  • Unsafe javascript: / data: links in card: {bad_links}", flush=True)
+        # 4. Assert that javascript:, vbscript:, and data: links are sanitized
+        bad_links = page.locator("#turnCard-XSS-Security-Test a[href^='javascript:'], #turnCard-XSS-Security-Test a[href^='data:'], #turnCard-XSS-Security-Test a[href^='vbscript:']").count()
+        print(f"  • Unsafe javascript: / data: / vbscript: links in card: {bad_links}", flush=True)
         assert bad_links == 0, "SECURITY REGRESSION: unsafe URL scheme remained in rendered DOM!"
 
+        # 5. Assert rel="noopener noreferrer" enforced on all target="_blank" links
+        blank_links = page.locator("#turnCard-XSS-Security-Test a[target='_blank']")
+        for i in range(blank_links.count()):
+            rel_attr = blank_links.nth(i).get_attribute("rel") or ""
+            assert "noopener" in rel_attr and "noreferrer" in rel_attr, f"Missing rel='noopener noreferrer' on {blank_links.nth(i)}"
+
+        # 6. Verify non-malicious quoted paper title renders correctly as citation anchor
+        cite_2 = page.locator("#turnCard-XSS-Security-Test a.citation-ref[data-citation-num='2']").first
+        assert cite_2.count() > 0, "Missing citation ref [2] for quoted title test"
+        cite_2_title = cite_2.get_attribute("data-citation-title") or ""
+        print(f"  • Citation [2] Title with quotes rendered: '{cite_2_title}'", flush=True)
+        assert "Attention" in cite_2_title
+
         page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "20_security_xss_rendered_inert.png"))
-        print("  ✓ Security regression verified: all injection vectors rendered inert via DOMPurify & safe URL checking!", flush=True)
+        print("  ✓ Security regression verified: all 8 injection vectors rendered inert and quoted title preserved!", flush=True)
 
         # -------------------------------------------------------------
         # Test Case 7: Reading Palettes, Typography & Focus Reading Mode (Zen View)

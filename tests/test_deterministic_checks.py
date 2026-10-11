@@ -71,3 +71,46 @@ Hasil survei membuktikan [1] bahwa kecepatan wicara memicu respons saraf. "Pemro
     result_id = run_deterministic_checks(draft_id)
     assert result_id["passed"] is False
     assert any("causal verb" in issue.lower() or "verb ladder" in issue.lower() for issue in result_id["issues"])
+
+
+def test_deterministic_checks_ignores_publication_year_brackets():
+    draft = """# Speech Overview
+According to Doe et al. [2023], "phonetic processing is continuous and layered" [1].
+
+## References
+[1] Doe, J. (2023). Speech Science.
+"""
+    result = run_deterministic_checks(draft)
+    assert result["passed"] is True
+    assert result["has_issues"] is False
+    # [2023] should NOT be counted in in_text citations
+    assert result["in_text_count"] == 1
+
+
+def test_deterministic_checks_numbered_dot_bibliography():
+    draft = """# Speech Overview
+As shown in experimental trials, "speech perception operates across dual dorsal-ventral streams" [1].
+
+## References
+1. Hickok, G. & Poeppel, D. (2007). The cortical organization of speech processing.
+"""
+    result = run_deterministic_checks(draft)
+    assert result["passed"] is True
+    assert result["has_issues"] is False
+    assert result["ref_count"] == 1
+
+
+def test_deterministic_checks_uncited_reference_warning():
+    draft = """# Speech Overview
+As demonstrated by recent trials, "auditory representations undergo hierarchical cortical transformation" [1].
+
+## References
+[1] Smith, A. (2020). J Acoust Soc Am.
+[2] Johnson, B. (2022). Brain & Language.
+"""
+    result = run_deterministic_checks(draft)
+    assert result["passed"] is True
+    assert len(result["issues"]) == 0
+    assert len(result["warnings"]) == 1
+    assert "Reference [2] in bibliography is not cited in text" in result["warnings"][0]
+
