@@ -1562,12 +1562,16 @@
             searchBox.checked = false;
             searchBox.disabled = true;
             searchBadge.classList.remove("hidden");
-            searchBadge.textContent = "⚠️ Search quota reached (uncheck to run pure LLM)";
+            searchBadge.textContent = currentLang === "id"
+              ? "⚠️ Kuota pencarian web habis (nonaktifkan untuk menjalankan LLM murni)"
+              : "⚠️ Search quota reached (uncheck to run pure LLM)";
             searchBadge.className = "text-[10px] text-amber-400 pl-6 block font-medium";
           } else {
             searchBox.disabled = false;
             searchBadge.classList.remove("hidden");
-            searchBadge.textContent = "✓ Search quota available";
+            searchBadge.textContent = currentLang === "id"
+              ? "✓ Kuota pencarian web tersedia"
+              : "✓ Search quota available";
             searchBadge.className = "text-[10px] text-emerald-400 pl-6 block";
           }
         } catch (e) {
