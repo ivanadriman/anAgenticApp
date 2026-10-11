@@ -9,8 +9,12 @@ import sys
 import re
 import json
 import argparse
+import time
+import random
+import http.client
 import urllib.request
 import urllib.parse
+import urllib.error
 from typing import Optional, List, Dict, Any, Tuple
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -28,15 +32,107 @@ if sys.platform == "win32":
 # Load environment variables
 load_dotenv()
 
-API_KEY = os.environ.get("GEMINI_API_KEY")
-if not API_KEY:
-    raise ValueError("GEMINI_API_KEY environment variable is missing. Check your .env file.")
-
 DEFAULT_MODEL = "gemini-3.5-flash-lite"
-console = Console(force_terminal=True, legacy_windows=False)
-client = genai.Client(api_key=API_KEY)
-
 POLITE_EMAIL = "agenticapp.research@gmail.com"
+
+# Network Retry & Backoff Configuration
+MAX_RETRIES = 3
+BASE_BACKOFF = 1.0  # seconds
+MAX_BACKOFF = 10.0  # seconds
+
+console = Console(force_terminal=True, legacy_windows=False)
+
+_client: Optional[genai.Client] = None
+
+
+def get_client() -> genai.Client:
+    """Lazily initialize and return the Gemini API client only when an API call is made."""
+    global _client
+    if _client is None:
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "GEMINI_API_KEY environment variable is missing. "
+                "Please configure GEMINI_API_KEY in your environment or .env file before running generation."
+            )
+        _client = genai.Client(api_key=api_key)
+    return _client
+
+
+def set_client(custom_client: Optional[genai.Client]) -> None:
+    """Set a custom or mocked client instance (primarily for tests)."""
+    global _client
+    _client = custom_client
+
+
+def request_with_retry(
+    req: urllib.request.Request,
+    timeout: float = 10.0,
+    max_retries: int = MAX_RETRIES,
+    base_backoff: float = BASE_BACKOFF,
+    max_backoff: float = MAX_BACKOFF
+):
+    """
+    Execute urllib.request.urlopen with exponential backoff, jitter, and Retry-After support.
+    Retries transient errors: HTTP 429, 500, 502, 503, 504, and network timeouts.
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            return urllib.request.urlopen(req, timeout=timeout)
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 500, 502, 503, 504) and attempt < max_retries:
+                retry_after = e.headers.get("Retry-After") if hasattr(e, "headers") and e.headers else None
+                if retry_after:
+                    try:
+                        delay = float(retry_after)
+                    except ValueError:
+                        delay = min(base_backoff * (2 ** attempt), max_backoff)
+                else:
+                    delay = min(base_backoff * (2 ** attempt), max_backoff)
+                delay += random.uniform(0.0, 0.25 * delay)
+                console.print(f"[dim yellow]HTTP {e.code} transient response for {req.full_url}. Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...[/dim yellow]")
+                time.sleep(delay)
+                continue
+            raise
+        except (urllib.error.URLError, TimeoutError, http.client.HTTPException, ConnectionResetError) as e:
+            if attempt < max_retries:
+                delay = min(base_backoff * (2 ** attempt), max_backoff) + random.uniform(0.0, 0.5)
+                console.print(f"[dim yellow]Network transient error ({e}) for {req.full_url}. Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...[/dim yellow]")
+                time.sleep(delay)
+                continue
+            raise
+
+
+def call_gemini_with_retry(
+    func,
+    *args,
+    max_retries: int = MAX_RETRIES,
+    base_backoff: float = BASE_BACKOFF,
+    max_backoff: float = MAX_BACKOFF,
+    **kwargs
+):
+    """
+    Invoke a Gemini API method with exponential backoff and jitter for transient 429/rate limit/5xx errors.
+    """
+    for attempt in range(max_retries + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            err_msg = str(e).lower()
+            is_transient = (
+                "429" in err_msg
+                or "resource_exhausted" in err_msg
+                or "rate limit" in err_msg
+                or "503" in err_msg
+                or "unavailable" in err_msg
+                or "timeout" in err_msg
+            )
+            if is_transient and attempt < max_retries:
+                delay = min(base_backoff * (2 ** attempt), max_backoff) + random.uniform(0.0, 0.5)
+                console.print(f"[dim yellow]Gemini API transient rate limit/error ({e}). Retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})...[/dim yellow]")
+                time.sleep(delay)
+                continue
+            raise
 
 
 class CritiqueResult(BaseModel):
@@ -120,7 +216,8 @@ Topic: "{topic}"
 If the topic is in Indonesian or non-English, extract 2-4 concise English scientific keywords for arXiv, PubMed, and Semantic Scholar.
 Respond ONLY with JSON:
 {{"global_stem": "...", "regional": "{topic}", "is_indonesian": {str(is_id).lower()}}}"""
-        resp = client.models.generate_content(
+        resp = call_gemini_with_retry(
+            get_client().models.generate_content,
             model=DEFAULT_MODEL,
             contents=prompt,
         )
@@ -133,8 +230,10 @@ Respond ONLY with JSON:
                     "regional": data.get("regional", topic).strip(),
                     "is_indonesian": is_id or data.get("is_indonesian", False)
                 }
-    except Exception:
-        pass
+    except (json.JSONDecodeError, KeyError, ValueError) as e:
+        console.print(f"[dim yellow]Notice: Query formulation JSON parse error ({e}), using heuristic fallback[/dim yellow]")
+    except Exception as e:
+        console.print(f"[dim yellow]Notice: Query formulation LLM error ({e}), using heuristic fallback[/dim yellow]")
 
     return {
         "global": global_query.strip(),
@@ -163,7 +262,7 @@ def fetch_arxiv_papers(topic: str) -> List[Dict[str, Any]]:
     try:
         url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&filter=primary_location.source.id:s4306400194&per-page=4&mailto={POLITE_EMAIL}"
         req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with request_with_retry(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             results = []
             for r in data.get("results", []):
@@ -181,14 +280,16 @@ def fetch_arxiv_papers(topic: str) -> List[Dict[str, Any]]:
                 })
             if results:
                 return results
-    except Exception as e:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
         console.print(f"[dim]arXiv primary index note: {e}, checking Crossref...[/dim]")
+    except Exception as e:
+        console.print(f"[dim]arXiv primary index unexpected error: {e}, checking Crossref...[/dim]")
 
     # Fallback via Crossref
     try:
         fb_url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic + ' arxiv')}&rows=3&mailto={POLITE_EMAIL}"
         req = urllib.request.Request(fb_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with request_with_retry(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             results = []
             for it in data.get("message", {}).get("items", []):
@@ -203,8 +304,11 @@ def fetch_arxiv_papers(topic: str) -> List[Dict[str, Any]]:
                     "abstract": ""
                 })
             return results
-    except Exception as e:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
         console.print(f"[yellow]Warning: arXiv fetch failed: {e}[/yellow]")
+        return []
+    except Exception as e:
+        console.print(f"[yellow]Warning: arXiv unexpected fetch error: {e}[/yellow]")
         return []
 
 
@@ -213,7 +317,7 @@ def fetch_crossref_papers(topic: str) -> List[Dict[str, Any]]:
     try:
         url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic)}&rows=4&mailto={POLITE_EMAIL}"
         req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with request_with_retry(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             results = []
             for it in data.get("message", {}).get("items", []):
@@ -231,8 +335,11 @@ def fetch_crossref_papers(topic: str) -> List[Dict[str, Any]]:
                     "abstract": ""
                 })
             return results
-    except Exception as e:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
         console.print(f"[yellow]Warning: Crossref fetch failed: {e}[/yellow]")
+        return []
+    except Exception as e:
+        console.print(f"[yellow]Warning: Crossref unexpected fetch error: {e}[/yellow]")
         return []
 
 
@@ -242,7 +349,7 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
     try:
         url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={urllib.parse.quote(topic)}&limit=4&fields=title,authors,year,citationCount,url,abstract"
         req = urllib.request.Request(url, headers={"User-Agent": "AgenticApp/1.0"})
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        with request_with_retry(req, timeout=8) as resp:
             data = json.loads(resp.read().decode())
             results = []
             for p in data.get("data", []):
@@ -263,14 +370,16 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
                 })
             if results:
                 return results
-    except Exception as e:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
         console.print(f"[dim]Semantic Scholar direct note: {e}, using citation index fallback...[/dim]")
+    except Exception as e:
+        console.print(f"[dim]Semantic Scholar direct unexpected note: {e}, using citation index fallback...[/dim]")
 
     # 2. Resilient Fallback: OpenAlex citation-ranked index
     try:
         url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&sort=cited_by_count:desc&per-page=4&mailto={POLITE_EMAIL}"
         req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with request_with_retry(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             results = []
             for r in data.get("results", []):
@@ -289,8 +398,11 @@ def fetch_semantic_scholar_papers(topic: str) -> List[Dict[str, Any]]:
                     "abstract": abstract
                 })
             return results
-    except Exception as e:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
         console.print(f"[yellow]Warning: Semantic Scholar fetch failed: {e}[/yellow]")
+        return []
+    except Exception as e:
+        console.print(f"[yellow]Warning: Semantic Scholar unexpected fetch error: {e}[/yellow]")
         return []
 
 
@@ -300,7 +412,7 @@ def fetch_openalex_works(topic: str, reg_topic: Optional[str] = None, is_id: boo
     try:
         url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&per-page=4&mailto={POLITE_EMAIL}"
         req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with request_with_retry(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             for r in data.get("results", []):
                 authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
@@ -316,15 +428,17 @@ def fetch_openalex_works(topic: str, reg_topic: Optional[str] = None, is_id: boo
                     "url": r.get("doi") or r.get("primary_location", {}).get("landing_page_url") or "",
                     "abstract": abstract
                 })
-    except Exception as e:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
         console.print(f"[yellow]Warning: OpenAlex fetch failed: {e}[/yellow]")
+    except Exception as e:
+        console.print(f"[yellow]Warning: OpenAlex unexpected fetch error: {e}[/yellow]")
 
     # If Indonesian or regional topic differs, also fetch regional works and merge
     if is_id and reg_topic and reg_topic.lower() != topic.lower():
         try:
             reg_url = f"https://api.openalex.org/works?search={urllib.parse.quote(reg_topic)}&per-page=2&mailto={POLITE_EMAIL}"
             req = urllib.request.Request(reg_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with request_with_retry(req, timeout=10) as resp:
                 reg_data = json.loads(resp.read().decode())
                 seen_urls = {it.get("url") for it in results if it.get("url")}
                 for r in reg_data.get("results", []):
@@ -343,8 +457,10 @@ def fetch_openalex_works(topic: str, reg_topic: Optional[str] = None, is_id: boo
                             "url": item_url,
                             "abstract": abstract
                         })
-        except Exception as e:
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
             console.print(f"[dim]OpenAlex regional query note: {e}[/dim]")
+        except Exception as e:
+            console.print(f"[dim]OpenAlex regional query unexpected note: {e}[/dim]")
 
     return results
 
@@ -355,7 +471,7 @@ def fetch_pubmed_works(topic: str) -> List[Dict[str, Any]]:
     try:
         ep_url = f"https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={urllib.parse.quote(topic)}&resultType=core&format=json&pageSize=4"
         req = urllib.request.Request(ep_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with request_with_retry(req, timeout=10) as resp:
             ep_data = json.loads(resp.read().decode())
             results = []
             for it in ep_data.get("resultList", {}).get("result", []):
@@ -379,14 +495,16 @@ def fetch_pubmed_works(topic: str) -> List[Dict[str, Any]]:
                 })
             if results:
                 return results
-    except Exception as ep_err:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as ep_err:
         console.print(f"[dim]Europe PMC query note: {ep_err}, falling back to NCBI PMC...[/dim]")
+    except Exception as ep_err:
+        console.print(f"[dim]Europe PMC query unexpected note: {ep_err}, falling back to NCBI PMC...[/dim]")
 
     # 2. Resilient Fallback: NCBI PubMed Central
     try:
         search_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pmc&term={urllib.parse.quote(topic)}&retmode=json&retmax=4"
         req = urllib.request.Request(search_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with request_with_retry(req, timeout=10) as resp:
             data = json.loads(resp.read().decode())
             ids = data.get("esearchresult", {}).get("idlist", [])
             if not ids:
@@ -394,7 +512,7 @@ def fetch_pubmed_works(topic: str) -> List[Dict[str, Any]]:
 
             sum_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pmc&id={','.join(ids)}&retmode=json"
             req2 = urllib.request.Request(sum_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-            with urllib.request.urlopen(req2, timeout=10) as resp2:
+            with request_with_retry(req2, timeout=10) as resp2:
                 data2 = json.loads(resp2.read().decode())
                 results = []
                 for uid in ids:
@@ -413,8 +531,11 @@ def fetch_pubmed_works(topic: str) -> List[Dict[str, Any]]:
                         "abstract": ""
                     })
                 return results
-    except Exception as e:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
         console.print(f"[yellow]Warning: PubMed fetch failed: {e}[/yellow]")
+        return []
+    except Exception as e:
+        console.print(f"[yellow]Warning: PubMed unexpected fetch error: {e}[/yellow]")
         return []
 
 
@@ -430,7 +551,7 @@ def fetch_wikipedia_summary(topic: str, queries: Optional[Dict[str, Any]] = None
         try:
             search_url = f"https://id.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(reg_topic)}&format=json"
             req1 = urllib.request.Request(search_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-            with urllib.request.urlopen(req1, timeout=10) as resp1:
+            with request_with_retry(req1, timeout=10) as resp1:
                 data1 = json.loads(resp1.read().decode())
                 hits = data1.get("query", {}).get("search", [])
                 if hits:
@@ -438,7 +559,7 @@ def fetch_wikipedia_summary(topic: str, queries: Optional[Dict[str, Any]] = None
                     slug = urllib.parse.quote(title.replace(" ", "_"))
                     sum_url = f"https://id.wikipedia.org/api/rest_v1/page/summary/{slug}"
                     req2 = urllib.request.Request(sum_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-                    with urllib.request.urlopen(req2, timeout=10) as resp2:
+                    with request_with_retry(req2, timeout=10) as resp2:
                         data2 = json.loads(resp2.read().decode())
                         if data2.get("extract"):
                             results.append({
@@ -448,14 +569,16 @@ def fetch_wikipedia_summary(topic: str, queries: Optional[Dict[str, Any]] = None
                                 "meta": "Ensiklopedia Bahasa Indonesia",
                                 "url": data2.get("content_urls", {}).get("desktop", {}).get("page") or f"https://id.wikipedia.org/wiki/{slug}"
                             })
-        except Exception as e:
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
             console.print(f"[dim]Indonesian Wikipedia fetch note: {e}[/dim]")
+        except Exception as e:
+            console.print(f"[dim]Indonesian Wikipedia unexpected note: {e}[/dim]")
 
     # 2. Query Global English Wikipedia
     try:
         search_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={urllib.parse.quote(glob_topic)}&format=json"
         req1 = urllib.request.Request(search_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-        with urllib.request.urlopen(req1, timeout=10) as resp1:
+        with request_with_retry(req1, timeout=10) as resp1:
             data1 = json.loads(resp1.read().decode())
             hits = data1.get("query", {}).get("search", [])
             if hits:
@@ -463,7 +586,7 @@ def fetch_wikipedia_summary(topic: str, queries: Optional[Dict[str, Any]] = None
                 slug = urllib.parse.quote(title.replace(" ", "_"))
                 sum_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{slug}"
                 req2 = urllib.request.Request(sum_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
-                with urllib.request.urlopen(req2, timeout=10) as resp2:
+                with request_with_retry(req2, timeout=10) as resp2:
                     data2 = json.loads(resp2.read().decode())
                     if data2.get("extract"):
                         results.append({
@@ -473,8 +596,10 @@ def fetch_wikipedia_summary(topic: str, queries: Optional[Dict[str, Any]] = None
                             "meta": "Rujukan Ensiklopedia Global" if is_id else "Encyclopedic Reference Overview",
                             "url": data2.get("content_urls", {}).get("desktop", {}).get("page") or f"https://en.wikipedia.org/wiki/{slug}"
                         })
-    except Exception as e:
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
         console.print(f"[yellow]Warning: English Wikipedia fetch failed: {e}[/yellow]")
+    except Exception as e:
+        console.print(f"[yellow]Warning: English Wikipedia unexpected fetch error: {e}[/yellow]")
 
     return results
 
@@ -871,7 +996,8 @@ Rewrite ONLY this paragraph to resolve the discrepancy while keeping all valid f
 """
 
     try:
-        response = client.interactions.create(
+        response = call_gemini_with_retry(
+            get_client().interactions.create,
             model=model,
             system_instruction=sys_prompt,
             input=prompt,
@@ -948,7 +1074,8 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
         user_prompt += "Please write Draft 1 grounded in the topic and research, using exact verbatim quotes \"... ...\" [n] and the numbered references list at the end with clickable links [🔗 Open Paper](url)."
 
     tools = [{"type": "google_search"}] if enable_search else None
-    response = client.interactions.create(
+    response = call_gemini_with_retry(
+        get_client().interactions.create,
         model=model,
         system_instruction=system_prompt,
         input=user_prompt,
@@ -1016,7 +1143,8 @@ Required Improvements:
         prompt += f"\nPlease write the complete revised version (Draft {turn + 1}) addressing all feedback with exact verbatim quotes \"... ...\" [n] and the numbered references list at the end with clickable links [🔗 Open Paper](url)."
 
     tools = [{"type": "google_search"}] if enable_search else None
-    response = client.interactions.create(
+    response = call_gemini_with_retry(
+        get_client().interactions.create,
         model=model,
         system_instruction=system_prompt,
         input=prompt,
@@ -1083,7 +1211,8 @@ Draft to Review:
 Analyze the draft thoroughly and output your evaluation as a valid JSON object only.
 """
 
-    response = client.interactions.create(
+    response = call_gemini_with_retry(
+        get_client().interactions.create,
         model=model,
         system_instruction=system_prompt,
         input=prompt,
@@ -1096,7 +1225,14 @@ Analyze the draft thoroughly and output your evaluation as a valid JSON object o
         cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
         cleaned = re.sub(r"\s*```$", "", cleaned)
     
-    data = json.loads(cleaned)
+    try:
+        data = json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        match = re.search(r"\{[\s\S]*\}", cleaned)
+        if match:
+            data = json.loads(match.group(0))
+        else:
+            raise
     return CritiqueResult(**data)
 
 
@@ -1158,7 +1294,8 @@ def run_source_audit(topic: str, draft: str, dossier_text: str = "", model: str 
         prompt += f"\nGrounding Dossier Reference:\n{dossier_text}\n"
     prompt += "\nPerform the rigorous 11-question 3-layer audit and output valid JSON ONLY."
 
-    response = client.interactions.create(
+    response = call_gemini_with_retry(
+        get_client().interactions.create,
         model=model,
         system_instruction=system_prompt,
         input=prompt,
@@ -1173,10 +1310,13 @@ def run_source_audit(topic: str, draft: str, dossier_text: str = "", model: str 
 
     try:
         data = json.loads(cleaned)
-    except Exception:
+    except (json.JSONDecodeError, ValueError):
         match = re.search(r"\{[\s\S]*\}", cleaned)
         if match:
-            data = json.loads(match.group(0))
+            try:
+                data = json.loads(match.group(0))
+            except (json.JSONDecodeError, ValueError):
+                data = {"all_yes": False, "overall_verdict": "DISCREPANCIES_DETECTED", "score_percentage": 0.0, "failure_patterns_detected": [], "discrepancies": ["JSON parsing failed"], "items": []}
         else:
             data = {"all_yes": False, "overall_verdict": "DISCREPANCIES_DETECTED", "score_percentage": 0.0, "failure_patterns_detected": [], "discrepancies": ["JSON parsing failed"], "items": []}
 
@@ -1294,7 +1434,8 @@ PREVIOUS DRAFT TO REBUILD:
     else:
         prompt += "\nPlease rebuild the complete draft in full Markdown. Resolve every single discrepancy above so that all 11 criteria achieve 'YES' on the next audit round. Maintain exact quotes \"... ...\" [n] and the clickable references list at the end [🔗 Open Paper](url)."
 
-    response = client.interactions.create(
+    response = call_gemini_with_retry(
+        get_client().interactions.create,
         model=model,
         system_instruction=system_prompt,
         input=prompt,
