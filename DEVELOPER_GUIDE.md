@@ -20,8 +20,10 @@ This guide provides technical contributors, software engineers, and AI researche
 7. [Two-Agent Prompt Engineering & Structured Outputs](#-two-agent-prompt-engineering--structured-outputs)
 8. [Client-Side Quota Probing System](#-client-side-quota-probing-system)
 9. [Development Setup & Local Environment](#-development-setup--local-environment)
-10. [Test Automation Suite (Playwright)](#-test-automation-suite-playwright)
-11. [Extension Guide: Adding New Sources & Models](#-extension-guide-adding-new-sources--models)
+10. [Reading System, Color Palettes & Mobile Ergonomics Architecture](#-reading-system-color-palettes--mobile-ergonomics-architecture)
+    - [Document Export Engine & Clipping Prevention Architecture](#7-document-export-engine--clipping-prevention-architecture)
+11. [Test Automation Suite (Playwright)](#-test-automation-suite-playwright)
+12. [Extension Guide: Adding New Sources & Models](#-extension-guide-adding-new-sources--models)
 
 ---
 
@@ -401,6 +403,25 @@ To solve mobile vertical clutter without sacrificing desktop ergonomics, the fro
   This eliminates imperative JavaScript class toggling on individual clicks while maintaining complete cross-theme visual fidelity.
 - **Fluid Padding Scale**: Dynamic output generators (`renderWriterCard`, `renderCriticCard`, `renderDossierCard`, `renderFinalApprovedCard`) use `p-4 sm:p-6 rounded-xl sm:rounded-2xl`, ensuring edge-to-edge readability on phones without horizontal overflow.
 
+### 7. Document Export Engine & Clipping Prevention Architecture
+To ensure exported documents are free from clipped web headers, API key boxes, navigation bars, and dark backgrounds, the system implements a dual-pathway client-side export architecture:
+1. **Title Extraction & Markdown Downloader (`downloadMarkdownFile`)**:
+   - Parses the generated draft text for `# Heading` or `## Heading` using regex `/^#+\s+(.+)$/m`.
+   - Cleans markdown formatting symbols and runs through `slugifyFilename(title, maxLength = 80)` to produce safe, human-readable filenames (e.g. `perkembangan_arsitektur_agentic_ai.md`).
+   - Packages the Markdown draft into a UTF-8 `Blob` and triggers programmatic download via a temporary anchor element.
+2. **Dedicated Zero-Clipping Print Iframe (`printDocumentViaIframe`)**:
+   - Instead of invoking `window.print()` directly on the active webpage DOM, this engine creates a temporary invisible `<iframe>`.
+   - Injects a self-contained HTML document containing **only** the sanitized article text, quote callouts, and references.
+   - Injects custom `@page { size: ${paperSize} ${orientation}; margin: ${margin}; }` CSS corresponding to user selections.
+   - Enforces `break-inside: avoid;` on `.verbatim-quote-block`, `table`, and `.reference-item`, plus `break-after: avoid;` on headings `h1, h2, h3`.
+   - Dispatches `iframe.contentWindow.print()` for vector-crisp "Save as PDF" output completely devoid of website components.
+3. **Client-Side Direct PDF Exporter (`downloadDocumentAsPdf`)**:
+   - Spawns an off-screen sandbox container populated with sanitized article HTML and user typography preferences.
+   - Invokes `html2pdf.js` configured with `scale: 2` (high-DPI canvas), `margin: [mm, mm, mm, mm]`, paper format (`a4`, `letter`, `a5`, `legal`, `executive`), and `orientation`.
+   - Automatically falls back to `printDocumentViaIframe` if external library loading is blocked.
+4. **Failsafe Global `@media print` Rules**:
+   - In `index.html`, global `@media print` enforces `body { background: #ffffff !important; color: #111827 !important; }` and strictly sets `display: none !important;` on `#headerNav`, `#inputSection`, `#liveResearchProgressCard`, `#citationDrawer`, `#pdfExportModal`, buttons, and dialogs.
+
 ---
 
 ## 🧪 Test Automation Suite (Playwright)
@@ -433,6 +454,15 @@ python test_browser.py
    - Simulates touch tap on in-text citation pill, asserting that `#citationDrawer` slides up with `.drawer-open`.
    - Verifies drawer metadata and 48px touch-target button `🔗 Buka Makalah / Open Paper ↗`.
    - Closes drawer via close button and verifies `.drawer-closed`.
+9. **Test Case 9 (Markdown Download & PDF Export Dialog)**:
+   - Verifies Markdown Download and PDF Export buttons on output cards and reading toolbars.
+   - Triggers Markdown download and asserts generated `.md` filename matches the extracted article title.
+   - Opens `#pdfExportModal` and asserts visibility.
+   - Tests selecting common paper sizes (`a4`, `letter`, `a5`, `legal`, `executive`).
+   - Tests orientation, margins, and typography dropdown selections.
+   - Verifies presence of `#pdfPrintVectorBtn` and `#pdfDownloadDirectBtn`.
+   - Captures modal screenshot (`27_pdf_export_modal_options.png`) and tests modal close and cancel.
+   - Verifies export buttons inside Focus Reading Mode (Zen View).
 
 Screenshots of every stage are captured and stored in `test_screenshots/`.
 

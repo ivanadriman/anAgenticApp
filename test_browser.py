@@ -468,7 +468,127 @@ def run_browser_tests():
         page.set_viewport_size({"width": 1280, "height": 950})
         time.sleep(0.5)
 
-        final_screenshot = os.path.join(SCREENSHOTS_DIR, "26_full_reading_experience_session.png")
+        # -------------------------------------------------------------
+        # Test Case 9: Verify Markdown Download & PDF Export Dialog with Paper Sizes
+        # -------------------------------------------------------------
+        print("\n--- Test Case 9: Markdown Download & PDF Export with Paper Size Options ---", flush=True)
+
+        # 1. Verify Markdown Download and PDF Export Buttons on Cards
+        dl_md_btn = page.locator("#downloadMDBtn").first if page.locator("#downloadMDBtn").count() > 0 else page.locator(".download-md-btn").first
+        export_pdf_btn = page.locator("#exportPdfBtn").first if page.locator("#exportPdfBtn").count() > 0 else page.locator(".export-pdf-btn").first
+
+        assert dl_md_btn.count() > 0, "Missing Markdown Download button on card / reading toolbar"
+        assert export_pdf_btn.count() > 0, "Missing Export PDF button on card / reading toolbar"
+        print("  ✓ Markdown Download and Export PDF buttons found on card!", flush=True)
+
+        # 2. Test Markdown Download Trigger
+        print("  • Triggering Markdown download event...", flush=True)
+        with page.expect_download(timeout=10000) as download_info:
+            dl_md_btn.click()
+        download = download_info.value
+        download_filename = download.suggested_filename
+        print(f"    - Downloaded file: '{download_filename}'", flush=True)
+        assert download_filename.endswith(".md"), f"Expected .md extension, got {download_filename}"
+        assert len(download_filename) > 3, "Filename should not be empty"
+        print("  ✓ Markdown downloaded successfully with actual document title!", flush=True)
+
+        # 3. Test PDF Export Modal Opening
+        print("  • Opening PDF Export Modal via #exportPdfBtn...", flush=True)
+        export_pdf_btn.click()
+        time.sleep(0.5)
+
+        pdf_modal = page.locator("#pdfExportModal")
+        assert not pdf_modal.is_hidden(), "Expected #pdfExportModal to be visible"
+        print("    ✓ PDF Export Modal is visible!", flush=True)
+
+        # 4. Verify Common Paper Size Options
+        paper_select = page.locator("#pdfPaperSizeSelect")
+        assert paper_select.count() > 0, "Missing #pdfPaperSizeSelect"
+
+        # Verify options: A4, Letter, A5, Legal, Executive
+        page.select_option("#pdfPaperSizeSelect", "letter")
+        selected_val = paper_select.input_value()
+        print(f"    - Selected paper size: '{selected_val}' (Letter)", flush=True)
+        assert selected_val == "letter"
+
+        page.select_option("#pdfPaperSizeSelect", "a5")
+        selected_val = paper_select.input_value()
+        print(f"    - Selected paper size: '{selected_val}' (A5)", flush=True)
+        assert selected_val == "a5"
+
+        page.select_option("#pdfPaperSizeSelect", "legal")
+        selected_val = paper_select.input_value()
+        print(f"    - Selected paper size: '{selected_val}' (Legal)", flush=True)
+        assert selected_val == "legal"
+
+        page.select_option("#pdfPaperSizeSelect", "executive")
+        selected_val = paper_select.input_value()
+        print(f"    - Selected paper size: '{selected_val}' (Executive)", flush=True)
+        assert selected_val == "executive"
+
+        page.select_option("#pdfPaperSizeSelect", "a4")
+        selected_val = paper_select.input_value()
+        print(f"    - Selected paper size: '{selected_val}' (A4 default)", flush=True)
+        assert selected_val == "a4"
+
+        # 5. Verify Orientation & Margins
+        page.select_option("#pdfOrientationSelect", "landscape")
+        assert page.locator("#pdfOrientationSelect").input_value() == "landscape"
+        page.select_option("#pdfOrientationSelect", "portrait")
+        assert page.locator("#pdfOrientationSelect").input_value() == "portrait"
+
+        page.select_option("#pdfMarginsSelect", "narrow")
+        assert page.locator("#pdfMarginsSelect").input_value() == "narrow"
+        page.select_option("#pdfMarginsSelect", "standard")
+        assert page.locator("#pdfMarginsSelect").input_value() == "standard"
+
+        # 6. Verify Typography Options
+        page.select_option("#pdfFontSelect", "sans")
+        assert page.locator("#pdfFontSelect").input_value() == "sans"
+        page.select_option("#pdfFontSelect", "serif")
+        assert page.locator("#pdfFontSelect").input_value() == "serif"
+
+        # 7. Verify Action Buttons exist
+        print_vec_btn = page.locator("#pdfPrintVectorBtn")
+        dl_direct_btn = page.locator("#pdfDownloadDirectBtn")
+        assert print_vec_btn.count() > 0, "Missing #pdfPrintVectorBtn"
+        assert dl_direct_btn.count() > 0, "Missing #pdfDownloadDirectBtn"
+
+        # Screenshot modal
+        pdf_screenshot = os.path.join(SCREENSHOTS_DIR, "27_pdf_export_modal_options.png")
+        page.screenshot(path=pdf_screenshot)
+        print(f"  ✓ PDF Export Modal screenshot saved to {pdf_screenshot}", flush=True)
+
+        # 8. Close PDF Modal
+        page.locator("#closePdfModalBtn").click()
+        time.sleep(0.3)
+        assert pdf_modal.is_hidden(), "Expected #pdfExportModal to be hidden after close button"
+        print("  ✓ PDF Export Modal closed cleanly!", flush=True)
+
+        # 9. Verify Focus Reading Mode Export Buttons
+        print("  • Verifying Export buttons in Focus Reading Mode...", flush=True)
+        zen_btn = page.locator(".zen-mode-btn").first
+        zen_btn.click()
+        time.sleep(0.5)
+
+        focus_dl_md = page.locator("#focusDownloadMDBtn")
+        focus_export_pdf = page.locator("#focusExportPdfBtn")
+        assert focus_dl_md.count() > 0, "Missing #focusDownloadMDBtn"
+        assert focus_export_pdf.count() > 0, "Missing #focusExportPdfBtn"
+
+        # Click export PDF from inside Focus Mode
+        focus_export_pdf.click()
+        time.sleep(0.3)
+        assert not pdf_modal.is_hidden(), "Expected #pdfExportModal to open from Focus mode"
+        page.locator("#cancelPdfModalBtn").click()
+        time.sleep(0.3)
+        assert pdf_modal.is_hidden(), "Expected #pdfExportModal to close via cancel button"
+
+        page.locator("#closeFocusModalBtn").click()
+        time.sleep(0.3)
+        print("  ✓ Focus Reading Mode export buttons verified successfully!", flush=True)
+
+        final_screenshot = os.path.join(SCREENSHOTS_DIR, "28_full_reading_experience_session.png")
         page.screenshot(path=final_screenshot, full_page=True)
         print(f"\nAll reading mode & mobile test cases passed! Saved to {final_screenshot}", flush=True)
 

@@ -35,8 +35,13 @@ This guide provides end-users, students, researchers, technical writers, and con
    - [Interactive Citation Micro-Previews & Mobile Bottom Sheet Drawer](#3-interactive-citation-micro-previews--mobile-bottom-sheet-drawer)
    - [Zen Mode Focus Reading Overlay](#4-zen-mode-focus-reading-overlay)
    - [Mobile Phone Streamlined Experience & Decluttering](#5-mobile-phone-streamlined-experience--decluttering)
-11. [CLI Usage & Command Reference](#-cli-usage--command-reference)
-12. [Troubleshooting & FAQs](#-troubleshooting--faqs)
+11. [Exporting Documents (Markdown & Clean PDF with Paper Sizes)](#-exporting-documents-markdown--clean-pdf)
+    - [Download as Markdown (.md) with Text Title](#1-download-as-markdown-md-with-actual-title)
+    - [PDF Export with Zero Website Clipping](#2-pdf-export-with-zero-website-components-clipping)
+    - [Common Paper Sizes: A4, Letter, A5, Legal, Executive](#3-supported-paper-sizes--layout-customization)
+    - [Dual Export Pathways (Direct File vs. Vector Print)](#4-dual-export-pathways)
+12. [CLI Usage & Command Reference](#-cli-usage--command-reference)
+13. [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
 ---
 
@@ -316,6 +321,47 @@ When accessed on narrow smartphone screens (such as 390×844 iPhone 14/Pixel 7, 
 - **Collapsible Advanced Options Accordion**: Complex parameters (Thinking Mode, Iteration Mode, Approval Target Score, Force All Turns, Google Search) are housed inside a smooth collapsible `<details>` panel. A dynamic summary badge (`⚙️ Advanced Pipeline Options (🧠 Medium • 3 Turns • Target 9.5)`) keeps you informed of your current settings at a single glance.
 - **2-Column Responsive Grounding Grid**: The 7 academic literature repositories are arranged in an ergonomic 2-column chip grid with quick-toggle `[Select All]` and `[Clear]` buttons, reducing scroll depth by over 60%. Active sources display a subtle cyan glow and highlight border.
 - **Native Touch Targets & Safe Padding**: Cards use responsive padding (`p-4` on mobile, `p-6` on desktop) to ensure full readability without excessive side margins or horizontal overflow.
+
+---
+
+## 📤 Exporting Documents (Markdown & Clean PDF)
+
+Gemini Agentic Studio provides two dedicated document export engines designed to preserve academic formatting, verbatim quotes, and bibliographic citations without website interface components clipping into your exported documents.
+
+### 1. Download as Markdown (.md) with Actual Title
+- **Automatic Title Extraction**: When saving, the system analyzes the draft's primary markdown heading (`# Title` or `## Title`) or your target topic prompt, generating a clean, human-friendly, slugified filename (e.g., `the_impact_of_quantum_computing_on_cryptography.md` or `persepsi_wicara_dan_mekanisme_auditori.md`).
+- **Complete Integrity**: Includes all original Markdown headers, bold/italic markup, verbatim quotation callouts (`"..." [n]`), clickable DOI URLs, and the complete ending reference list.
+- **Where to Access**:
+  - **Final Approved Card**: Click **`📥 Download Markdown`** beside the Copy Markdown button.
+  - **Writer Draft Cards**: Click **`📥 Unduh MD` / `📥 Download MD`** on the card's reading toolbar.
+  - **Zen Mode Focus Reader**: Click **`📥 MD`** in the top navigation bar.
+
+### 2. PDF Export with Zero Website Components Clipping
+When exporting or printing articles from typical web apps, browser print engines often clip navigation headers, dark theme background canvases, sticky buttons, and modal dialogs directly into the document. 
+
+Gemini Agentic Studio completely eliminates this clipping issue:
+- **Dedicated Isolated Print Sandbox**: All PDF generation is rendered within an isolated canvas and invisible print iframe that contains **only** the sanitized article text, formatted verbatim quote boxes, tables, and bibliography.
+- **Pure Paper Typography**: The exported document uses crisp white paper (`#ffffff`) with high-contrast text (`#111827`), academic serif or modern sans typography, and subtle border accents.
+- **Smart Page Break Protection**: Verbatim quote callouts, data tables, code listings, and individual reference entries use CSS `break-inside: avoid;` to ensure quotes and citations never split clumsily across page breaks. Headings use `break-after: avoid;` to prevent orphaned headers at page bottoms.
+
+### 3. Supported Paper Sizes & Layout Customization
+Clicking **`📄 Export PDF`** opens the **PDF Export Configuration Dialog**, allowing you to customize your document before printing or saving:
+- **Paper Size Options**:
+  - **A4 (210 × 297 mm)**: International academic standard (default).
+  - **US Letter (8.5 × 11 in)**: Standard North American format.
+  - **A5 (148 × 210 mm)**: Compact booklet, handbook, or digest format.
+  - **US Legal (8.5 × 14 in)**: Extended format for extensive data tables or legal briefs.
+  - **Executive (7.25 × 10.5 in)**: Compact executive report format.
+- **Orientation**: Portrait (Vertical) or Landscape (Horizontal).
+- **Margins**: Standard (15 mm / 0.6 in), Narrow (10 mm / 0.4 in), or Spacious (22 mm / 0.9 in).
+- **Typography**: Academic Serif (Charter/Georgia) or Modern Sans (Inter/system-ui).
+- **Body Font Size**: Standard (11 pt), Compact (10 pt), or Comfortable (12 pt).
+- **Metadata Cover Banner**: Option to include a top header banner displaying the article title, generation date, target audience tier, document genre, and final critic score.
+
+### 4. Dual Export Pathways
+The export dialog provides two distinct generation methods:
+1. **📥 Download PDF (Direct File)**: Uses client-side `html2pdf.js` to render and download a standalone `.pdf` file with 1 click directly in your browser.
+2. **🖨️ Print / Vector PDF (Save as PDF)**: Dispatches the document into an isolated print engine iframe with exact `@page { size: ${paperSize} ${orientation}; margin: ${margin}; }` styling, activating your browser's native print preview dialog for razor-sharp vector text and direct saving via "Save as PDF".
 
 ---
 
