@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0B0F19" id="metaThemeColor" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' https://generativelanguage.googleapis.com https://export.arxiv.org https://api.crossref.org https://api.semanticscholar.org https://api.openalex.org https://eutils.ncbi.nlm.nih.gov https://www.ebi.ac.uk https://en.wikipedia.org https://id.wikipedia.org; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self'; object-src 'none'; base-uri 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: https:; font-src 'self' data: https://cdnjs.cloudflare.com; connect-src 'self' https://generativelanguage.googleapis.com https://export.arxiv.org https://api.crossref.org https://api.semanticscholar.org https://api.openalex.org https://eutils.ncbi.nlm.nih.gov https://www.ebi.ac.uk https://en.wikipedia.org https://id.wikipedia.org https://doaj.org https://api.core.ac.uk; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self'; object-src 'none'; base-uri 'self';" />
   <title>Gemini Agentic Studio - Writer & Critic Pipeline</title>
   <!-- Tailwind CSS CDN for modern responsive UI (Option A: Play CDN, dynamically evaluates utility classes) -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -811,6 +811,62 @@
             <div class="flex flex-col min-w-0">
               <span data-i18n="wikipediaTitle" class="font-semibold text-slate-100 truncate text-[11px] sm:text-xs">📖 Wikipedia</span>
               <span data-i18n="wikipediaSub" class="text-[9px] sm:text-[10px] text-slate-400 truncate hidden xs:block">Ensiklopedia</span>
+            </div>
+          </label>
+
+          <label class="source-chip flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition select-none">
+            <input type="checkbox" id="googleScholarCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <span data-i18n="googleScholarTitle" class="font-semibold text-slate-100 truncate text-[11px] sm:text-xs">🎓 Google Scholar</span>
+              <span data-i18n="googleScholarSub" class="text-[9px] sm:text-[10px] text-slate-400 truncate hidden xs:block">Universal academic index</span>
+            </div>
+          </label>
+
+          <label class="source-chip flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition select-none">
+            <input type="checkbox" id="ieeeCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <span data-i18n="ieeeTitle" class="font-semibold text-slate-100 truncate text-[11px] sm:text-xs">⚡ IEEE Xplore</span>
+              <span data-i18n="ieeeSub" class="text-[9px] sm:text-[10px] text-slate-400 truncate hidden xs:block">EE, CS & Robotics</span>
+            </div>
+          </label>
+
+          <label class="source-chip flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition select-none">
+            <input type="checkbox" id="ssrnCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <span data-i18n="ssrnTitle" class="font-semibold text-slate-100 truncate text-[11px] sm:text-xs">📑 SSRN Preprints</span>
+              <span data-i18n="ssrnSub" class="text-[9px] sm:text-[10px] text-slate-400 truncate hidden xs:block">Economics, Law & Social</span>
+            </div>
+          </label>
+
+          <label class="source-chip flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition select-none">
+            <input type="checkbox" id="coreCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <span data-i18n="coreTitle" class="font-semibold text-slate-100 truncate text-[11px] sm:text-xs">🌐 CORE Repositories</span>
+              <span data-i18n="coreSub" class="text-[9px] sm:text-[10px] text-slate-400 truncate hidden xs:block">Open university full texts</span>
+            </div>
+          </label>
+
+          <label class="source-chip flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition select-none">
+            <input type="checkbox" id="doajCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <span data-i18n="doajTitle" class="font-semibold text-slate-100 truncate text-[11px] sm:text-xs">📜 DOAJ Journals</span>
+              <span data-i18n="doajSub" class="text-[9px] sm:text-[10px] text-slate-400 truncate hidden xs:block">Open-access peer reviewed</span>
+            </div>
+          </label>
+
+          <label class="source-chip flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition select-none">
+            <input type="checkbox" id="springerCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <span data-i18n="springerTitle" class="font-semibold text-slate-100 truncate text-[11px] sm:text-xs">📕 SpringerLink</span>
+              <span data-i18n="springerSub" class="text-[9px] sm:text-[10px] text-slate-400 truncate hidden xs:block">Peer-reviewed book & papers</span>
+            </div>
+          </label>
+
+          <label class="source-chip flex items-center gap-2 p-2 sm:p-2.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-cyan-500/50 cursor-pointer text-xs text-slate-200 transition select-none">
+            <input type="checkbox" id="googlePatentsCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4 shrink-0" />
+            <div class="flex flex-col min-w-0">
+              <span data-i18n="googlePatentsTitle" class="font-semibold text-slate-100 truncate text-[11px] sm:text-xs">⚙️ Google Patents</span>
+              <span data-i18n="googlePatentsSub" class="text-[9px] sm:text-[10px] text-slate-400 truncate hidden xs:block">Patents & Specs</span>
             </div>
           </label>
         </div>

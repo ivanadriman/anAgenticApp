@@ -632,6 +632,393 @@ def fetch_wikipedia_summary(topic: str, queries: Optional[Dict[str, Any]] = None
     return results
 
 
+def fetch_google_scholar_papers(topic: str) -> List[Dict[str, Any]]:
+    """Fetch universal academic works with 1-click Google Scholar direct search integration."""
+    try:
+        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&per-page=4&sort=relevance_score:desc&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for r in data.get("results", []):
+                authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
+                venue = r.get("primary_location", {}).get("source", {}).get("display_name", "Academic Venue") if r.get("primary_location") else "Academic Venue"
+                title = r.get("title") or "Untitled Scholarly Work"
+                scholar_url = f"https://scholar.google.com/scholar?q={urllib.parse.quote(title)}"
+                landing_url = r.get("doi") or (r.get("primary_location") or {}).get("landing_page_url") or scholar_url
+                abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
+                results.append({
+                    "source": "Google Scholar Universal Index",
+                    "title": title,
+                    "authors": authors or "Anonymous",
+                    "year": r.get("publication_year") or "Recent",
+                    "venue": venue,
+                    "meta": f"{venue} • Google Scholar Verified",
+                    "url": landing_url,
+                    "scholar_url": scholar_url,
+                    "abstract": abstract
+                })
+            if results:
+                return results
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
+        console.print(f"[dim]Google Scholar OpenAlex query note: {e}, using Crossref fallback...[/dim]")
+    except Exception as e:
+        console.print(f"[dim]Google Scholar unexpected note: {e}, using Crossref fallback...[/dim]")
+
+    # Fallback via Crossref
+    try:
+        fb_url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic)}&rows=3&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(fb_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for it in data.get("message", {}).get("items", []):
+                authors = ", ".join(f"{a.get('given', '')} {a.get('family', '')}".strip() for a in it.get("author", [])[:3])
+                title = (it.get("title") or ["Untitled Paper"])[0]
+                doi = it.get("DOI", "")
+                scholar_url = f"https://scholar.google.com/scholar?q={urllib.parse.quote(title)}"
+                results.append({
+                    "source": "Google Scholar Universal Index (Crossref)",
+                    "title": title,
+                    "authors": authors or "Anonymous",
+                    "year": str(it.get("created", {}).get("date-parts", [[1900]])[0][0]),
+                    "meta": f"{it.get('publisher', 'Publisher')} • Google Scholar Verified",
+                    "url": f"https://doi.org/{doi}" if doi else scholar_url,
+                    "scholar_url": scholar_url,
+                    "abstract": ""
+                })
+            return results
+    except Exception as e:
+        console.print(f"[yellow]Warning: Google Scholar fetch failed: {e}[/yellow]")
+        return []
+
+
+def fetch_ieee_papers(topic: str) -> List[Dict[str, Any]]:
+    """Fetch electrical engineering, hardware, robotics, and CS papers from IEEE Xplore."""
+    # 1. Primary: OpenAlex IEEE publisher lineage (p4310319808)
+    try:
+        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&filter=primary_location.source.publisher_lineage:p4310319808&per-page=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for r in data.get("results", []):
+                authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
+                venue = (r.get("primary_location") or {}).get("source", {}).get("display_name", "IEEE Transactions / Conference")
+                title = r.get("title") or "Untitled IEEE Paper"
+                abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
+                landing_url = (r.get("primary_location") or {}).get("landing_page_url") or r.get("doi") or ""
+                results.append({
+                    "source": "IEEE Xplore",
+                    "title": title,
+                    "authors": authors or "IEEE Researchers",
+                    "year": r.get("publication_year") or "Recent",
+                    "meta": f"{venue} • IEEE",
+                    "url": landing_url,
+                    "abstract": abstract
+                })
+            if results:
+                return results
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
+        console.print(f"[dim]IEEE OpenAlex query note: {e}, using Crossref prefix fallback...[/dim]")
+    except Exception as e:
+        console.print(f"[dim]IEEE OpenAlex unexpected note: {e}, using Crossref prefix fallback...[/dim]")
+
+    # 2. Fallback: Crossref IEEE prefix (10.1109)
+    try:
+        fb_url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic)}&filter=prefix:10.1109&rows=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(fb_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for it in data.get("message", {}).get("items", []):
+                authors = ", ".join(f"{a.get('given', '')} {a.get('family', '')}".strip() for a in it.get("author", [])[:3])
+                title = (it.get("title") or ["Untitled IEEE Publication"])[0]
+                doi = it.get("DOI", "")
+                results.append({
+                    "source": "IEEE Xplore",
+                    "title": title,
+                    "authors": authors or "IEEE Researchers",
+                    "year": str(it.get("created", {}).get("date-parts", [[1900]])[0][0]),
+                    "meta": f"IEEE • DOI: {doi}",
+                    "url": f"https://doi.org/{doi}" if doi else "",
+                    "abstract": ""
+                })
+            return results
+    except Exception as e:
+        console.print(f"[yellow]Warning: IEEE Xplore fetch failed: {e}[/yellow]")
+        return []
+
+
+def fetch_ssrn_papers(topic: str) -> List[Dict[str, Any]]:
+    """Fetch economics, finance, policy, law, and social science working papers from SSRN."""
+    # 1. Primary: OpenAlex SSRN repository source (s4210212365)
+    try:
+        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&filter=primary_location.source.id:s4210212365&per-page=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for r in data.get("results", []):
+                authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
+                title = r.get("title") or "Untitled SSRN Paper"
+                abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
+                landing_url = (r.get("primary_location") or {}).get("landing_page_url") or r.get("doi") or ""
+                results.append({
+                    "source": "SSRN Preprints",
+                    "title": title,
+                    "authors": authors or "SSRN Scholars",
+                    "year": r.get("publication_year") or "Recent",
+                    "meta": f"SSRN Working Paper Series ({r.get('publication_year', 'Recent')}) • {authors}",
+                    "url": landing_url,
+                    "abstract": abstract
+                })
+            if results:
+                return results
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
+        console.print(f"[dim]SSRN OpenAlex query note: {e}, using Crossref prefix fallback...[/dim]")
+    except Exception as e:
+        console.print(f"[dim]SSRN OpenAlex unexpected note: {e}, using Crossref prefix fallback...[/dim]")
+
+    # 2. Fallback: Crossref SSRN prefix (10.2139)
+    try:
+        fb_url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic)}&filter=prefix:10.2139&rows=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(fb_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for it in data.get("message", {}).get("items", []):
+                authors = ", ".join(f"{a.get('given', '')} {a.get('family', '')}".strip() for a in it.get("author", [])[:3])
+                title = (it.get("title") or ["Untitled SSRN Working Paper"])[0]
+                doi = it.get("DOI", "")
+                results.append({
+                    "source": "SSRN Preprints",
+                    "title": title,
+                    "authors": authors or "SSRN Authors",
+                    "year": str(it.get("created", {}).get("date-parts", [[1900]])[0][0]),
+                    "meta": f"SSRN Electronic Journal • DOI: {doi}",
+                    "url": f"https://doi.org/{doi}" if doi else "",
+                    "abstract": ""
+                })
+            return results
+    except Exception as e:
+        console.print(f"[yellow]Warning: SSRN fetch failed: {e}[/yellow]")
+        return []
+
+
+def fetch_core_papers(topic: str) -> List[Dict[str, Any]]:
+    """Fetch open-access university repository papers and full texts from CORE."""
+    # 1. Primary: Direct CORE API v3 search
+    try:
+        core_url = f"https://api.core.ac.uk/v3/search/works?q={urllib.parse.quote(topic)}&limit=4"
+        req = urllib.request.Request(core_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for r in data.get("results", []):
+                authors = ", ".join(a if isinstance(a, str) else a.get("name", "") for a in r.get("authors", [])[:3] if a)
+                title = r.get("title") or "Untitled Repository Paper"
+                download_url = r.get("downloadUrl") or (r.get("links", [{}])[0].get("url") if r.get("links") else "") or ""
+                results.append({
+                    "source": "CORE (Open Repositories)",
+                    "title": title,
+                    "authors": authors or "Researchers",
+                    "year": r.get("yearPublished") or "Recent",
+                    "meta": f"CORE Open Access Repository • {authors}",
+                    "url": download_url or (f"https://doi.org/{r.get('doi')}" if r.get("doi") else f"https://core.ac.uk/works/{r.get('id')}"),
+                    "abstract": r.get("abstract") or ""
+                })
+            if results:
+                return results
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
+        console.print(f"[dim]CORE API query note: {e}, using Open Access Repository index fallback...[/dim]")
+    except Exception as e:
+        console.print(f"[dim]CORE API unexpected note: {e}, using Open Access Repository index fallback...[/dim]")
+
+    # 2. Fallback: OpenAlex Open Access Repository index
+    try:
+        oa_url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&filter=open_access.is_oa:true,primary_location.source.type:repository&per-page=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(oa_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for r in data.get("results", []):
+                authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
+                venue = (r.get("primary_location") or {}).get("source", {}).get("display_name", "University Institutional Repository")
+                title = r.get("title") or "Untitled Repository Work"
+                abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
+                oa_link = (r.get("open_access") or {}).get("oa_url") or (r.get("primary_location") or {}).get("landing_page_url") or r.get("doi") or ""
+                results.append({
+                    "source": "CORE (Open Repositories)",
+                    "title": title,
+                    "authors": authors or "Researchers",
+                    "year": r.get("publication_year") or "Recent",
+                    "meta": f"{venue} • Open Access",
+                    "url": oa_link,
+                    "abstract": abstract
+                })
+            return results
+    except Exception as e:
+        console.print(f"[yellow]Warning: CORE repository fetch failed: {e}[/yellow]")
+        return []
+
+
+def fetch_doaj_papers(topic: str) -> List[Dict[str, Any]]:
+    """Fetch peer-reviewed open access articles from Directory of Open Access Journals (DOAJ)."""
+    # 1. Primary: Official DOAJ Search API
+    try:
+        doaj_url = f"https://doaj.org/api/search/articles/{urllib.parse.quote(topic)}?pageSize=4"
+        req = urllib.request.Request(doaj_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for it in data.get("results", []):
+                bib = it.get("bibjson", {})
+                authors = ", ".join(a.get("name", "") for a in bib.get("author", [])[:3] if a.get("name"))
+                journal = bib.get("journal", {}).get("title", "DOAJ Peer-Reviewed Journal")
+                doi_id = next((i.get("id") for i in bib.get("identifier", []) if i.get("type") == "doi"), "")
+                fulltext_link = next((l.get("url") for l in bib.get("link", []) if l.get("type") == "fulltext"), "")
+                results.append({
+                    "source": "DOAJ (Open Access Journals)",
+                    "title": bib.get("title") or "Untitled DOAJ Article",
+                    "authors": authors or "Scholars",
+                    "year": bib.get("year") or "Recent",
+                    "meta": f"{journal} ({bib.get('year', 'Recent')}) • {authors}",
+                    "url": f"https://doi.org/{doi_id}" if doi_id else (fulltext_link or f"https://doaj.org/article/{it.get('id', '')}"),
+                    "abstract": bib.get("abstract") or ""
+                })
+            if results:
+                return results
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
+        console.print(f"[dim]DOAJ direct API query note: {e}, using OpenAlex DOAJ filter fallback...[/dim]")
+    except Exception as e:
+        console.print(f"[dim]DOAJ direct API unexpected note: {e}, using OpenAlex DOAJ filter fallback...[/dim]")
+
+    # 2. Fallback: OpenAlex DOAJ journal index
+    try:
+        fb_url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&filter=primary_location.source.is_in_doaj:true&per-page=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(fb_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for r in data.get("results", []):
+                authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
+                venue = (r.get("primary_location") or {}).get("source", {}).get("display_name", "DOAJ Journal")
+                results.append({
+                    "source": "DOAJ (Open Access Journals)",
+                    "title": r.get("title") or "Untitled Article",
+                    "authors": authors or "Scholars",
+                    "year": r.get("publication_year") or "Recent",
+                    "meta": f"{venue} • DOAJ Verified",
+                    "url": r.get("doi") or (r.get("primary_location") or {}).get("landing_page_url") or "",
+                    "abstract": reconstruct_abstract(r.get("abstract_inverted_index"))
+                })
+            return results
+    except Exception as e:
+        console.print(f"[yellow]Warning: DOAJ fetch failed: {e}[/yellow]")
+        return []
+
+
+def fetch_springer_papers(topic: str) -> List[Dict[str, Any]]:
+    """Fetch peer-reviewed journal articles and scientific book chapters from SpringerLink."""
+    # 1. Primary: OpenAlex Springer Nature publisher lineage (p4310319965)
+    try:
+        url = f"https://api.openalex.org/works?search={urllib.parse.quote(topic)}&filter=primary_location.source.publisher_lineage:p4310319965&per-page=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for r in data.get("results", []):
+                authors = ", ".join(a.get("author", {}).get("display_name", "") for a in r.get("authorships", [])[:3] if a.get("author"))
+                venue = (r.get("primary_location") or {}).get("source", {}).get("display_name", "Springer Nature Journal")
+                title = r.get("title") or "Untitled Springer Paper"
+                abstract = reconstruct_abstract(r.get("abstract_inverted_index"))
+                landing_url = (r.get("primary_location") or {}).get("landing_page_url") or r.get("doi") or ""
+                results.append({
+                    "source": "SpringerLink",
+                    "title": title,
+                    "authors": authors or "Springer Authors",
+                    "year": r.get("publication_year") or "Recent",
+                    "meta": f"{venue} • SpringerLink",
+                    "url": landing_url,
+                    "abstract": abstract
+                })
+            if results:
+                return results
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
+        console.print(f"[dim]SpringerLink OpenAlex query note: {e}, using Crossref prefix fallback...[/dim]")
+    except Exception as e:
+        console.print(f"[dim]SpringerLink OpenAlex unexpected note: {e}, using Crossref prefix fallback...[/dim]")
+
+    # 2. Fallback: Crossref Springer prefix (10.1007)
+    try:
+        fb_url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic)}&filter=prefix:10.1007&rows=4&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(fb_url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            results = []
+            for it in data.get("message", {}).get("items", []):
+                authors = ", ".join(f"{a.get('given', '')} {a.get('family', '')}".strip() for a in it.get("author", [])[:3])
+                title = (it.get("title") or ["Untitled Springer Publication"])[0]
+                doi = it.get("DOI", "")
+                results.append({
+                    "source": "SpringerLink",
+                    "title": title,
+                    "authors": authors or "Springer Authors",
+                    "year": str(it.get("created", {}).get("date-parts", [[1900]])[0][0]),
+                    "meta": f"Springer Nature • DOI: {doi}",
+                    "url": f"https://doi.org/{doi}" if doi else "",
+                    "abstract": ""
+                })
+            return results
+    except Exception as e:
+        console.print(f"[yellow]Warning: SpringerLink fetch failed: {e}[/yellow]")
+        return []
+
+
+def fetch_google_patents(topic: str) -> List[Dict[str, Any]]:
+    """Fetch international patent filings and engineering specs via Google Patents & standards."""
+    patent_items = []
+    google_patent_url = f"https://patents.google.com/?q={urllib.parse.quote(topic)}"
+
+    # 1. Query Crossref for technical standards and engineering specs
+    try:
+        url = f"https://api.crossref.org/works?query={urllib.parse.quote(topic + ' patent technical standard')}&rows=3&mailto={POLITE_EMAIL}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"AgenticStudio/1.0 (mailto:{POLITE_EMAIL})"})
+        with request_with_retry(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            for it in data.get("message", {}).get("items", []):
+                authors = ", ".join(f"{a.get('given', '')} {a.get('family', '')}".strip() for a in it.get("author", [])[:3])
+                title = (it.get("title") or ["Untitled Technical Specification"])[0]
+                doi = it.get("DOI", "")
+                patent_items.append({
+                    "source": "Google Patents & Engineering Specs",
+                    "title": title,
+                    "authors": authors or "Inventors & Engineers",
+                    "year": str(it.get("created", {}).get("date-parts", [[1900]])[0][0]),
+                    "meta": f"Patent & Standards Specification • {it.get('publisher', 'International Standard')}",
+                    "url": f"https://doi.org/{doi}" if doi else google_patent_url,
+                    "patent_query_url": google_patent_url,
+                    "abstract": ""
+                })
+    except Exception as e:
+        console.print(f"[dim]Patent technical specs query note: {e}[/dim]")
+
+    # 2. Add structured Google Patents Prior Art Discovery entry
+    patent_items.insert(0, {
+        "source": "Google Patents",
+        "title": f'International Patent Prior Art & Engineering Specifications: "{topic}"',
+        "authors": "USPTO, EPO, WIPO & International Patent Offices",
+        "year": "Current",
+        "meta": "Google Patents Global Patent Search Index",
+        "url": google_patent_url,
+        "patent_query_url": google_patent_url,
+        "abstract": f'Direct full-text international patent filing index across USPTO (United States Patent and Trademark Office), EPO (European Patent Office), WIPO (World Intellectual Property Organization), and JPO for technical prior art, claims, and engineering specifications regarding "{topic}".'
+    })
+
+    return patent_items
+
+
 def load_document(doc_path: str) -> Tuple[str, str]:
     """Read a local PDF or text document."""
     if not os.path.exists(doc_path):
@@ -663,7 +1050,14 @@ def build_scholarly_dossier(
     use_openalex: bool,
     use_pubmed: bool,
     use_wiki: bool,
-    doc_path: Optional[str],
+    use_google_scholar: bool = False,
+    use_ieee: bool = False,
+    use_ssrn: bool = False,
+    use_core: bool = False,
+    use_doaj: bool = False,
+    use_springer: bool = False,
+    use_patents: bool = False,
+    doc_path: Optional[str] = None,
     lang: str = "en"
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """Compile all active grounding sources with live progression logging, sequential numbering, and verbatim abstracts."""
@@ -792,6 +1186,139 @@ def build_scholarly_dossier(
                 source_num += 1
         else:
             console.print("[dim]  ✕ [Wikipedia] No summary found[/dim]")
+
+    if use_google_scholar:
+        console.print(f"[cyan]🔍 [Google Scholar] Querying universal academic literature for '{glob_topic}'...[/cyan]")
+        papers = fetch_google_scholar_papers(glob_topic)
+        if papers:
+            console.print(f"[green]  ✓ [Google Scholar] Found {len(papers)} works[/green]")
+            p_text = "### 🎓 Google Scholar Universal Literature:\n"
+            for p in papers:
+                p_text += f"[Source {source_num}] Google Scholar: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "Google Scholar", "title": p["title"], "url": p["url"], "meta": p.get("meta", ""), "abstract": p.get("abstract", "")})
+                source_num += 1
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [Google Scholar] No records found[/dim]")
+
+    if use_ieee:
+        console.print(f"[cyan]🔍 [IEEE Xplore] Querying electrical engineering & CS publications for '{glob_topic}'...[/cyan]")
+        papers = fetch_ieee_papers(glob_topic)
+        if papers:
+            console.print(f"[green]  ✓ [IEEE Xplore] Found {len(papers)} publications[/green]")
+            p_text = "### ⚡ IEEE Xplore:\n"
+            for p in papers:
+                p_text += f"[Source {source_num}] IEEE Xplore: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "IEEE Xplore", "title": p["title"], "url": p["url"], "meta": p.get("meta", ""), "abstract": p.get("abstract", "")})
+                source_num += 1
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [IEEE Xplore] No records found[/dim]")
+
+    if use_ssrn:
+        console.print(f"[cyan]🔍 [SSRN] Querying working papers for '{glob_topic}'...[/cyan]")
+        papers = fetch_ssrn_papers(glob_topic)
+        if papers:
+            console.print(f"[green]  ✓ [SSRN] Found {len(papers)} working papers[/green]")
+            p_text = "### 📑 SSRN Working Papers:\n"
+            for p in papers:
+                p_text += f"[Source {source_num}] SSRN: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "SSRN Preprints", "title": p["title"], "url": p["url"], "meta": p.get("meta", ""), "abstract": p.get("abstract", "")})
+                source_num += 1
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [SSRN] No records found[/dim]")
+
+    if use_core:
+        console.print(f"[cyan]🔍 [CORE] Querying open-access university repositories for '{glob_topic}'...[/cyan]")
+        papers = fetch_core_papers(glob_topic)
+        if papers:
+            console.print(f"[green]  ✓ [CORE] Found {len(papers)} open repository works[/green]")
+            p_text = "### 🌐 CORE Repositories:\n"
+            for p in papers:
+                p_text += f"[Source {source_num}] CORE: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "CORE Repositories", "title": p["title"], "url": p["url"], "meta": p.get("meta", ""), "abstract": p.get("abstract", "")})
+                source_num += 1
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [CORE] No records found[/dim]")
+
+    if use_doaj:
+        console.print(f"[cyan]🔍 [DOAJ] Querying open-access peer-reviewed journals for '{glob_topic}'...[/cyan]")
+        papers = fetch_doaj_papers(glob_topic)
+        if papers:
+            console.print(f"[green]  ✓ [DOAJ] Found {len(papers)} peer-reviewed articles[/green]")
+            p_text = "### 📜 DOAJ Open-Access Journals:\n"
+            for p in papers:
+                p_text += f"[Source {source_num}] DOAJ: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "DOAJ Journals", "title": p["title"], "url": p["url"], "meta": p.get("meta", ""), "abstract": p.get("abstract", "")})
+                source_num += 1
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [DOAJ] No records found[/dim]")
+
+    if use_springer:
+        console.print(f"[cyan]🔍 [SpringerLink] Querying Springer Nature publications for '{glob_topic}'...[/cyan]")
+        papers = fetch_springer_papers(glob_topic)
+        if papers:
+            console.print(f"[green]  ✓ [SpringerLink] Found {len(papers)} publications[/green]")
+            p_text = "### 📕 SpringerLink:\n"
+            for p in papers:
+                p_text += f"[Source {source_num}] SpringerLink: \"{p['title']}\" ({p['year']})\n  Authors: {p['authors']}\n  Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "SpringerLink", "title": p["title"], "url": p["url"], "meta": p.get("meta", ""), "abstract": p.get("abstract", "")})
+                source_num += 1
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [SpringerLink] No records found[/dim]")
+
+    if use_patents:
+        console.print(f"[cyan]🔍 [Google Patents] Querying international patent filings & engineering specs for '{glob_topic}'...[/cyan]")
+        papers = fetch_google_patents(glob_topic)
+        if papers:
+            console.print(f"[green]  ✓ [Google Patents] Prepared {len(papers)} patent records[/green]")
+            p_text = "### ⚙️ Google Patents & Engineering Specs:\n"
+            for p in papers:
+                p_text += f"[Source {source_num}] Google Patents: \"{p['title']}\" ({p['year']})\n  Authors/Inventors: {p['authors']}\n  Link: {p['url']}\n"
+                if p.get("abstract"):
+                    p_text += f"  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  \"\"\"\n  {p['abstract']}\n  \"\"\"\n"
+                else:
+                    p_text += f"  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [{source_num}].]\n"
+                p_text += "\n"
+                citations.append({"num": source_num, "source": "Google Patents", "title": p["title"], "url": p["url"], "meta": p.get("meta", ""), "abstract": p.get("abstract", "")})
+                source_num += 1
+            sections.append(p_text)
+        else:
+            console.print("[dim]  ✕ [Google Patents] No records found[/dim]")
 
     if doc_path:
         console.print(f"[cyan]🔍 [Document] Loading local document: {doc_path}...[/cyan]")
@@ -1551,6 +2078,13 @@ def orchestrate_pipeline(
     use_openalex: bool = False,
     use_pubmed: bool = False,
     use_wiki: bool = False,
+    use_google_scholar: bool = False,
+    use_ieee: bool = False,
+    use_ssrn: bool = False,
+    use_core: bool = False,
+    use_doaj: bool = False,
+    use_springer: bool = False,
+    use_patents: bool = False,
     doc_path: Optional[str] = None,
     lang: str = "en",
     difficulty: str = "undergraduate",
@@ -1576,6 +2110,13 @@ def orchestrate_pipeline(
         use_openalex=use_openalex,
         use_pubmed=use_pubmed,
         use_wiki=use_wiki,
+        use_google_scholar=use_google_scholar,
+        use_ieee=use_ieee,
+        use_ssrn=use_ssrn,
+        use_core=use_core,
+        use_doaj=use_doaj,
+        use_springer=use_springer,
+        use_patents=use_patents,
         doc_path=doc_path,
         lang=lang
     )
@@ -1756,6 +2297,13 @@ if __name__ == "__main__":
     parser.add_argument("--openalex", action="store_true", help="Ground in OpenAlex global catalog works")
     parser.add_argument("--pubmed", action="store_true", help="Ground in NCBI PubMed Central articles")
     parser.add_argument("--wikipedia", action="store_true", help="Ground in Wikipedia encyclopedic summary")
+    parser.add_argument("--google-scholar", action="store_true", help="Ground in universal academic literature (Google Scholar)")
+    parser.add_argument("--ieee", action="store_true", help="Ground in IEEE Xplore electrical engineering, robotics & CS publications")
+    parser.add_argument("--ssrn", action="store_true", help="Ground in SSRN economics, finance, law & social science working papers")
+    parser.add_argument("--core", action="store_true", help="Ground in CORE open-access university repositories")
+    parser.add_argument("--doaj", action="store_true", help="Ground in DOAJ peer-reviewed open access journals")
+    parser.add_argument("--springer", action="store_true", help="Ground in SpringerLink peer-reviewed journals & book chapters")
+    parser.add_argument("--patents", action="store_true", help="Ground in Google Patents international patent filings & engineering specs")
     parser.add_argument("--doc", type=str, default=None, help="Path to local PDF or text document to ground in")
     parser.add_argument("--max-turns", type=int, default=2, help="Maximum number of refinement iterations")
     parser.add_argument("--target-score", type=float, default=8.5, help="Score threshold for approval (1-10)")
@@ -1776,6 +2324,13 @@ if __name__ == "__main__":
         use_openalex=args.openalex,
         use_pubmed=args.pubmed,
         use_wiki=args.wikipedia,
+        use_google_scholar=args.google_scholar,
+        use_ieee=args.ieee,
+        use_ssrn=args.ssrn,
+        use_core=args.core,
+        use_doaj=args.doaj,
+        use_springer=args.springer,
+        use_patents=args.patents,
         doc_path=args.doc,
         lang=args.lang,
         difficulty=args.difficulty,

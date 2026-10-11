@@ -136,20 +136,29 @@ def run_browser_tests():
                 api_input.fill(API_KEY)
                 page.locator("#saveKeyBtn").click()
 
-        # Select all 6 scholarly sources
-        arxiv_box = page.locator("#arxivCheck")
-        crossref_box = page.locator("#crossrefCheck")
-        semantic_box = page.locator("#semanticScholarCheck")
-        openalex_box = page.locator("#openAlexCheck")
-        pubmed_box = page.locator("#pubmedCheck")
-        wiki_box = page.locator("#wikipediaCheck")
+        # Verify all 13 scholarly source checkboxes and Select All / Clear
+        all_box_ids = [
+            "arxivCheck", "semanticScholarCheck", "pubmedCheck", "openAlexCheck", "crossrefCheck", "wikipediaCheck",
+            "googleScholarCheck", "ieeeCheck", "ssrnCheck", "coreCheck", "doajCheck", "springerCheck", "googlePatentsCheck"
+        ]
+        for bid in all_box_ids:
+            box = page.locator(f"#{bid}")
+            assert box.count() == 1, f"Expected source checkbox #{bid} to exist"
 
-        arxiv_box.check()
-        crossref_box.check()
-        semantic_box.check()
-        openalex_box.check()
-        pubmed_box.check()
-        wiki_box.check()
+        # Test Select All
+        page.locator("#selectAllSourcesBtn").click()
+        badge_text = page.locator("#activeSourcesCountBadge").text_content()
+        print(f"  • Active sources after Select All: '{badge_text}'", flush=True)
+        assert "13" in badge_text, f"Expected 13 active sources after Select All, got '{badge_text}'"
+
+        # Test Clear All
+        page.locator("#clearAllSourcesBtn").click()
+        badge_text_clear = page.locator("#activeSourcesCountBadge").text_content()
+        print(f"  • Active sources after Clear: '{badge_text_clear}'", flush=True)
+        assert "0" in badge_text_clear, f"Expected 0 active sources after Clear, got '{badge_text_clear}'"
+
+        # Re-check all 13 sources
+        page.locator("#selectAllSourcesBtn").click()
 
         # Disable google web search checkbox to prevent quota limits
         search_box = page.locator("#webSearchCheck")

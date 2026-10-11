@@ -33,6 +33,13 @@ import {
   fetchOpenAlexWorks,
   fetchPubMedWorks,
   fetchWikipediaSummary,
+  fetchGoogleScholarPapers,
+  fetchIeeePapers,
+  fetchSsrnPapers,
+  fetchCorePapers,
+  fetchDoajPapers,
+  fetchSpringerPapers,
+  fetchGooglePatents,
   extractPdfText
 } from "./fetchers.js";
 
@@ -114,6 +121,13 @@ const semanticScholarCheck = document.getElementById("semanticScholarCheck");
 const openAlexCheck = document.getElementById("openAlexCheck");
 const pubmedCheck = document.getElementById("pubmedCheck");
 const wikipediaCheck = document.getElementById("wikipediaCheck");
+const googleScholarCheck = document.getElementById("googleScholarCheck");
+const ieeeCheck = document.getElementById("ieeeCheck");
+const ssrnCheck = document.getElementById("ssrnCheck");
+const coreCheck = document.getElementById("coreCheck");
+const doajCheck = document.getElementById("doajCheck");
+const springerCheck = document.getElementById("springerCheck");
+const googlePatentsCheck = document.getElementById("googlePatentsCheck");
 const docFileInput = document.getElementById("docFileInput");
 const uploadDocBtn = document.getElementById("uploadDocBtn");
 const docFileStatus = document.getElementById("docFileStatus");
@@ -146,7 +160,10 @@ function updateApiKeyCardState(hasKey) {
 }
 
 function updateActiveSourcesUI() {
-  const sources = [arxivCheck, semanticScholarCheck, pubmedCheck, openAlexCheck, crossrefCheck, wikipediaCheck];
+  const sources = [
+    arxivCheck, semanticScholarCheck, pubmedCheck, openAlexCheck, crossrefCheck, wikipediaCheck,
+    googleScholarCheck, ieeeCheck, ssrnCheck, coreCheck, doajCheck, springerCheck, googlePatentsCheck
+  ];
   let active = 0;
   sources.forEach(box => {
     if (box && box.checked) active++;
@@ -428,6 +445,13 @@ async function collectScholarlyDossier(rawTopic, queries) {
   if (openAlexCheck?.checked) activeSources.push({ id: "openalex", name: "🏛️ OpenAlex API" });
   if (crossrefCheck?.checked) activeSources.push({ id: "crossref", name: "🏷️ Crossref API" });
   if (wikipediaCheck?.checked) activeSources.push({ id: "wikipedia", name: "📖 Wikipedia Reference" });
+  if (googleScholarCheck?.checked) activeSources.push({ id: "googleScholar", name: "🎓 Google Scholar" });
+  if (ieeeCheck?.checked) activeSources.push({ id: "ieee", name: "⚡ IEEE Xplore" });
+  if (ssrnCheck?.checked) activeSources.push({ id: "ssrn", name: "📑 SSRN Preprints" });
+  if (coreCheck?.checked) activeSources.push({ id: "core", name: "🌐 CORE Repositories" });
+  if (doajCheck?.checked) activeSources.push({ id: "doaj", name: "📜 DOAJ Journals" });
+  if (springerCheck?.checked) activeSources.push({ id: "springer", name: "📕 SpringerLink" });
+  if (googlePatentsCheck?.checked) activeSources.push({ id: "googlePatents", name: "⚙️ Google Patents" });
   if (uploadedDocument) activeSources.push({ id: "doc", name: `📄 ${currentLang === "id" ? "Dokumen Lokal" : "Local Document"}: ${uploadedDocument.name}` });
 
   if (activeSources.length === 0) return null;
@@ -543,6 +567,132 @@ async function collectScholarlyDossier(rawTopic, queries) {
           dossierMarkdown += `  Reference URL: ${item.url}\n`;
           dossierMarkdown += `  Verbatim Encyclopedic Text (FOR EXACT CTRL+F QUOTING):\n  """\n  ${item.extract}\n  """\n\n`;
           citationList.push({ num: sourceNum, title: item.title, url: item.url, source: item.source, meta: item.meta, abstract: item.extract });
+          sourceNum++;
+        });
+      }
+    } else if (s.id === "googleScholar") {
+      const items = await fetchGoogleScholarPapers(queries, (st, msg, its) => updateSourceProgressUI("googleScholar", st, msg, its), currentLang);
+      if (items.length > 0) {
+        dossierMarkdown += "### 🎓 Google Scholar Universal Index:\n";
+        items.forEach(p => {
+          dossierMarkdown += `[Source ${sourceNum}] Google Scholar: "${p.title}" (${p.year})\n`;
+          dossierMarkdown += `  Authors: ${p.authors}\n`;
+          dossierMarkdown += `  Link: ${p.url}\n`;
+          if (p.abstract) {
+            dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+          } else {
+            dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
+          }
+          dossierMarkdown += "\n";
+          citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "Google Scholar", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+          sourceNum++;
+        });
+      }
+    } else if (s.id === "ieee") {
+      const items = await fetchIeeePapers(queries, (st, msg, its) => updateSourceProgressUI("ieee", st, msg, its), currentLang);
+      if (items.length > 0) {
+        dossierMarkdown += "### ⚡ IEEE Xplore:\n";
+        items.forEach(p => {
+          dossierMarkdown += `[Source ${sourceNum}] IEEE Xplore: "${p.title}" (${p.year})\n`;
+          dossierMarkdown += `  Authors: ${p.authors}\n`;
+          dossierMarkdown += `  Link: ${p.url}\n`;
+          if (p.abstract) {
+            dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+          } else {
+            dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
+          }
+          dossierMarkdown += "\n";
+          citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "IEEE Xplore", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+          sourceNum++;
+        });
+      }
+    } else if (s.id === "ssrn") {
+      const items = await fetchSsrnPapers(queries, (st, msg, its) => updateSourceProgressUI("ssrn", st, msg, its), currentLang);
+      if (items.length > 0) {
+        dossierMarkdown += "### 📑 SSRN Preprints:\n";
+        items.forEach(p => {
+          dossierMarkdown += `[Source ${sourceNum}] SSRN: "${p.title}" (${p.year})\n`;
+          dossierMarkdown += `  Authors: ${p.authors}\n`;
+          dossierMarkdown += `  Link: ${p.url}\n`;
+          if (p.abstract) {
+            dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+          } else {
+            dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
+          }
+          dossierMarkdown += "\n";
+          citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "SSRN Preprints", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+          sourceNum++;
+        });
+      }
+    } else if (s.id === "core") {
+      const items = await fetchCorePapers(queries, (st, msg, its) => updateSourceProgressUI("core", st, msg, its), currentLang);
+      if (items.length > 0) {
+        dossierMarkdown += "### 🌐 CORE Repositories:\n";
+        items.forEach(p => {
+          dossierMarkdown += `[Source ${sourceNum}] CORE: "${p.title}" (${p.year})\n`;
+          dossierMarkdown += `  Authors: ${p.authors}\n`;
+          dossierMarkdown += `  Link: ${p.url}\n`;
+          if (p.abstract) {
+            dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+          } else {
+            dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
+          }
+          dossierMarkdown += "\n";
+          citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "CORE Repositories", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+          sourceNum++;
+        });
+      }
+    } else if (s.id === "doaj") {
+      const items = await fetchDoajPapers(queries, (st, msg, its) => updateSourceProgressUI("doaj", st, msg, its), currentLang);
+      if (items.length > 0) {
+        dossierMarkdown += "### 📜 DOAJ Journals:\n";
+        items.forEach(p => {
+          dossierMarkdown += `[Source ${sourceNum}] DOAJ: "${p.title}" (${p.year})\n`;
+          dossierMarkdown += `  Authors: ${p.authors}\n`;
+          dossierMarkdown += `  Link: ${p.url}\n`;
+          if (p.abstract) {
+            dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+          } else {
+            dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
+          }
+          dossierMarkdown += "\n";
+          citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "DOAJ Journals", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+          sourceNum++;
+        });
+      }
+    } else if (s.id === "springer") {
+      const items = await fetchSpringerPapers(queries, (st, msg, its) => updateSourceProgressUI("springer", st, msg, its), currentLang);
+      if (items.length > 0) {
+        dossierMarkdown += "### 📕 SpringerLink:\n";
+        items.forEach(p => {
+          dossierMarkdown += `[Source ${sourceNum}] SpringerLink: "${p.title}" (${p.year})\n`;
+          dossierMarkdown += `  Authors: ${p.authors}\n`;
+          dossierMarkdown += `  Link: ${p.url}\n`;
+          if (p.abstract) {
+            dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+          } else {
+            dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
+          }
+          dossierMarkdown += "\n";
+          citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "SpringerLink", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
+          sourceNum++;
+        });
+      }
+    } else if (s.id === "googlePatents") {
+      const items = await fetchGooglePatents(queries, (st, msg, its) => updateSourceProgressUI("googlePatents", st, msg, its), currentLang);
+      if (items.length > 0) {
+        dossierMarkdown += "### ⚙️ Google Patents & Engineering Specs:\n";
+        items.forEach(p => {
+          dossierMarkdown += `[Source ${sourceNum}] Google Patents: "${p.title}" (${p.year})\n`;
+          dossierMarkdown += `  Inventors/Authors: ${p.authors}\n`;
+          dossierMarkdown += `  Patent Link: ${p.url}\n`;
+          if (p.abstract) {
+            dossierMarkdown += `  Verbatim Excerpt / Abstract (FOR EXACT CTRL+F QUOTING):\n  """\n  ${p.abstract}\n  """\n`;
+          } else {
+            dossierMarkdown += `  [Bibliographic Metadata Only - No Excerpt Available. Do NOT invent/fabricate a quotation. Cite purely as bibliographic attribution [${sourceNum}].]\n`;
+          }
+          dossierMarkdown += "\n";
+          citationList.push({ num: sourceNum, title: p.title, url: p.url, source: "Google Patents", authors: p.authors, year: p.year, meta: p.meta, abstract: p.abstract || "" });
           sourceNum++;
         });
       }
@@ -718,9 +868,14 @@ document.getElementById("editApiKeyBtn")?.addEventListener("click", () => {
 
 const selectAllSourcesBtn = document.getElementById("selectAllSourcesBtn");
 const clearAllSourcesBtn = document.getElementById("clearAllSourcesBtn");
+const allSourceBoxes = [
+  arxivCheck, semanticScholarCheck, pubmedCheck, openAlexCheck, crossrefCheck, wikipediaCheck,
+  googleScholarCheck, ieeeCheck, ssrnCheck, coreCheck, doajCheck, springerCheck, googlePatentsCheck
+];
+
 if (selectAllSourcesBtn) {
   selectAllSourcesBtn.addEventListener("click", () => {
-    [arxivCheck, semanticScholarCheck, pubmedCheck, openAlexCheck, crossrefCheck, wikipediaCheck].forEach(box => {
+    allSourceBoxes.forEach(box => {
       if (box) box.checked = true;
     });
     updateActiveSourcesUI();
@@ -728,13 +883,13 @@ if (selectAllSourcesBtn) {
 }
 if (clearAllSourcesBtn) {
   clearAllSourcesBtn.addEventListener("click", () => {
-    [arxivCheck, semanticScholarCheck, pubmedCheck, openAlexCheck, crossrefCheck, wikipediaCheck].forEach(box => {
+    allSourceBoxes.forEach(box => {
       if (box) box.checked = false;
     });
     updateActiveSourcesUI();
   });
 }
-[arxivCheck, semanticScholarCheck, pubmedCheck, openAlexCheck, crossrefCheck, wikipediaCheck].forEach(box => {
+allSourceBoxes.forEach(box => {
   box?.addEventListener("change", updateActiveSourcesUI);
 });
 
@@ -908,13 +1063,7 @@ if (startPipelineBtn) {
 
     try {
       // Step 0: Formulate Multilingual Search Queries & Collect Grounding Dossier
-      const anyScholarly = (arxivCheck && arxivCheck.checked) || 
-                           (crossrefCheck && crossrefCheck.checked) || 
-                           (semanticScholarCheck && semanticScholarCheck.checked) || 
-                           (openAlexCheck && openAlexCheck.checked) || 
-                           (pubmedCheck && pubmedCheck.checked) || 
-                           (wikipediaCheck && wikipediaCheck.checked) || 
-                           uploadedDocument;
+      const anyScholarly = allSourceBoxes.some(b => b && b.checked) || uploadedDocument;
       if (anyScholarly) {
         if (statusText) {
           statusText.textContent = currentLang === "id" 

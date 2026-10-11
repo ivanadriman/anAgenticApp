@@ -14,6 +14,13 @@ from dev_pipeline import (
     fetch_openalex_works,
     fetch_pubmed_works,
     fetch_wikipedia_summary,
+    fetch_google_scholar_papers,
+    fetch_ieee_papers,
+    fetch_ssrn_papers,
+    fetch_core_papers,
+    fetch_doaj_papers,
+    fetch_springer_papers,
+    fetch_google_patents,
 )
 
 
@@ -218,3 +225,210 @@ def test_fetch_wikipedia_summary_failure():
     with patch("dev_pipeline.request_with_retry", side_effect=err):
         results = fetch_wikipedia_summary("Speech perception", lang="en")
         assert results == []
+
+
+# ------------------------------------------------------------------------------
+# 7. Google Scholar Universal Index Fetcher
+# ------------------------------------------------------------------------------
+
+def test_fetch_google_scholar_papers_success():
+    canned_data = {
+        "results": [
+            {
+                "title": "Universal Foundations of Language Acquisition",
+                "authorships": [{"author": {"display_name": "Noam Chomsky"}}],
+                "primary_location": {"source": {"display_name": "Cambridge Monographs"}},
+                "publication_year": 1965,
+                "doi": "https://doi.org/10.1017/CBO978",
+                "abstract_inverted_index": {"Foundations": [0], "language": [1]}
+            }
+        ]
+    }
+    with patch("dev_pipeline.request_with_retry", return_value=make_mock_response(canned_data)):
+        results = fetch_google_scholar_papers("language acquisition")
+        assert len(results) == 1
+        assert results[0]["title"] == "Universal Foundations of Language Acquisition"
+        assert "scholar.google.com" in results[0]["scholar_url"]
+        assert results[0]["abstract"] == "Foundations language"
+
+
+def test_fetch_google_scholar_papers_failure():
+    err = urllib.error.URLError("Network unreachable")
+    with patch("dev_pipeline.request_with_retry", side_effect=err):
+        results = fetch_google_scholar_papers("language acquisition")
+        assert results == []
+
+
+# ------------------------------------------------------------------------------
+# 8. IEEE Xplore Fetcher
+# ------------------------------------------------------------------------------
+
+def test_fetch_ieee_papers_success():
+    canned_data = {
+        "results": [
+            {
+                "title": "Deep Neural Architectures for Audio Signal Decomposition",
+                "authorships": [{"author": {"display_name": "Alan Oppenheim"}}],
+                "primary_location": {"source": {"display_name": "IEEE Trans. Signal Process."}},
+                "publication_year": 2022,
+                "doi": "https://doi.org/10.1109/TSP.2022.01",
+                "abstract_inverted_index": {"Neural": [0], "architectures": [1]}
+            }
+        ]
+    }
+    with patch("dev_pipeline.request_with_retry", return_value=make_mock_response(canned_data)):
+        results = fetch_ieee_papers("audio signal")
+        assert len(results) == 1
+        assert "IEEE" in results[0]["meta"]
+        assert results[0]["title"] == "Deep Neural Architectures for Audio Signal Decomposition"
+        assert results[0]["abstract"] == "Neural architectures"
+
+
+def test_fetch_ieee_papers_failure():
+    err = urllib.error.HTTPError("https://api.crossref.org", 502, "Bad Gateway", None, None)
+    with patch("dev_pipeline.request_with_retry", side_effect=err):
+        results = fetch_ieee_papers("audio signal")
+        assert results == []
+
+
+# ------------------------------------------------------------------------------
+# 9. SSRN Preprints Fetcher
+# ------------------------------------------------------------------------------
+
+def test_fetch_ssrn_papers_success():
+    canned_data = {
+        "results": [
+            {
+                "title": "Algorithmic Pricing and Market Equilibrium",
+                "authorships": [{"author": {"display_name": "Hal Varian"}}],
+                "publication_year": 2023,
+                "primary_location": {"landing_page_url": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=12345"},
+                "abstract_inverted_index": {"Algorithmic": [0], "pricing": [1]}
+            }
+        ]
+    }
+    with patch("dev_pipeline.request_with_retry", return_value=make_mock_response(canned_data)):
+        results = fetch_ssrn_papers("algorithmic pricing")
+        assert len(results) == 1
+        assert "SSRN" in results[0]["source"]
+        assert results[0]["title"] == "Algorithmic Pricing and Market Equilibrium"
+        assert results[0]["abstract"] == "Algorithmic pricing"
+
+
+def test_fetch_ssrn_papers_failure():
+    err = urllib.error.URLError("Connection reset by peer")
+    with patch("dev_pipeline.request_with_retry", side_effect=err):
+        results = fetch_ssrn_papers("algorithmic pricing")
+        assert results == []
+
+
+# ------------------------------------------------------------------------------
+# 10. CORE Repository Fetcher
+# ------------------------------------------------------------------------------
+
+def test_fetch_core_papers_success():
+    canned_data = {
+        "results": [
+            {
+                "title": "Open Access Phonetics Corpus Analysis",
+                "authors": ["Jane Doe", "Bob Roe"],
+                "yearPublished": 2021,
+                "downloadUrl": "https://repository.ox.ac.uk/paper.pdf",
+                "abstract": "We analyze acoustic vowel formants in university repositories."
+            }
+        ]
+    }
+    with patch("dev_pipeline.request_with_retry", return_value=make_mock_response(canned_data)):
+        results = fetch_core_papers("phonetics corpus")
+        assert len(results) == 1
+        assert "CORE" in results[0]["source"]
+        assert results[0]["title"] == "Open Access Phonetics Corpus Analysis"
+        assert results[0]["url"] == "https://repository.ox.ac.uk/paper.pdf"
+
+
+def test_fetch_core_papers_failure():
+    err = TimeoutError("CORE API timed out")
+    with patch("dev_pipeline.request_with_retry", side_effect=err):
+        results = fetch_core_papers("phonetics corpus")
+        assert results == []
+
+
+# ------------------------------------------------------------------------------
+# 11. DOAJ Open Access Journals Fetcher
+# ------------------------------------------------------------------------------
+
+def test_fetch_doaj_papers_success():
+    canned_data = {
+        "results": [
+            {
+                "id": "doaj-12345",
+                "bibjson": {
+                    "title": "Machine Learning in Computational Linguistics",
+                    "author": [{"name": "Sara Connor"}],
+                    "journal": {"title": "Journal of Open Linguistics"},
+                    "year": 2024,
+                    "identifier": [{"type": "doi", "id": "10.3390/ling123"}],
+                    "link": [{"type": "fulltext", "url": "https://doaj.org/article/123"}],
+                    "abstract": "Open access research in linguistic AI."
+                }
+            }
+        ]
+    }
+    with patch("dev_pipeline.request_with_retry", return_value=make_mock_response(canned_data)):
+        results = fetch_doaj_papers("linguistics AI")
+        assert len(results) == 1
+        assert "DOAJ" in results[0]["source"]
+        assert results[0]["title"] == "Machine Learning in Computational Linguistics"
+        assert "10.3390/ling123" in results[0]["url"]
+
+
+def test_fetch_doaj_papers_failure():
+    err = urllib.error.URLError("DOAJ service down")
+    with patch("dev_pipeline.request_with_retry", side_effect=err):
+        results = fetch_doaj_papers("linguistics AI")
+        assert results == []
+
+
+# ------------------------------------------------------------------------------
+# 12. SpringerLink Fetcher
+# ------------------------------------------------------------------------------
+
+def test_fetch_springer_papers_success():
+    canned_data = {
+        "results": [
+            {
+                "title": "Speech Perception and Neural Coding in Mammals",
+                "authorships": [{"author": {"display_name": "Marcus Aurelius"}}],
+                "primary_location": {"source": {"display_name": "Springer Nature Brain Structure"}, "landing_page_url": "https://link.springer.com/article/10.1007/s00429"},
+                "publication_year": 2023,
+                "doi": "https://doi.org/10.1007/s00429",
+                "abstract_inverted_index": {"Neural": [0], "coding": [1]}
+            }
+        ]
+    }
+    with patch("dev_pipeline.request_with_retry", return_value=make_mock_response(canned_data)):
+        results = fetch_springer_papers("mammalian speech")
+        assert len(results) == 1
+        assert "Springer" in results[0]["source"]
+        assert results[0]["title"] == "Speech Perception and Neural Coding in Mammals"
+        assert results[0]["abstract"] == "Neural coding"
+
+
+def test_fetch_springer_papers_failure():
+    err = urllib.error.HTTPError("https://api.openalex.org", 500, "Error", None, None)
+    with patch("dev_pipeline.request_with_retry", side_effect=err):
+        results = fetch_springer_papers("mammalian speech")
+        assert results == []
+
+
+# ------------------------------------------------------------------------------
+# 13. Google Patents Fetcher
+# ------------------------------------------------------------------------------
+
+def test_fetch_google_patents_success():
+    results = fetch_google_patents("transformer neural network")
+    assert len(results) >= 1
+    assert "Google Patents" in results[0]["source"]
+    assert "patents.google.com" in results[0]["url"]
+    assert "transformer neural network" in results[0]["title"]
+
