@@ -25,20 +25,31 @@ Built with dual implementations:
 - **🔄 Two-Agent Iterative Feedback Loop**:
   - **Writer Agent**: Gathers peer-reviewed sources, writes drafts, and integrates verbatim quotes with numbered citations.
   - **Critic Agent**: Meticulously audits drafts against scholarly abstracts, checking factual accuracy and formatting, outputting structured scores (1.0 to 10.0) and actionable revision items.
+- **🛡️ 3-Layer Publication Integrity Auditor (`source-checking-guide.md`)**:
+  - Audits drafts against 11 rigorous publication criteria across source ceiling, construct alignment, sample scope, and the Verb Ladder (downgrading causal verbs to correlational).
+  - Automatically triggers targeted surgical paragraph patching or full rebuilds until achieving a 100% Verified Seal.
 - **🌐 Multilingual Interface & Scientific Routing**:
   - Full support for **🇬🇧 English** and **🇮🇩 Bahasa Indonesia**.
   - Automatically translates non-English topics into global English STEM terminology for international scientific repositories while maintaining native terms for regional encyclopedias.
-- **📚 Multi-Source Academic Grounding**:
+- **📚 13-Source Academic & Technical Grounding Suite**:
   - **arXiv Preprints**: Fast-moving AI, physics, CS, and mathematics preprints.
-  - **Crossref DOIs**: 150M+ verified peer-reviewed publisher articles.
-  - **Semantic Scholar API**: High-impact papers with citation rankings.
-  - **OpenAlex Global & Regional Catalog**: 250M+ institutional works.
-  - **PubMed Central / Europe PMC**: Biomedical, health, and life-sciences literature with open abstracts.
-  - **Wikipedia Encyclopedia**: Encyclopedic overviews in regional and global editions.
-  - **Local Documents**: Client-side parsing of uploaded `.pdf` and `.txt` documents.
-- **🔍 Verbatim Quotations & CTRL+F Verifiability**:
-  - Quoted evidence is formatted as `"... exact words ..."` `[n]`.
-  - Quotes are extracted character-for-character from source abstracts, allowing readers to press <kbd>Ctrl</kbd> + <kbd>F</kbd> in the source paper to instantly find the full context.
+  - **Semantic Scholar API**: High-impact papers with citation rankings and AI summaries.
+  - **PubMed Central / Europe PMC**: Biomedical, health, and clinical life-sciences literature.
+  - **OpenAlex Global & Regional Catalog**: 250M+ global works and institutional author networks.
+  - **Crossref DOIs**: 150M+ verified peer-reviewed publisher articles and official cross-citations.
+  - **Wikipedia Reference**: Foundational encyclopedic overviews in regional and global editions.
+  - **Google Scholar**: Universal academic literature indexing with 1-click citation lookup.
+  - **IEEE Xplore**: Specialized electrical engineering, hardware, robotics, and computing papers.
+  - **SSRN**: Economics, finance, policy, law, and social science research working papers.
+  - **CORE**: Open-access full-text PDFs aggregated across global university repositories.
+  - **DOAJ**: Peer-reviewed open-access journal catalog with universal CORS endpoints.
+  - **SpringerLink**: Peer-reviewed journals and scientific book chapters across STEM disciplines.
+  - **Google Patents**: International patent filings, technical claims, and engineering specifications.
+  - **Local Documents**: Client-side parsing of uploaded `.pdf` and `.txt` documents via PDF.js.
+- **🔍 Verbatim Quotations & W3C Deep Text-Fragment Highlighting**:
+  - Quoted evidence is formatted as `"... exact words ..."` `[n]` character-for-character from source abstracts, enabling instant <kbd>Ctrl</kbd> + <kbd>F</kbd> verification.
+  - Generates W3C Scroll-to-Text Fragment deep links (`#:~:text=start,end`) taking readers directly to highlighted target passages on source publisher pages.
+  - Interactive Citation Inspector modal and mobile bottom sheet for instant abstract preview and 1-click quote copying.
   - Numbered bibliography at the end (`## 📚 Referensi & Sumber Terkutip` / `## 📚 References & Cited Sources`) mapping every `[n]` citation.
 - **🚦 Client-Side Quota Probing**:
   - Tests daily quotas across all Gemini models in real time, sorting available models from exhausted ones.
@@ -66,15 +77,15 @@ pip install -r requirements.txt
 
 #### Run CLI Pipeline
 ```bash
-# English run with arXiv and PubMed
-python dev_pipeline.py --topic "Speech perception" --lang en --arxiv --pubmed
+# English run with arXiv, IEEE, and Google Scholar
+python dev_pipeline.py --topic "Robotic grasping algorithms" --lang en --arxiv --ieee --google-scholar
 
-# Indonesian run with all scholarly sources
+# Indonesian run with multi-source engineering & medical grounding
 python dev_pipeline.py \
   --topic "Persepsi wicara" \
   --lang id \
   --model gemini-3.8-flash \
-  --arxiv --crossref --semantic-scholar --openalex --pubmed --wikipedia
+  --arxiv --crossref --semantic-scholar --openalex --pubmed --wikipedia --doaj --springer
 ```
 
 Reports with full revision history and Critic audits are saved automatically to `output/<topic_slug>.md`.
@@ -84,7 +95,7 @@ Reports with full revision history and Critic audits are saved automatically to 
 ## 🧪 Automated Testing
 
 ### 1. Offline Unit Tests (Pytest)
-Run the 41 offline unit tests (zero network, zero API key required):
+Run the 59 offline unit tests (zero network, zero API key required):
 ```bash
 pip install -r requirements-dev.txt
 pytest tests/ -v

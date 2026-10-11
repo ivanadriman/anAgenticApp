@@ -141,12 +141,26 @@ Click the **"Check All Quotas"** button next to the API key input:
 Before the Writer Agent drafts a single sentence, the platform compiles a verified research dossier from your selected sources:
 
 ### Supported Academic Sources
-1. **📚 arXiv Preprints**: Open-access preprints in physics, computer science, mathematics, quantitative biology, and AI.
-2. **🏷️ Crossref Verified DOIs**: Official digital object identifiers from over 150 million publisher-verified journals and conference proceedings.
-3. **🔬 Semantic Scholar API**: High-impact academic works with citation counts and citation-graph rankings.
-4. **🏛️ OpenAlex Global Catalog**: 250+ million scholarly works cataloging global and regional institutional research.
-5. **🧬 PubMed Central / Europe PMC**: Millions of biomedical, health, life sciences, and clinical research papers with open full-text abstracts.
-6. **📖 Wikipedia Reference**: Background encyclopedic overviews from both regional editions and the global English encyclopedia.
+
+Gemini Agentic Studio connects to **13 open academic, scientific, and technical registries**, giving you comprehensive multidisciplinary coverage:
+
+1. **📚 arXiv Preprints**: Fast-moving preprints in physics, computer science, mathematics, quantitative biology, quantitative finance, and AI.
+2. **🔬 Semantic Scholar API**: High-impact academic papers with citation counts, AI-generated summary TLDRs, and citation-graph rankings.
+3. **🧬 PubMed Central / Europe PMC**: Millions of biomedical, health, clinical trials, and life sciences papers with open-access abstracts.
+4. **🏛️ OpenAlex Global Catalog**: 250M+ scholarly works indexing worldwide universities, author networks, and regional research.
+5. **🏷️ Crossref Verified DOIs**: Official digital object identifiers from over 150 million publisher-verified journals and proceedings.
+6. **📖 Wikipedia Reference**: Background encyclopedic overviews, foundational taxonomy, and cross-lingual summaries (EN & ID).
+7. **🎓 Google Scholar**: Universal academic literature indexing across books, dissertations, and preprints, with 1-click citation lookup.
+8. **⚡ IEEE Xplore**: Specialized engineering literature covering electrical engineering, robotics, hardware, and telecommunications.
+9. **📈 SSRN (Social Science Research Network)**: Pre-publication working papers in economics, finance, law, public policy, and management.
+10. **🌐 CORE Repositories**: Aggregated open-access research papers and full-text PDFs hosted across university repositories worldwide.
+11. **🔓 DOAJ (Directory of Open Access Journals)**: Curated database of peer-reviewed, open-access scientific journals with open CORS.
+12. **📕 SpringerLink**: Peer-reviewed scientific, technical, and medical books, monographs, and academic journal articles.
+13. **💡 Google Patents**: Over 120M international patent filings, claims, and engineering specifications across global patent offices.
+
+### Source Selection Controls & Active Badge
+- **Quick Selection Controls**: Use the **"Select All"** button to instantly activate all 13 registries for exhaustive literature synthesis, or **"Clear"** to deselect all sources and manually pick specific databases.
+- **Active Sources Badge**: A real-time badge in the section header (e.g. `13 active`) dynamically updates whenever you toggle checkboxes, providing an immediate count of active retrieval streams.
 
 ### Multilingual Scientific Lookup
 If you enter a topic in Bahasa Indonesia (e.g., *"Persepsi wicara"* or *"Dampak kecerdasan buatan pada diagnosis medis"*):
@@ -511,6 +525,13 @@ python dev_pipeline.py \
   --openalex \
   --pubmed \
   --wikipedia \
+  --google-scholar \
+  --ieee \
+  --ssrn \
+  --core \
+  --doaj \
+  --springer \
+  --patents \
   --doc path/to/my_paper.pdf
 ```
 
@@ -524,12 +545,19 @@ python dev_pipeline.py \
 | `--reading-type {literature_review,deep_dive_essay,textbook_chapter,technical_whitepaper,executive_brief}` | Document format and reading genre | `literature_review` |
 | `--thinking-level {low,medium,high}` | Depth of Gemini internal reasoning | `medium` |
 | `--web-search` | Enable Google Search grounding | `False` |
-| `--arxiv` | Enable arXiv preprints index | `False` |
+| `--arxiv` | Enable arXiv preprints index (CS, Math, Physics) | `False` |
 | `--crossref` | Enable Crossref 150M+ verified DOI index | `False` |
 | `--semantic-scholar` | Enable Semantic Scholar citation index | `False` |
 | `--openalex` | Enable OpenAlex global catalog | `False` |
 | `--pubmed` | Enable PubMed / Europe PMC biomedical articles | `False` |
 | `--wikipedia` | Enable Wikipedia encyclopedic reference | `False` |
+| `--google-scholar` | Enable Google Scholar citation lookup & literature indexing | `False` |
+| `--ieee` | Enable IEEE Xplore engineering, robotics & hardware library | `False` |
+| `--ssrn` | Enable SSRN economics, law, policy & social science working papers | `False` |
+| `--core` | Enable CORE global repository open-access full-text PDFs | `False` |
+| `--doaj` | Enable DOAJ directory of peer-reviewed open-access journals | `False` |
+| `--springer` | Enable SpringerLink scientific books & journal papers | `False` |
+| `--patents` | Enable Google Patents international filings & specs search | `False` |
 | `--doc <path>` | Path to a local `.pdf` or `.txt` document to ground in | `None` |
 | `--max-turns <int>` | Maximum number of Writer-Critic iterations | `2` |
 | `--target-score <float>` | Score threshold required for Critic approval (1.0 - 10.0) | `8.5` |

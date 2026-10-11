@@ -24,7 +24,7 @@ This guide outlines the primary use cases, target audiences, recommended pipelin
 
 | Dimension | Standard Chatbot (e.g., ChatGPT / Gemini Free Chat) | Gemini Agentic Studio |
 | :--- | :--- | :--- |
-| **Grounding Source** | Unpredictable internal weights or generic web search | 6 verified academic registries (arXiv, PubMed, Semantic Scholar, Crossref, OpenAlex, Wikipedia) + local PDFs |
+| **Grounding Source** | Unpredictable internal weights or generic web search | 13 verified academic & technical registries (arXiv, Semantic Scholar, PubMed, OpenAlex, Crossref, Wikipedia, Google Scholar, IEEE Xplore, SSRN, CORE, DOAJ, SpringerLink, Google Patents) + local PDFs |
 | **Citation Verification** | Hallucinated titles, broken DOIs, or unverifiable links | Verbatim quotes `"..." [n]` matching source abstracts for instant <kbd>Ctrl</kbd>+<kbd>F</kbd> verification |
 | **Editorial Standard** | Single-pass generation; repeats its own bias | Multi-round adversarial peer review with strict 1.0–10.0 rubric and revision enforcement |
 | **Publication Integrity** | No verification against epistemic leaps, scope inflation, or verb causality | 3-Layer Publication Integrity Auditor enforcing `source-checking-guide.md` with Verb Ladder calibration & auto-rebuild loop until 100% YES |
@@ -44,7 +44,7 @@ Finding, reading, and synthesizing dozens of peer-reviewed articles takes days o
 ### ⚙️ Recommended Pipeline Configuration
 - **Target Audience / Difficulty**: `Expert / Specialist Researcher` or `Undergraduate / College`
 - **Document Type / Genre**: `Academic Literature Review`
-- **Active Grounding Sources**: `arXiv`, `PubMed / Europe PMC`, `Crossref`, `Semantic Scholar`, `OpenAlex`
+- **Active Grounding Sources**: `arXiv`, `PubMed / Europe PMC`, `Crossref`, `Semantic Scholar`, `OpenAlex`, `DOAJ`, `CORE`, `SpringerLink`, `Google Scholar`
 - **Thinking Mode**: `High (Deep Strategic Reasoning)`
 - **Iterations / Target Score**: 2–3 Turns (Score: 8.5+)
 
@@ -72,7 +72,7 @@ Engineering teams need balanced, rigorous documentation before making million-do
 ### ⚙️ Recommended Pipeline Configuration
 - **Target Audience / Difficulty**: `Expert / Specialist Researcher`
 - **Document Type / Genre**: `Technical Whitepaper`
-- **Active Grounding Sources**: `arXiv` (CS/AI), `Crossref`, `Wikipedia`
+- **Active Grounding Sources**: `IEEE Xplore` (Hardware/Robotics), `Google Patents` (Technical Specs), `arXiv` (CS/AI), `Crossref`, `Wikipedia`
 - **Thinking Mode**: `Medium` or `High`
 - **Iterations**: 2 Turns
 
@@ -100,7 +100,7 @@ Decision makers need actionable intelligence without wading through 40 pages of 
 ### ⚙️ Recommended Pipeline Configuration
 - **Target Audience / Difficulty**: `Executive / Strategic Decision Maker`
 - **Document Type / Genre**: `Executive / Policy Brief`
-- **Active Grounding Sources**: `OpenAlex`, `Crossref`, `Wikipedia`
+- **Active Grounding Sources**: `SSRN` (Economics/Law Working Papers), `OpenAlex`, `Crossref`, `Wikipedia`
 - **Thinking Mode**: `Medium`
 - **Iterations**: 1–2 Turns
 
@@ -228,9 +228,9 @@ Even when citations exist, AI generated or hurried human drafts often suffer fro
 
 | Use Case | Recommended Audience Tier | Recommended Genre | Key Grounding Sources | Recommended Model |
 | :--- | :--- | :--- | :--- | :--- |
-| **Academic Thesis / Lit Review** | `Undergraduate` or `Expert` | `Academic Literature Review` | arXiv, PubMed, Crossref, Semantic Scholar | `gemini-3.8-flash` or `gemini-3.1-pro-preview` |
-| **Architecture Whitepaper** | `Expert` | `Technical Whitepaper` | arXiv, Crossref, Wikipedia | `gemini-3.8-flash` |
-| **Executive / Board Brief** | `Executive` | `Executive / Policy Brief` | OpenAlex, Crossref, Wikipedia | `gemini-3.5-flash-lite` or `gemini-3.8-flash` |
-| **Textbook / Course Module** | `Layman` or `Undergraduate` | `Educational Chapter` | Wikipedia, OpenAlex, Crossref | `gemini-3.5-flash-lite` |
+| **Academic Thesis / Lit Review** | `Undergraduate` or `Expert` | `Academic Literature Review` | arXiv, PubMed, DOAJ, CORE, SpringerLink, Semantic Scholar | `gemini-3.8-flash` or `gemini-3.1-pro-preview` |
+| **Architecture Whitepaper** | `Expert` | `Technical Whitepaper` | IEEE Xplore, Google Patents, arXiv, Crossref | `gemini-3.8-flash` |
+| **Executive / Board Brief** | `Executive` | `Executive / Policy Brief` | SSRN, OpenAlex, Crossref, Wikipedia | `gemini-3.5-flash-lite` or `gemini-3.8-flash` |
+| **Textbook / Course Module** | `Layman` or `Undergraduate` | `Educational Chapter` | Wikipedia, OpenAlex, Crossref, DOAJ | `gemini-3.5-flash-lite` |
 | **Confidential PDF Audit** | Custom | Custom | Local Document Upload (`PDF.js`) | User Choice |
-| **Indonesian Scientific Study** | `Undergraduate` or `Expert` | Any Genre (Language: `ID`) | All Sources (Auto STEM Routing) | `gemini-3.8-flash` |
+| **Indonesian Scientific Study** | `Undergraduate` or `Expert` | Any Genre (Language: `ID`) | All 13 Sources (Auto STEM Routing) | `gemini-3.8-flash` |

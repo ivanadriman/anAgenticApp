@@ -9,12 +9,20 @@ This guide provides technical contributors, software engineers, and AI researche
 2. [Repository Structure](#-repository-structure)
 3. [Dual-Implementation Pattern](#-dual-implementation-pattern)
 4. [Academic Literature Grounding Engine](#-academic-literature-grounding-engine)
-   - [OpenAlex API & Inverted Index Reconstruction](#1-openalex-api--inverted-index-reconstruction)
-   - [Europe PMC / NCBI PubMed Integration](#2-europe-pmc--ncbi-pubmed-integration)
-   - [Semantic Scholar & Fallback Strategy](#3-semantic-scholar--fallback-strategy)
-   - [Crossref 150M+ DOI Catalog](#4-crossref-150m-doi-catalog)
-   - [Wikipedia REST API](#5-wikipedia-rest-api)
-   - [Client-Side PDF Parsing (PDF.js)](#6-client-side-pdf-parsing-pdfjs)
+   - [1. arXiv Preprints](#1-arxiv-preprints)
+   - [2. Semantic Scholar & Fallback Strategy](#2-semantic-scholar--fallback-strategy)
+   - [3. Europe PMC / NCBI PubMed Integration](#3-europe-pmc--ncbi-pubmed-integration)
+   - [4. OpenAlex API & Inverted Index Reconstruction](#4-openalex-api--inverted-index-reconstruction)
+   - [5. Crossref 150M+ DOI Catalog](#5-crossref-150m-doi-catalog)
+   - [6. Wikipedia REST API](#6-wikipedia-rest-api)
+   - [7. Google Scholar Literature Index](#7-google-scholar-literature-index)
+   - [8. IEEE Xplore Engineering Library](#8-ieee-xplore-engineering-library)
+   - [9. SSRN Working Papers & Social Sciences](#9-ssrn-working-papers--social-sciences)
+   - [10. CORE Global Open-Access Repositories](#10-core-global-open-access-repositories)
+   - [11. DOAJ Directory of Open Access Journals](#11-doaj-directory-of-open-access-journals)
+   - [12. SpringerLink Scientific Books & Journals](#12-springerlink-scientific-books--journals)
+   - [13. Google Patents International Filings](#13-google-patents-international-filings)
+   - [14. Client-Side PDF Parsing (PDF.js)](#14-client-side-pdf-parsing-pdfjs)
 5. [Cross-Lingual Query Routing](#-cross-lingual-query-routing)
 6. [Verbatim Quotation & CTRL+F Standard](#-verbatim-quotation--ctrlf-standard)
 7. [Two-Agent Prompt Engineering & Structured Outputs](#-two-agent-prompt-engineering--structured-outputs)
@@ -41,17 +49,25 @@ flowchart TD
     subgraph UI ["User Input & Configuration"]
         UserTopic["Topic / Research Prompt"]
         LangToggle["Language Toggle (EN / ID)"]
-        SourceSelect["Academic Checkboxes (arXiv, PubMed, etc.)"]
+        SourceSelect["13 Academic Checkboxes & Select All / Clear"]
         ModelSelect["Gemini Model Selector & Quota Checker"]
     end
 
-    subgraph GroundingEngine ["Grounding & Cross-Lingual Routing"]
+    subgraph GroundingEngine ["13-Source Scholarly Retrieval & Routing"]
         QueryRouter["Multilingual Scientific Query Router"]
-        OpenAlex["OpenAlex Global & Regional Index"]
+        OpenAlex["OpenAlex (Global Works & Inverted Index)"]
         EuropePMC["Europe PMC / NCBI PubMed"]
-        Crossref["Crossref DOI Index"]
-        Semantic["Semantic Scholar / Citation Graph"]
+        Crossref["Crossref DOIs (150M+ Records)"]
+        Semantic["Semantic Scholar (Citation Graph)"]
+        Arxiv["arXiv Preprints (CS, Math, Physics)"]
         Wiki["Wikipedia (ID & Global)"]
+        Scholar["Google Scholar (Universal Index)"]
+        IEEE["IEEE Xplore (Hardware & Robotics)"]
+        SSRN["SSRN (Economics, Law, Social Sciences)"]
+        CORE["CORE (Open-Access Repository PDFs)"]
+        DOAJ["DOAJ (Directory of Open Access Journals)"]
+        Springer["SpringerLink (Books & Scientific Journals)"]
+        Patents["Google Patents (International Filings)"]
         PDFParser["PDF.js Client-Side Parser"]
         InvertedIndex["Abstract Reconstructor"]
         DossierBuilder["Numbered Research Dossier Builder"]
@@ -59,34 +75,61 @@ flowchart TD
 
     subgraph AgentLoop ["Iterative Multi-Agent Refinement Loop"]
         Writer["Writer Agent (Drafting & Exact Quoting)"]
-        Critic["Critic Agent (Audit & JSON Evaluation)"]
+        Critic["Critic Agent (Rubric 1.0-10.0 Evaluation)"]
         Decision{"Score >= Target?"}
-        Approved["Final Approved Article"]
+    end
+
+    subgraph IntegrityAudit ["3-Layer Publication Integrity Auditor"]
+        Auditor["Auditor Agent (11 Binary Criteria)"]
+        AuditCheck{"All 11 = YES?"}
+        SurgicalPatch["Surgical Paragraph Patch / Full Rebuild"]
+        Approved["Final Approved Article (100% Verified)"]
     end
 
     UserTopic --> QueryRouter
     LangToggle --> QueryRouter
     SourceSelect --> QueryRouter
 
-    QueryRouter --> OpenAlex
-    QueryRouter --> EuropePMC
-    QueryRouter --> Crossref
+    QueryRouter --> Arxiv
     QueryRouter --> Semantic
+    QueryRouter --> EuropePMC
+    QueryRouter --> OpenAlex
+    QueryRouter --> Crossref
     QueryRouter --> Wiki
+    QueryRouter --> Scholar
+    QueryRouter --> IEEE
+    QueryRouter --> SSRN
+    QueryRouter --> CORE
+    QueryRouter --> DOAJ
+    QueryRouter --> Springer
+    QueryRouter --> Patents
     PDFParser --> DossierBuilder
 
     OpenAlex --> InvertedIndex
     InvertedIndex --> DossierBuilder
+    Arxiv --> DossierBuilder
+    Semantic --> DossierBuilder
     EuropePMC --> DossierBuilder
     Crossref --> DossierBuilder
-    Semantic --> DossierBuilder
     Wiki --> DossierBuilder
+    Scholar --> DossierBuilder
+    IEEE --> DossierBuilder
+    SSRN --> DossierBuilder
+    CORE --> DossierBuilder
+    DOAJ --> DossierBuilder
+    Springer --> DossierBuilder
+    Patents --> DossierBuilder
 
     DossierBuilder --> Writer
     Writer --> Critic
     Critic --> Decision
-    Decision -- "No (Score < 8.5 & Turn < Max)" --> Writer
-    Decision -- "Yes (Score >= 8.5 or Max Turns)" --> Approved
+    Decision -- "No (Score < Target & Turn < Max)" --> Writer
+    Decision -- "Yes (Score >= Target or Max Turns)" --> Auditor
+
+    Auditor --> AuditCheck
+    AuditCheck -- "YES (100%)" --> Approved
+    AuditCheck -- "NO (Discrepancy)" --> SurgicalPatch
+    SurgicalPatch --> Writer
 ```
 
 ---
@@ -95,17 +138,25 @@ flowchart TD
 
 ```text
 anAgenticApp/
-├── index.html              # Standalone client-side web app (Vanilla JS, DOMPurify, Marked, PDF.js)
+├── index.html              # Standalone HTML shell & UI structure (SRI-pinned CDNs, Tailwind, CSP)
+├── js/                     # Modular client-side architecture (zero-build ES / global namespaces)
+│   ├── app.js              # Pipeline orchestrator, event bus, dossier collection, early termination
+│   ├── config.js           # Bilingual (EN/ID) localization strings, model constants, default settings
+│   ├── fetchers.js         # 13 scholarly fetchers, polite email pools, exponential backoff
+│   ├── gemini.js           # Gemini API client, quota probe, Writer & Critic system prompts
+│   ├── security.js         # DOMPurify sanitization, URL whitelisting, attribute escaping
+│   ├── text-fragments.js   # W3C scroll-to-text-fragment generator, abstract reconstructor
+│   └── ui.js               # Card renderers, theme switching, mobile drawer, PDF export modal
 ├── dev_pipeline.py         # Python CLI multi-agent orchestrator (google-genai, rich, pydantic)
-├── test_browser.py         # Playwright test suite (offline UI, security regression & live pipeline)
-├── tests/                  # Offline pytest suite (0 network, 0 API key required)
+├── test_browser.py         # Playwright test suite (12 offline & security regression cases)
+├── tests/                  # Offline pytest suite (59 tests, 0 network, 0 API key required)
 │   ├── __init__.py
 │   ├── test_pydantic_models.py       # Pydantic schemas and serialization
 │   ├── test_text_fragments.py        # Abstract reconstruction & W3C text fragment generation
 │   ├── test_deterministic_checks.py # Pre-audit sanity heuristics & verb ladder rules
 │   ├── test_retry_backoff.py         # Exponential backoff, jitter & Retry-After handling
 │   ├── test_multilingual_queries.py  # Dictionary heuristic & mocked LLM routing
-│   └── test_fetchers_mocked.py       # Canned response parsing for 6 academic APIs
+│   └── test_fetchers_mocked.py       # Mocked responses & fallbacks across all 13 academic APIs
 ├── docs/                   # Documentation visual assets
 │   └── images/             # Key verified workflow screenshots
 ├── requirements.txt        # Core runtime dependencies (google-genai, rich, pydantic, etc.)
@@ -115,6 +166,7 @@ anAgenticApp/
 ├── README.md               # Quickstart and project intro
 ├── USER_GUIDE.md           # End-user reference manual
 ├── DEVELOPER_GUIDE.md      # Technical architecture & developer reference (this file)
+├── USE_CASES.md           # Real-world use cases & prompt configuration matrix
 ├── output/                 # (Git-ignored) Output directory for generated markdown reports
 └── test_screenshots/      # (Git-ignored) Automated test screenshot captures
 ```
@@ -140,8 +192,26 @@ The system provides identical capabilities in two environments:
 
 All academic literature retrieval occurs **directly via open academic REST APIs** without requiring paid aggregators or proprietary scrapers.
 
-### 1. OpenAlex API & Inverted Index Reconstruction
+### 1. arXiv Preprints
+- **Endpoint**: `https://export.arxiv.org/api/query?search_query=all:{query}&start=0&max_results=4`
+- **Domain Coverage**: Physics, Computer Science, Mathematics, Quantitative Biology, Quantitative Finance, Statistics, Electrical Engineering, and Systems Science.
+- **Payload Format**: Atom XML feed with entry metadata (`<title>`, `<summary>`, `<author>`, `<published>`, and `<link>`).
+- **Resilient Fallback**: In browser environments where the raw arXiv XML export may be blocked or throttled, the pipeline queries Crossref with arXiv's DOI prefix filter (`filter=prefix:10.48550`).
+
+### 2. Semantic Scholar & Fallback Strategy
+- **Direct Endpoint**: `https://api.semanticscholar.org/graph/v1/paper/search?query={topic}&limit=4&fields=title,authors,year,citationCount,url,abstract`
+- **Domain Coverage**: High-impact multidisciplinary AI, computer science, and biomedicine papers with citation velocity and citation-graph metrics.
+- **CORS / Rate Limit Fallback**: In browser environments where direct requests may be CORS-restricted or rate-limited, the system automatically falls back to an OpenAlex citation-ranked query (`sort=cited_by_count:desc`).
+
+### 3. Europe PMC / NCBI PubMed Integration
+- **Primary Endpoint**: `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={topic}&resultType=core&format=json`
+- **Domain Coverage**: Biomedical, clinical trials, healthcare, epidemiology, biochemistry, and life sciences.
+- **Why Europe PMC?**: Unlike NCBI E-utilities (which enforce strict origin blocking and low IP rate limits), Europe PMC supports open CORS (`origin=*`) and returns complete `abstractText` strings in core mode.
+- **Resilient NCBI Fallback**: If Europe PMC fails, the pipeline queries NCBI's `esearch.fcgi` and `esummary.fcgi` endpoints.
+
+### 4. OpenAlex API & Inverted Index Reconstruction
 - **Endpoint**: `https://api.openalex.org/works`
+- **Domain Coverage**: 250M+ global scholarly works, author networks, and institutional affiliations.
 - **Polite Pool**: Requests include `mailto=agenticapp.research@gmail.com` to use OpenAlex's fast polite pool rate limits.
 - **Abstract Reconstruction Algorithm**: OpenAlex stores abstracts as an inverted index (`abstract_inverted_index: { "word": [positions] }`) to optimize metadata indexing. The application reconstructs the verbatim author abstract:
 
@@ -161,24 +231,52 @@ def reconstruct_abstract(inverted_index: Optional[Dict[str, List[int]]]) -> str:
     return " ".join(words[p] for p in sorted_positions).strip()
 ```
 
-### 2. Europe PMC / NCBI PubMed Integration
-- **Primary Endpoint**: `https://www.ebi.ac.uk/europepmc/webservices/rest/search?query={topic}&resultType=core&format=json`
-- **Why Europe PMC?**: Unlike NCBI E-utilities (which enforce strict origin blocking and rate limits), Europe PMC supports open CORS (`origin=*`) and returns complete `abstractText` strings in core mode.
-- **Resilient NCBI Fallback**: If Europe PMC fails, the pipeline queries NCBI's `esearch.fcgi` and `esummary.fcgi` endpoints.
-
-### 3. Semantic Scholar & Fallback Strategy
-- **Direct Endpoint**: `https://api.semanticscholar.org/graph/v1/paper/search?query={topic}&limit=4&fields=title,authors,year,citationCount,url,abstract`
-- **CORS / Rate Limit Fallback**: In browser environments where direct requests may be CORS-restricted, the system automatically falls back to an OpenAlex citation-ranked query (`sort=cited_by_count:desc`).
-
-### 4. Crossref 150M+ DOI Catalog
+### 5. Crossref 150M+ DOI Catalog
 - **Endpoint**: `https://api.crossref.org/works?query={topic}&rows=4&mailto={email}`
+- **Domain Coverage**: Official DOI registry representing over 150 million peer-reviewed journal articles, conference proceedings, and book chapters.
 - Resolves official DOI records, publishers, author family names, and publication years.
 
-### 5. Wikipedia REST API
-- Regional Search: `https://{lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json&origin=*`
-- Extract Endpoint: `https://{lang}.wikipedia.org/api/rest_v1/page/summary/{slug}`
+### 6. Wikipedia REST API
+- **Regional Search**: `https://{lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch={query}&format=json&origin=*`
+- **Extract Endpoint**: `https://{lang}.wikipedia.org/api/rest_v1/page/summary/{slug}`
+- **Domain Coverage**: Ground-truth encyclopedic overviews, historical context, and foundational taxonomy across English and Bahasa Indonesia.
 
-### 6. Client-Side PDF Parsing (PDF.js)
+### 7. Google Scholar Literature Index
+- **Query URL**: `https://scholar.google.com/scholar?q={query}`
+- **Domain Coverage**: Universal academic literature spanning peer-reviewed journals, working papers, dissertations, preprints, and academic books.
+- **Integration Role**: Generates 1-click verified citation search URLs in citation inspection dialogs and provides indexed bibliographic metadata backed by Crossref academic queries.
+
+### 8. IEEE Xplore Engineering Library
+- **DOI Prefix Endpoint**: Crossref filtered search with `filter=prefix:10.1109` (IEEE's official registrant prefix).
+- **Domain Coverage**: Electrical engineering, electronics, computer science, robotics, signal processing, and telecommunications.
+- **Direct Asset Resolution**: Resolves canonical IEEE papers with direct links to `https://ieeexplore.ieee.org/document/{id}` or permanent DOI handles.
+
+### 9. SSRN Working Papers & Social Sciences
+- **DOI Prefix Endpoint**: Crossref filtered search with `filter=prefix:10.2139` (Social Science Research Network prefix).
+- **Domain Coverage**: Pre-publication research and working papers in economics, finance, policy, law, management, and social sciences.
+- **Direct Asset Resolution**: Resolves working papers linked directly to SSRN abstract pages (`https://papers.ssrn.com/sol3/papers.cfm?abstract_id={id}`).
+
+### 10. CORE Global Open-Access Repositories
+- **Primary Endpoint**: `https://api.core.ac.uk/v3/search/works?q={query}&limit=4`
+- **Domain Coverage**: World's largest aggregator of open-access research papers harvested from university and institutional repositories worldwide.
+- **Fallback Strategy**: In browser contexts where CORS restrictions may limit direct access, the system queries OpenAlex with open-access filtering (`filter=is_oa:true`).
+
+### 11. DOAJ Directory of Open Access Journals
+- **Primary Endpoint**: `https://doaj.org/api/search/articles/{query}?pageSize=4`
+- **Domain Coverage**: Community-curated online directory that indexes high-quality, peer-reviewed, open-access scientific and scholarly journals.
+- **Universal CORS**: Open endpoint accessible directly from client-side browsers without proxies or API keys.
+
+### 12. SpringerLink Scientific Books & Journals
+- **DOI Prefix Endpoint**: Crossref filtered search with `filter=prefix:10.1007` (Springer Nature registrant prefix).
+- **Domain Coverage**: Peer-reviewed scientific, technical, and medical journals, monographs, and academic book series.
+- **Direct Asset Resolution**: Links directly to canonical SpringerLink chapter and article pages (`https://link.springer.com/...`).
+
+### 13. Google Patents International Filings
+- **Query URL**: `https://patents.google.com/?q={query}`
+- **Domain Coverage**: Over 120 million patent publications from 100+ patent offices worldwide (USPTO, EPO, WIPO, JPO, KIPO, etc.).
+- **Integration Role**: Surfaces patent claims, engineering specifications, prior art, and technical embodiments, mapped to verified technical research items.
+
+### 14. Client-Side PDF Parsing (PDF.js)
 In `index.html`, users can upload local PDF files:
 ```javascript
 const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -605,7 +703,7 @@ Install test dependencies and run the unit test suite:
 # Install test requirements
 pip install -r requirements-dev.txt
 
-# Run all offline unit tests (41 tests, zero network, zero API key)
+# Run all offline unit tests (59 tests, zero network, zero API key)
 pytest tests/ -v
 ```
 
@@ -615,7 +713,7 @@ The pytest suite tests the system offline with mocked network and client abstrac
 - **`tests/test_deterministic_checks.py`**: Citation parity verification, quotation format audits, heuristic causal verb pattern flags, and dossier quote fidelity.
 - **`tests/test_retry_backoff.py`**: Mocked `urllib` and `time.sleep` testing HTTP 429 `Retry-After` header extraction, 5xx backoff retries, non-retryable 404 immediate propagation, and `call_gemini_with_retry`.
 - **`tests/test_multilingual_queries.py`**: Offline dictionary heuristic fallback when API key is missing and mocked Gemini LLM query generation.
-- **`tests/test_fetchers_mocked.py`**: Canned response parsing and failure/timeout recovery across all 6 scholarly fetchers (`fetch_arxiv_papers`, `fetch_crossref_papers`, `fetch_semantic_scholar_papers`, `fetch_openalex_works`, `fetch_pubmed_works`, `fetch_wikipedia_summary`).
+- **`tests/test_fetchers_mocked.py`**: Canned response parsing, schema integrity, and failure/timeout recovery across all 13 scholarly fetchers (`fetch_arxiv_papers`, `fetch_crossref_papers`, `fetch_semantic_scholar_papers`, `fetch_openalex_works`, `fetch_pubmed_works`, `fetch_wikipedia_summary`, `fetch_google_scholar_papers`, `fetch_ieee_papers`, `fetch_ssrn_papers`, `fetch_core_papers`, `fetch_doaj_papers`, `fetch_springer_papers`, `fetch_google_patents`).
 
 ---
 
@@ -692,7 +790,7 @@ script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.clou
 style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
 font-src 'self' https://fonts.gstatic.com;
 img-src 'self' data: https: blob:;
-connect-src 'self' https://generativelanguage.googleapis.com https://api.openalex.org https://api.crossref.org https://api.semanticscholar.org https://eutils.ncbi.nlm.nih.gov https://www.ebi.ac.uk https://en.wikipedia.org https://id.wikipedia.org;
+connect-src 'self' https://generativelanguage.googleapis.com https://api.openalex.org https://api.crossref.org https://api.semanticscholar.org https://eutils.ncbi.nlm.nih.gov https://www.ebi.ac.uk https://en.wikipedia.org https://id.wikipedia.org https://doaj.org https://api.core.ac.uk;
 object-src 'none';
 base-uri 'self';
 form-action 'self';
