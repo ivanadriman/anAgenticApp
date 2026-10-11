@@ -27,23 +27,27 @@ This guide provides end-users, students, researchers, technical writers, and con
    - [Thinking Depth & Turn Budget](#thinking-depth--turn-budget)
    - [Live Summary Badge & Mobile Layout](#live-summary-badge--mobile-layout)
 8. [Verbatim Quotations & CTRL+F Verifiability](#-verbatim-quotations--ctrlf-verifiability)
-9. [The Two-Agent Collaboration Workflow](#-the-two-agent-collaboration-workflow)
+9. [The Multi-Agent Collaboration Workflow](#-the-multi-agent-collaboration-workflow)
    - [Writer Agent](#writer-agent)
    - [Critic Agent](#critic-agent)
    - [Iterative Loop & Approval Threshold](#iterative-refinement-loop)
-10. [Reading Ergonomics, Palettes & Focus Mode](#-reading-ergonomics-palettes--focus-mode)
+10. [Publication Integrity Audit & Self-Correcting Rebuild Loop (source-checking-guide.md)](#-publication-integrity-audit--self-correcting-rebuild-loop)
+   - [The 3 Audit Layers & 11 Evaluation Criteria](#the-3-audit-layers--11-evaluation-criteria)
+   - [The Verb Ladder & 7 Guarded Failure Patterns](#the-verb-ladder--7-guarded-failure-patterns)
+   - [Self-Correction Loop: Automatic Rebuilding until 100% YES](#self-correction-loop-automatic-rebuilding-until-100-yes)
+11. [Reading Ergonomics, Palettes & Focus Mode](#-reading-ergonomics-palettes--focus-mode)
    - [Four Reading Color Palettes](#1-four-reading-color-palettes)
    - [Typographic Ergonomics & Reader Toolbar](#2-typographic-ergonomics--reader-toolbar)
    - [Interactive Citation Micro-Previews & Mobile Bottom Sheet Drawer](#3-interactive-citation-micro-previews--mobile-bottom-sheet-drawer)
    - [Zen Mode Focus Reading Overlay](#4-zen-mode-focus-reading-overlay)
    - [Mobile Phone Streamlined Experience & Decluttering](#5-mobile-phone-streamlined-experience--decluttering)
-11. [Exporting Documents (Markdown & Clean PDF with Paper Sizes)](#-exporting-documents-markdown--clean-pdf)
+12. [Exporting Documents (Markdown & Clean PDF with Paper Sizes)](#-exporting-documents-markdown--clean-pdf)
     - [Download as Markdown (.md) with Text Title](#1-download-as-markdown-md-with-actual-title)
     - [PDF Export with Zero Website Clipping](#2-pdf-export-with-zero-website-components-clipping)
     - [Common Paper Sizes: A4, Letter, A5, Legal, Executive](#3-supported-paper-sizes--layout-customization)
     - [Dual Export Pathways (Direct File vs. Vector Print)](#4-dual-export-pathways)
-12. [CLI Usage & Command Reference](#-cli-usage--command-reference)
-13. [Troubleshooting & FAQs](#-troubleshooting--faqs)
+13. [CLI Usage & Command Reference](#-cli-usage--command-reference)
+14. [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
 ---
 
@@ -233,7 +237,7 @@ Often, AI summaries paraphrase findings in ways that make it difficult or imposs
 
 ---
 
-## 🔄 The Two-Agent Collaboration Workflow
+## 🔄 The Multi-Agent Collaboration Workflow
 
 ```mermaid
 sequenceDiagram
@@ -242,39 +246,86 @@ sequenceDiagram
     participant Grounding as Scholarly Grounding
     participant Writer as Writer Agent
     participant Critic as Critic Agent
+    participant Auditor as Publication Integrity Auditor
 
     User->>Grounding: Submit Topic & Select Sources
     Grounding->>Grounding: Query arXiv, PubMed, Crossref, Semantic Scholar, etc.
     Grounding->>Writer: Verified Dossier with Exact Abstracts
-    loop Iterative Refinement Loop
+    loop Iterative Writer-Critic Loop
         Writer->>Writer: Compose Draft with Quotes & References
         Writer->>Critic: Submit Draft for Audit
         Critic->>Critic: Audit Quotes, CTRL+F Exactness & Depth (Score 1-10)
         alt Score >= Target (e.g. 8.5)
-            Critic-->>User: APPROVED! Deliver Polished Article
+            Critic->>Auditor: Approve for Publication Integrity Check
         else Score < Target & Turns Remaining
             Critic->>Writer: Actionable Revision Instructions
+        end
+    end
+    loop Self-Correcting Integrity Rebuild Loop (source-checking-guide)
+        Auditor->>Auditor: Audit 11 Binary Questions across 3 Layers
+        alt All Questions YES (100% Clearance)
+            Auditor-->>User: 🛡️ 100% Publication Integrity Clearance Granted!
+        else Any Question NO
+            Auditor->>Writer: Return Specific Discrepancies & Verb Ladder Directives
+            Writer->>Writer: Rebuild Text Resolving Every Discrepancy
+            Writer->>Auditor: Re-Submit Rebuilt Text for Re-Audit
         end
     end
 ```
 
 ### Writer Agent
 - Analyzes the research dossier and organizes content into structured Markdown sections.
-- Synthesizes findings across multiple disciplines.
+- Synthesizes findings across multiple disciplines into fluent text.
 - Incorporates verbatim quotes with citation numbers and creates the final bibliography.
 
 ### Critic Agent
-- Reviews drafts according to strict academic standards:
+- Reviews drafts according to strict editorial and scholarly standards:
   - **Factual Grounding**: Does the draft align with the papers provided?
   - **Quotation Audit**: Are quotes enclosed in `"... ..."` with `[n]` citation numbers?
   - **CTRL+F Accuracy**: Are quotes verbatim substrings rather than paraphrases?
   - **Bibliography Integrity**: Does every `[n]` match an entry in the references list?
 - Issues an overall score (1.0 to 10.0) and specific, numbered revision instructions if the score is below the approval threshold.
 
-### Exporting Your Content
-Once approved:
-- Click **"📋 Copy Markdown"** to copy the full article and bibliography to your clipboard.
-- Paste directly into Obsidian, Notion, GitHub, Google Docs, or your Markdown editor of choice.
+---
+
+## 🛡️ Publication Integrity Audit & Self-Correcting Rebuild Loop (`source-checking-guide.md`)
+
+At the conclusion of the Writer-Critic loop, the document is submitted to an independent **Publication Integrity Auditor Agent**. This agent rigorously verifies the text against the rules codified in [`.agents/rules/source-checking-guide.md`](.agents/rules/source-checking-guide.md).
+
+### The 3 Audit Layers & 11 Evaluation Criteria
+
+| Layer | Criterion | Why It Matters | Required Check |
+|---|---|---|---|
+| **Layer 1: What Is This Source?** | **1. Source Type Ceiling** | Type sets the ceiling on what it can support. | A theory paper can justify a hypothesis, not an empirical finding. A preprint has not been through peer review. |
+| | **2. Metadata Verification** | Mismatched metadata signals hallucinated or wrong citations. | Authors, journal/venue, year, and DOI/URL must strictly match actual published literature. |
+| | **3. Source Independence** | Multiple citations tracing to one underlying study represent one piece of evidence, not multiple. | Sources must be genuinely independent. |
+| **Layer 2: Does the Source Support This Specific Claim?** | **4. Exact Construct Match** | Guard against neighboring construct substitution. | Does the study measure the exact target construct? (e.g. perfectionism cannot stand in for materialism; purchase intention cannot stand in for attachment). |
+| | **5. Finding vs. Framing** | Introductions and abstracts state background assumptions or motivating hypotheses. | Quotations must be the paper's demonstrated empirical findings, not introductory framing. |
+| | **6. Verb Ladder Compliance** | Match the strength of the claim to the study design. | Cross-sectional surveys support associative language ("is associated with", "relates to"), **never** causal verbs ("causes", "drives", "reduces"). Randomized trials support causal verbs bounded to their experimental setting. |
+| | **7. Sample & Scope Bounds** | Scope must not be wider than the sample. | Findings on 120 college undergraduates must not be inflated into statements about "all humans" or "modern societies". |
+| | **8. Quote & Context Integrity** | Accurate quotes can still sit under claims the paper never made. | Quotes must do evidentiary work and say the same thing in context. |
+| **Layer 3: Does the Whole Argument Hold?** | **9. No Uncited Author Leaps** | Arguments often cite A→B and B→C, then assert A→C as if cited. | Every link in the argument chain must be evidence-backed, with author inferences explicitly labeled. |
+| | **10. Rival Explanations Acknowledged** | One mechanism presented as "the" explanation omits alternatives. | Alternative hypotheses, caveats, and rival explanations must be acknowledged. |
+| | **11. Bounded Conclusion** | A conclusion should not exceed its best-supported premise. | The final conclusion must refrain from claiming more than the strongest single source. |
+
+### The Verb Ladder & 7 Guarded Failure Patterns
+
+The auditor specifically detects and eliminates the 7 classic publication pitfalls:
+1. **Adjacent-construct substitution**: The source studies something related, and the text treats it as the target construct.
+2. **Correlation-to-causation drift**: Correlational data described with causal verbs ("associated with" becomes "drives").
+3. **Framing-as-finding**: An introduction's assumption cited as a proven result.
+4. **Scope inflation**: A finding on a narrow demographic generalized to humanity.
+5. **Orphaned quotation**: An accurate quote attached to a claim the author never made.
+6. **Citation laundering**: Weak sources borrowing credibility from adjacent strong sources.
+7. **Mismatched or fabricated metadata**: Citations that do not match real papers.
+
+### Self-Correction Loop: Automatic Rebuilding until 100% YES
+
+If **any** of the 11 questions evaluates to `"NO"`:
+1. The **Publication Integrity Auditor Agent** outputs the specific failure pattern, the offending text snippet, and the precise required correction (e.g., *"Change causal verb 'drives' in citation [2] to correlational verb 'is associated with' per Verb Ladder"*).
+2. The **Integrity Revision Writer Agent** is automatically invoked with these directives and rebuilds the text.
+3. The rebuilt text is re-audited.
+4. This self-correcting refinement loop repeats until **all 11 criteria answer "YES"**, granting the **🛡️ 100% Publication & Understanding Integrity Clearance Seal**.
 
 ---
 

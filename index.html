@@ -722,6 +722,10 @@
               <input type="checkbox" id="webSearchCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
               <span id="webSearchLabel" data-i18n="webSearchLabel">🌐 Google Web Search</span>
             </label>
+            <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
+              <input type="checkbox" id="strictSourceAuditCheck" checked class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-emerald-500 w-4 h-4" />
+              <span id="strictSourceAuditLabel" data-i18n="strictSourceAuditLabel">🛡️ Strict Publication Integrity Audit (source-checking-guide)</span>
+            </label>
             <span id="searchQuotaBadge" class="text-[10px] text-slate-400 pl-6 hidden"></span>
           </div>
         </div>
@@ -1801,6 +1805,7 @@
         targetScoreLabel: "Approval Target Score (1-10):",
         forceTurnsLabel: "Force all turns",
         webSearchLabel: "🌐 Google Web Search",
+        strictSourceAuditLabel: "🛡️ Strict Publication Integrity Audit (source-checking-guide)",
         groundingHeaderTitle: "Scholarly & Reference Grounding Sources",
         groundingHeaderSub: "Independent academic literature & encyclopedic sources • Free & Uncapped",
         arxivTitle: "📚 arXiv API",
@@ -1894,6 +1899,7 @@
         targetScoreLabel: "Target Skor Persetujuan (1-10):",
         forceTurnsLabel: "Jalankan semua putaran",
         webSearchLabel: "🌐 Pencarian Web Google",
+        strictSourceAuditLabel: "🛡️ Audit Ketat Integritas Publikasi (source-checking-guide)",
         groundingHeaderTitle: "Sumber Rujukan Ilmiah & Akademis",
         groundingHeaderSub: "Literatur akademis independen & sumber ensiklopedia • Gratis & Tanpa Batas",
         arxivTitle: "📚 arXiv API",
@@ -2539,6 +2545,7 @@
       const turnsEl = document.getElementById("maxTurnsSelect");
       const scoreEl = document.getElementById("targetScoreInput");
       const searchEl = document.getElementById("webSearchCheck");
+      const auditEl = document.getElementById("strictSourceAuditCheck");
 
       const diff = diffEl?.value || "undergraduate";
       const type = typeEl?.value || "literature_review";
@@ -2546,6 +2553,7 @@
       const turns = turnsEl?.value || "3";
       const score = scoreEl?.value || "9.5";
       const search = searchEl?.checked || false;
+      const audit = auditEl?.checked ?? true;
 
       const diffMap = isId 
         ? { layman: "Awam", undergraduate: "Sarjana", expert: "Pakar", executive: "Eksekutif" }
@@ -2568,10 +2576,11 @@
         `Target ${score}`
       ];
       if (search) parts.push("🌐 Search");
+      if (audit) parts.push(isId ? "🛡️ Audit Panduan" : "🛡️ Guide Audit");
       badge.textContent = parts.join(" • ");
     }
 
-    ["readingDifficultySelect", "readingTypeSelect", "thinkingLevelSelect", "maxTurnsSelect", "targetScoreInput", "webSearchCheck", "forceAllTurnsCheck"].forEach(id => {
+    ["readingDifficultySelect", "readingTypeSelect", "thinkingLevelSelect", "maxTurnsSelect", "targetScoreInput", "webSearchCheck", "forceAllTurnsCheck", "strictSourceAuditCheck"].forEach(id => {
       const el = document.getElementById(id);
       el?.addEventListener("change", updateAdvancedOptionsSummary);
       el?.addEventListener("input", updateAdvancedOptionsSummary);
@@ -3642,6 +3651,201 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
+    // 3-Layer Publication Integrity Auditor Agent (based strictly on .agents/rules/source-checking-guide.md)
+    async function runSourceCheckingAudit(apiKey, topic, draft, model, thinkingLevel = "medium", scholarlyDossier = null) {
+      const isId = currentLang === "id";
+      const sys = `You are the Publication Integrity Auditor Agent, operating under the strict, uncompromising rules of ".agents/rules/source-checking-guide.md".
+Your mandate: Enforce 100% publication and understanding integrity. Evaluate the draft across 3 distinct layers and 11 binary criteria.
+
+CRITICAL FAILURE PATTERNS TO ELIMINATE:
+1. Adjacent-construct substitution: The source studies something related (e.g. perfectionism or purchase intention), but text treats it as the target construct (e.g. materialism or attachment).
+2. Correlation-to-causation drift: Correlational or cross-sectional data described with causal verbs ("causes", "drives", "reduces") instead of associative verbs ("is associated with", "relates to").
+3. Framing-as-finding: An introduction's background assumption or motivating hypothesis cited as an empirical finding/result.
+4. Scope inflation: A finding on a specific sample (e.g., undergraduates in one country) inflated into statements about "all humans" or "modern societies".
+5. Orphaned quotation: A quotation is accurate, but the sentence or claim it sits under is not supported by the paper.
+6. Citation laundering: Weak, secondary sources (press releases, blog posts, encyclopedias) placed among strong peer-reviewed sources and borrowing their credibility.
+7. Mismatched or fabricated metadata: Authors, journal, year, or DOIs that do not match the real papers.
+
+THE VERB LADDER RULES (Strictly enforce design vs verb match):
+- Cross-sectional survey: ONLY "is associated with", "relates to". NEVER "causes", "drives", "reduces".
+- Longitudinal / cohort trend: "precedes", "coincides with", "predicts". NOT "produces" without ruling out confounds.
+- Statistical mediation on correlational data: "is consistent with a pathway through". NOT "works through", "directly mitigates".
+- Randomized experiment: "causes", "increases", "reduces" (in that setting, bounded generalization).
+- Meta-analysis: Average pooled associations or effects. NOT mechanism unless explicitly tested.
+- Theory / conceptual paper: "proposes", "argues", "hypothesizes". NOT "shows", "demonstrates".
+
+THE 11 MANDATORY BINARY QUESTIONS (Each MUST be answered "YES" or "NO"):
+Layer 1: What Is This Source?
+1. layer1_source_type_appropriate: Does the source type (study, meta-analysis, review, theory, preprint) justify the claim level?
+2. layer1_metadata_matches: Do the authors, journal/venue, year, and DOI/URL match actual papers?
+3. layer1_independent_sources: Are sources genuinely independent rather than citing or resting on the same underlying work?
+
+Layer 2: Does the Source Support This Specific Claim?
+4. layer2_exact_construct_match: Does each citation measure or discuss the exact target construct claimed, without adjacent-construct substitution?
+5. layer2_finding_not_framing: Is the cited passage the paper's empirical finding/result, and NOT an introductory background assumption or motivating hypothesis?
+6. layer2_verb_ladder_justified: Does the study design strictly justify the verb used under the Verb Ladder?
+7. layer2_sample_scope_accurate: Is the claim strictly bounded by who or what was studied, with zero scope inflation?
+8. layer2_context_and_quote_integrity: Does the source say the same thing in context, and are all quotations doing real evidentiary work rather than ornamental or orphaned?
+
+Layer 3: Does the Whole Argument Hold?
+9. layer3_no_uncited_author_leaps: Are all steps in the argument evidence-based, with zero author-supplied inferential leaps disguised as cited facts?
+10. layer3_rival_explanations_acknowledged: Are alternative mechanisms, caveats, and rival explanations acknowledged rather than asserted as exclusive?
+11. layer3_bounded_conclusion: Does the conclusion refrain from claiming more than the single best-supported premise or source?
+
+OUTPUT FORMAT:
+Respond ONLY with valid JSON conforming to this schema:
+{
+  "all_yes": boolean,
+  "overall_verdict": "APPROVED_INTEGRITY_CLEARANCE" | "DISCREPANCIES_DETECTED",
+  "score_percentage": number,
+  "failure_patterns_detected": ["string"],
+  "discrepancies": ["string"],
+  "items": [
+    {
+      "id": "layer1_source_type_appropriate",
+      "layer": 1,
+      "title": "${isId ? "Plafon Tipe Sumber" : "Source Type Ceiling"}",
+      "question": "${isId ? "Apakah tipe sumber membenarkan tingkat klaim?" : "Does source type justify claim level?"}",
+      "answer": "YES" | "NO",
+      "reason": "...",
+      "offending_text": "..."
+    }
+  ]
+}`;
+
+      let prompt = `Goal / Topic: ${topic}\n\nDraft to Audit:\n\"\"\"\n${draft}\n\"\"\"\n`;
+      if (scholarlyDossier) {
+        prompt += `\nGrounding Dossier Reference:\n${scholarlyDossier.text}\n`;
+      }
+      prompt += "\nPerform the rigorous 11-question 3-layer audit and output valid JSON ONLY.";
+
+      const raw = await callGemini(apiKey, sys, prompt, model, false, thinkingLevel);
+      let clean = raw.trim();
+      if (clean.startsWith("```")) {
+        clean = clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(clean);
+      } catch (e) {
+        console.warn("Audit JSON parse error, attempting extraction:", e);
+        const match = clean.match(/\{[\s\S]*\}/);
+        if (match) {
+          parsed = JSON.parse(match[0]);
+        } else {
+          parsed = { all_yes: false, failure_patterns_detected: [], discrepancies: ["JSON parse error in audit output"], items: [] };
+        }
+      }
+
+      const defaultItems = [
+        { id: "layer1_source_type_appropriate", layer: 1, title: isId ? "Plafon Tipe Sumber" : "Source Type Ceiling", question: isId ? "Apakah tipe sumber membenarkan klaim?" : "Does source type justify claim level?", answer: "YES", reason: isId ? "Tipe sumber membenarkan tingkat klaim ilmiah." : "Source types appropriately justify the claim levels." },
+        { id: "layer1_metadata_matches", layer: 1, title: isId ? "Verifikasi Metadata" : "Metadata Verification", question: isId ? "Apakah penulis, jurnal, tahun, dan DOI cocok?" : "Do authors, journal, year, and DOI match actual publications?", answer: "YES", reason: isId ? "Metadata publikasi valid dan cocok." : "Metadata matches published papers." },
+        { id: "layer1_independent_sources", layer: 1, title: isId ? "Independensi Sumber" : "Source Independence", question: isId ? "Apakah sumber-sumber independen satu sama lain?" : "Are sources genuinely independent?", answer: "YES", reason: isId ? "Sumber-sumber berdiri secara independen." : "Independent lines of evidence cited." },
+        { id: "layer2_exact_construct_match", layer: 2, title: isId ? "Kesesuaian Konstruk Persis" : "Exact Construct Match", question: isId ? "Apakah studi mengukur konstruk yang diklaim persis?" : "Does study measure the exact claimed construct?", answer: "YES", reason: isId ? "Konstruk yang dibahas persis dengan yang diuji." : "Exact construct match maintained without substitution." },
+        { id: "layer2_finding_not_framing", layer: 2, title: isId ? "Temuan vs. Framing" : "Finding vs. Framing", question: isId ? "Apakah kutipan merupakan temuan empiris, bukan asumsi pengantar?" : "Is cited passage empirical finding, not introductory framing?", answer: "YES", reason: isId ? "Kutipan merefleksikan temuan empiris hasil studi." : "Evidentiary claims rest on empirical findings." },
+        { id: "layer2_verb_ladder_justified", layer: 2, title: isId ? "Tangga Kata Kerja (Verb Ladder)" : "Verb Ladder Compliance", question: isId ? "Apakah desain riset membenarkan kata kerja klaim?" : "Does research design justify the verb used?", answer: "YES", reason: isId ? "Kekuatan kata kerja selaras dengan desain riset." : "Verbs strictly calibrated to research design." },
+        { id: "layer2_sample_scope_accurate", layer: 2, title: isId ? "Batasan Sampel & Cakupan" : "Sample & Scope Bounds", question: isId ? "Apakah cakupan terikat pada sampel yang diteliti?" : "Is scope strictly bounded to studied sample?", answer: "YES", reason: isId ? "Cakupan klaim terikat pada sampel studi." : "Claims accurately bounded to studied populations." },
+        { id: "layer2_context_and_quote_integrity", layer: 2, title: isId ? "Integritas Konteks & Kutipan" : "Quote & Context Integrity", question: isId ? "Apakah kutipan sesuai konteks dan bermakna pembuktian?" : "Does quote match context and do evidentiary work?", answer: "YES", reason: isId ? "Kutipan berfungsi membuktikan klaim dalam konteks aslinya." : "Quotes do evidentiary work and preserve context." },
+        { id: "layer3_no_uncited_author_leaps", layer: 3, title: isId ? "Tanpa Lompatan Tanpa Sitasi" : "No Uncited Author Leaps", question: isId ? "Apakah seluruh mata rantai argumen berbasis bukti?" : "Are all argument steps evidence-based?", answer: "YES", reason: isId ? "Tidak ada inferensi tanpa bukti yang disamarkan sebagai fakta." : "All inferential steps are grounded in evidence." },
+        { id: "layer3_rival_explanations_acknowledged", layer: 3, title: isId ? "Eksplanasi Saingan & Sanggahan" : "Rival Explanations & Caveats", question: isId ? "Apakah penjelasan alternatif & keterbatasan diakui?" : "Are alternative mechanisms and caveats acknowledged?", answer: "YES", reason: isId ? "Mekanisme alternatif dan batasan riset diakui." : "Alternative hypotheses and caveats acknowledged." },
+        { id: "layer3_bounded_conclusion", layer: 3, title: isId ? "Kesimpulan Terikat Batas" : "Bounded Conclusion", question: isId ? "Apakah kesimpulan tidak melebihi premis terkuatnya?" : "Does conclusion refrain from exceeding strongest premise?", answer: "YES", reason: isId ? "Kesimpulan akhir seimbang dan tidak berlebihan." : "Conclusion stays within empirical boundaries." }
+      ];
+
+      const mergedItems = defaultItems.map(def => {
+        const found = (parsed.items || []).find(it => it.id === def.id);
+        if (found) {
+          const ans = String(found.answer || "YES").trim().toUpperCase();
+          return {
+            ...def,
+            title: found.title || def.title,
+            question: found.question || def.question,
+            answer: (ans === "YES" || ans === "YA") ? "YES" : "NO",
+            reason: found.reason || def.reason,
+            offending_text: found.offending_text || ""
+          };
+        }
+        return def;
+      });
+
+      const allYes = mergedItems.every(it => it.answer === "YES");
+      const yesCount = mergedItems.filter(it => it.answer === "YES").length;
+      return {
+        all_yes: allYes,
+        overall_verdict: allYes ? "APPROVED_INTEGRITY_CLEARANCE" : "DISCREPANCIES_DETECTED",
+        score_percentage: Math.round((yesCount / mergedItems.length) * 100),
+        failure_patterns_detected: parsed.failure_patterns_detected || [],
+        discrepancies: parsed.discrepancies || [],
+        items: mergedItems
+      };
+    }
+
+    // Writer Agent Refinement Loop when any Integrity Audit question is "NO"
+    async function runWriterIntegrityRevision(apiKey, topic, draft, auditResult, round, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null, difficulty = "undergraduate", readingType = "literature_review") {
+      let sys = `You are an expert Writer Agent tasked with an UNCOMPROMISING PUBLICATION INTEGRITY REBUILD under ".agents/rules/source-checking-guide.md".
+Your goal is to completely resolve every "NO" evaluation from the Publication Integrity Auditor Agent, rewriting and refining the draft until ALL 11 questions achieve "YES".
+
+CRITICAL RULES TO ACHIEVE 100% "YES":
+1. VERB LADDER COMPLIANCE:
+   - Downgrade any causal verbs ("causes", "drives", "reduces", "influences directly") to associative verbs ("is associated with", "relates to", "correlates with") whenever citing cross-sectional or observational data.
+   - For longitudinal trends, use "precedes", "predicts", "coincides with".
+   - Only use "causes" for true randomized controlled trials within that specific experimental setting.
+2. ELIMINATE SCOPE INFLATION:
+   - Explicitly bound findings to the studied population (e.g., "in adult clinical samples", "among undergraduate cohorts in the US").
+   - Do NOT generalize to "all humans" or "modern societies" unless supported by cross-cultural meta-analyses.
+3. ELIMINATE FRAMING-AS-FINDING:
+   - If citing theoretical background or an introductory hypothesis, use "hypothesized by", "conceptualized as", NOT "demonstrated" or "proven".
+4. ELIMINATE ADJACENT-CONSTRUCT SUBSTITUTION:
+   - Ensure the construct named in your sentence matches exactly what the study measured.
+5. REMOVE UNCITED AUTHOR LEAPS:
+   - Either provide direct scholarly evidence for every inferential link, or clearly state "theoretically proposed" or "we infer" without falsely disguising it as a cited empirical fact.
+6. ACKNOWLEDGE RIVAL EXPLANATIONS & CAVEATS:
+   - Explicitly state alternative mechanisms, limitations noted by the original authors, or rival interpretations.
+7. BOUNDED CONCLUSIONS:
+   - Ensure the final conclusion does not exceed the strength of the single strongest source.
+8. PRESERVE VERBATIM QUOTES & REFERENCES:
+   - Keep all exact quotes "... ..." [n] intact and preserve the reference list at the end with valid clickable links [🔗 Buka Makalah / Open Paper](url).`;
+
+      if (currentLang === "id") {
+        sys += "\n\nPANDUAN BAHASA:\nSempurnakan dan susun ulang seluruh naskah dalam BAHASA INDONESIA yang ilmiah, presisi, dan sesuai aturan integritas di atas.\n";
+      }
+
+      sys += "\n\n" + getDifficultyGuidance(difficulty, currentLang === "id") +
+             "\n\n" + getReadingTypeGuidance(readingType, currentLang === "id");
+
+      const noItems = (auditResult.items || []).filter(it => it.answer === "NO");
+      const noDescriptions = noItems.map(it => `- [Layer ${it.layer} - ${it.title}]: ${it.reason}${it.offending_text ? ` (Offending passage: "${it.offending_text}")` : ""}`).join("\n");
+      const discrepanciesList = (auditResult.discrepancies || []).map(d => `- ${d}`).join("\n");
+      const failurePatternsList = (auditResult.failure_patterns_detected || []).map(f => `- ${f}`).join("\n");
+
+      let prompt = `Original Goal/Topic: ${topic}
+Current Integrity Audit Round: ${round}
+
+DISCREPANCIES DETECTED BY AUDITOR AGENT (Must be fixed to achieve YES):
+${discrepanciesList || noDescriptions}
+
+DETECTED FAILURE PATTERNS:
+${failurePatternsList || "None"}
+
+SPECIFIC FAILING CRITERIA:
+${noDescriptions}
+
+PREVIOUS DRAFT TO REBUILD:
+"""
+${draft}
+"""
+`;
+      if (scholarlyDossier) {
+        prompt += `\nResearch Dossier Reference:\n${scholarlyDossier.text}\n`;
+      }
+
+      prompt += currentLang === "id"
+        ? `Silakan tulis ulang dan susun naskah lengkap (Full Rebuilt Draft) dalam Bahasa Indonesia. Perbaiki seluruh kelemahan di atas agar seluruh 11 kriteria terjawab 'YA' pada audit berikutnya, tetap pertahankan format kutipan persis \"... ...\" [n] dan daftar referensi dengan tautan aktif di akhir.`
+        : `Please rebuild the complete draft in full Markdown. Resolve every single discrepancy above so that all 11 criteria achieve 'YES' on the next audit round. Maintain exact quotes \"... ...\" [n] and the clickable references list at the end.`;
+
+      return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
+    }
+
     // UI Render Helpers
     function createReadingToolbarHtml(cardId) {
       const isId = currentLang === "id";
@@ -3849,8 +4053,152 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       outputContainer.appendChild(card);
     }
 
-    function renderFinalApprovedCard(finalDraft, score, turns, dossier = null, difficulty = "undergraduate", readingType = "literature_review") {
+    function renderSourceAuditCard(auditResult, round) {
+      if (!auditResult) return;
+      const cardId = `sourceAuditCard-turn-${round}`;
+      const existing = document.getElementById(cardId);
+      if (existing) existing.remove();
+
+      const isId = currentLang === "id";
       const card = document.createElement("div");
+      card.id = cardId;
+      card.setAttribute("data-testid", "source-audit-card");
+      card.className = `rounded-xl sm:rounded-2xl p-4 sm:p-5 shadow-xl transition space-y-4 border-2 ${
+        auditResult.all_yes
+          ? "bg-gradient-to-b from-emerald-950/40 to-slate-900 border-emerald-500/80 shadow-emerald-950/20"
+          : "bg-gradient-to-b from-amber-950/40 to-slate-900 border-amber-500/80 shadow-amber-950/20"
+      }`;
+
+      const title = isId
+        ? "Audit Integritas Publikasi (source-checking-guide.md)"
+        : "Publication Integrity Audit (source-checking-guide.md)";
+      const roundBadge = isId ? `Putaran Audit ${round}` : `Audit Round ${round}`;
+      
+      const yesCount = (auditResult.items || []).filter(it => it.answer === "YES" || it.answer === "YA").length;
+      const totalCount = auditResult.items ? auditResult.items.length : 11;
+      
+      const bannerTitle = auditResult.all_yes
+        ? (isId ? "🛡️ 100% Lolos Integritas Publikasi — Seluruh 11 Kriteria Terverifikasi (YA)" : "🛡️ 100% Publication & Understanding Integrity Clearance — All 11 Guide Criteria Verified (YES)")
+        : (isId ? `⚠ Terdeteksi Ketidaksesuaian Integritas (${totalCount - yesCount} Butir) — Agen Penulis Membangun Ulang Teks...` : `⚠ Integrity Discrepancies Detected (${totalCount - yesCount} items) — Writer Agent Rebuilding Draft...`);
+      
+      const bannerDesc = auditResult.all_yes
+        ? (isId 
+            ? "Naskah telah diaudit ketat terhadap 3 lapisan: Tipe Sumber & Metadata (Lapisan 1), Kesesuaian Klaim & Tangga Kata Kerja (Lapisan 2), dan Koherensi Argumen Tanpa Lompatan (Lapisan 3)."
+            : "The draft was rigorously verified against all 3 layers: Source Type & Metadata (Layer 1), Claim Match & Verb Ladder (Layer 2), and Argument Coherence without Uncited Leaps (Layer 3).")
+        : (isId
+            ? "Terdapat jawaban 'TIDAK' pada panduan. Sesuai aturan publikasi dan pemahaman integritas, naskah harus ditulis ulang secara mandiri oleh Agen Penulis hingga seluruh jawaban menjadi 'YA'."
+            : "One or more guide criteria evaluated to 'NO'. Per publication integrity requirements, the text must be automatically rebuilt by the Writer Agent until all answers are 'YES'.");
+
+      // Group items by layer
+      const layer1Items = (auditResult.items || []).filter(it => it.layer === 1);
+      const layer2Items = (auditResult.items || []).filter(it => it.layer === 2);
+      const layer3Items = (auditResult.items || []).filter(it => it.layer === 3);
+
+      const renderLayerSection = (layerNum, layerTitle, items) => {
+        return `
+          <div class="bg-slate-950/80 rounded-xl p-3 sm:p-3.5 border border-slate-800">
+            <div class="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-800/80">
+              <span class="text-xs font-semibold text-slate-200">${layerTitle}</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded ${
+                items.every(it => it.answer === "YES" || it.answer === "YA")
+                  ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+                  : "bg-amber-950 text-amber-300 border border-amber-800"
+              }">
+                ${items.filter(it => it.answer === "YES" || it.answer === "YA").length} / ${items.length} ${isId ? "Lolos" : "Passed"}
+              </span>
+            </div>
+            <div class="space-y-2">
+              ${items.map(it => {
+                const passed = it.answer === "YES" || it.answer === "YA";
+                return `
+                  <div class="p-2 sm:p-2.5 rounded-lg ${passed ? "bg-slate-900/40 border border-emerald-900/30" : "bg-rose-950/20 border border-rose-900/40"} transition">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          <span class="text-[11px] font-semibold text-slate-200">${it.title}</span>
+                          <span class="text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold ${passed ? "bg-emerald-950 text-emerald-300 border border-emerald-800" : "bg-rose-950 text-rose-300 border border-rose-800"}">
+                            ${passed ? (isId ? "✓ YA" : "✓ YES") : (isId ? "⚠ TIDAK" : "⚠ NO")}
+                          </span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-0.5">${it.question}</div>
+                        ${it.reason ? `<div class="text-[11px] text-slate-300 mt-1 pl-2 border-l-2 ${passed ? "border-emerald-700/60" : "border-rose-700"}">${it.reason}</div>` : ""}
+                        ${it.offending_text ? `<div class="text-[10px] font-mono text-amber-300 bg-amber-950/40 p-1.5 rounded mt-1.5 border border-amber-900/50"><strong>${isId ? "Kutipan Discrepancy:" : "Discrepancy Passage:"}</strong> "${it.offending_text}"</div>` : ""}
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      };
+
+      const failureTagsHtml = (auditResult.failure_patterns_detected && auditResult.failure_patterns_detected.length > 0)
+        ? `
+          <div class="bg-rose-950/30 border border-rose-800/60 rounded-xl p-3 text-xs space-y-1.5">
+            <span class="font-semibold text-rose-300 flex items-center gap-1">
+              <span>⚠</span> ${isId ? "Pola Kegagalan Terdeteksi (Perlu Diperbaiki):" : "Failure Patterns Detected (Targeted for Rebuild):"}
+            </span>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              ${auditResult.failure_patterns_detected.map(p => `
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-900/50 text-rose-200 border border-rose-700 font-mono">${p}</span>
+              `).join("")}
+            </div>
+          </div>
+        `
+        : "";
+
+      card.innerHTML = `
+        <div class="flex items-center justify-between mb-1 pb-2 border-b border-slate-800 flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🛡️</span>
+            <span class="font-bold text-slate-100 text-sm sm:text-base">${title}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+              ${roundBadge}
+            </span>
+            <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full ${
+              auditResult.all_yes 
+                ? "bg-emerald-950 text-emerald-300 border border-emerald-700" 
+                : "bg-amber-950 text-amber-300 border border-amber-700"
+            }">
+              ${yesCount} / ${totalCount} YES (${Math.round((yesCount / totalCount) * 100)}%)
+            </span>
+          </div>
+        </div>
+
+        <div class="rounded-xl p-3 sm:p-3.5 border ${
+          auditResult.all_yes
+            ? "bg-emerald-950/50 border-emerald-600/70 text-emerald-100"
+            : "bg-amber-950/50 border-amber-600/70 text-amber-100"
+        }">
+          <div class="font-bold text-xs sm:text-sm flex items-center gap-1.5 mb-1">
+            ${bannerTitle}
+          </div>
+          <div class="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+            ${bannerDesc}
+          </div>
+        </div>
+
+        ${failureTagsHtml}
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          ${renderLayerSection(1, isId ? "Lapisan 1: Apa Sumber Ini?" : "Layer 1: What Is This Source?", layer1Items)}
+          ${renderLayerSection(2, isId ? "Lapisan 2: Kesesuaian Klaim & Tangga Verba" : "Layer 2: Claim Match & Verb Ladder", layer2Items)}
+          ${renderLayerSection(3, isId ? "Lapisan 3: Ketahanan Argumen Utuh" : "Layer 3: Whole Argument Integrity", layer3Items)}
+        </div>
+      `;
+
+      outputContainer.appendChild(card);
+    }
+
+    function renderFinalApprovedCard(finalDraft, score, turns, dossier = null, difficulty = "undergraduate", readingType = "literature_review", auditResult = null) {
+      const existing = document.getElementById("finalApprovedCard");
+      if (existing) existing.remove();
+
+      const card = document.createElement("div");
+      card.id = "finalApprovedCard";
       card.className = "bg-gradient-to-b from-cyan-950/40 to-slate-900 border-2 border-cyan-400/80 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl transition";
       const title = currentLang === "id" ? "Hasil Akhir Disetujui" : "Final Polish Approved";
       const copyBtnText = currentLang === "id" ? "📋 Salin Markdown" : "📋 Copy Markdown";
@@ -3872,15 +4220,17 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           turns: turns,
           difficulty: difficulty,
           readingType: readingType,
-          model: modelSelect?.value || "gemini-3.8-flash"
+          model: modelSelect?.value || "gemini-3.8-flash",
+          auditResult: auditResult
         }
       };
 
       card.innerHTML = `
         <div class="flex items-center justify-between mb-2 border-b border-cyan-800/60 pb-3 flex-wrap gap-2">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <span class="text-xl">🏆</span>
             <span class="font-bold text-cyan-300 text-base">${title}</span>
+            ${auditResult?.all_yes ? `<span id="finalIntegrityBadge" class="text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-700 px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1 shadow-sm">🛡️ 100% Publication Integrity Verified</span>` : ""}
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <button id="copyArtifactBtn" class="text-xs bg-cyan-950/70 hover:bg-cyan-900 text-cyan-200 border border-cyan-700 px-3 py-1.5 rounded-lg transition">
@@ -3901,6 +4251,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           <span>${turnsLabel} <strong class="text-slate-200 font-mono">${turns} ${turnsUnit}</strong></span>
           <span class="text-[11px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">🎯 ${getDifficultyLabel(difficulty, currentLang === "id")}</span>
           <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800">📚 ${getReadingTypeLabel(readingType, currentLang === "id")}</span>
+          ${auditResult?.all_yes ? `<span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800">🛡️ source-checking-guide: 11/11 YES</span>` : ""}
         </div>
         ${createReadingToolbarHtml("final-approved")}
         <div class="markdown-body text-slate-100 text-sm">
@@ -4042,19 +4393,52 @@ You MUST respond ONLY with valid JSON conforming to this schema:
           renderCriticCard(turn, latestCritique, targetScore);
 
           const isApproved = latestCritique.score >= targetScore;
+          const shouldFinalize = (isApproved && !forceAllTurns) || (turn === maxTurns);
 
-          // Check whether to stop early or continue
-          if (isApproved && !forceAllTurns) {
+          if (shouldFinalize) {
+            let auditResult = null;
+            const strictSourceAudit = document.getElementById("strictSourceAuditCheck")?.checked ?? true;
+            if (strictSourceAudit) {
+              let auditTurn = 1;
+              const maxAuditTurns = 3;
+              while (auditTurn <= maxAuditTurns) {
+                statusText.textContent = currentLang === "id"
+                  ? `🛡️ Putaran Audit Integritas ${auditTurn}: Menilai naskah berdasarkan Panduan Integritas Publikasi 3-Lapisan (source-checking-guide.md)...`
+                  : `🛡️ Integrity Audit Round ${auditTurn}: Evaluating draft against 3-Layer Publication Integrity Guide (source-checking-guide.md)...`;
+                
+                auditResult = await runSourceCheckingAudit(apiKey, topic, currentDraft, selectedModel, selectedThinking, scholarlyDossier);
+                renderSourceAuditCard(auditResult, auditTurn);
+
+                if (auditResult.all_yes) {
+                  statusText.textContent = currentLang === "id"
+                    ? `🛡️ 100% Lolos Integritas Publikasi! Seluruh 11 kriteria panduan terjawab YA.`
+                    : `🛡️ 100% Publication Integrity Clearance! All 11 guide criteria answered YES.`;
+                  break;
+                } else {
+                  if (auditTurn < maxAuditTurns) {
+                    const failCount = (auditResult.items || []).filter(i => i.answer === "NO").length || (auditResult.discrepancies?.length || 1);
+                    statusText.textContent = currentLang === "id"
+                      ? `🛡️ Ditemukan ${failCount} ketidaksesuaian integritas. Agen Penulis sedang menyusun ulang teks (Putaran Audit ${auditTurn + 1})...`
+                      : `🛡️ Integrity discrepancies detected (${failCount} items). Writer Agent is rebuilding text (Audit Round ${auditTurn + 1})...`;
+                    
+                    currentDraft = await runWriterIntegrityRevision(apiKey, topic, currentDraft, auditResult, auditTurn, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier, selectedDifficulty, selectedReadingType);
+                    renderWriterCard(`Integrity-Rev-${auditTurn}`, currentDraft, scholarlyDossier);
+                    auditTurn++;
+                  } else {
+                    statusText.textContent = currentLang === "id"
+                      ? `Menyelesaikan putaran audit integritas maksimum (${maxAuditTurns}).`
+                      : `Completed maximum integrity audit rounds (${maxAuditTurns}).`;
+                    break;
+                  }
+                }
+              }
+            }
+
             statusText.textContent = currentLang === "id"
-              ? `Disetujui! Skor Pengkritik ${latestCritique.score.toFixed(1)} mencapai target ${targetScore.toFixed(1)}.`
-              : `Approved! Critic score ${latestCritique.score.toFixed(1)} reached target ${targetScore.toFixed(1)}.`;
-            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier, selectedDifficulty, selectedReadingType);
+              ? `Selesai! Draf telah dipoles & diverifikasi (Skor Pengkritik: ${latestCritique.score.toFixed(1)}${auditResult?.all_yes ? " • 🛡️ 100% Integritas Terverifikasi" : ""}).`
+              : `Completed! Draft polished & verified (Critic score: ${latestCritique.score.toFixed(1)}${auditResult?.all_yes ? " • 🛡️ 100% Integrity Verified" : ""}).`;
+            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier, selectedDifficulty, selectedReadingType, auditResult);
             break;
-          } else if (turn === maxTurns) {
-            statusText.textContent = currentLang === "id"
-              ? `Menyelesaikan seluruh ${maxTurns} putaran (Skor akhir: ${latestCritique.score.toFixed(1)}).`
-              : `Completed all ${maxTurns} iterations (Final score: ${latestCritique.score.toFixed(1)}).`;
-            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier, selectedDifficulty, selectedReadingType);
           } else if (isApproved && forceAllTurns) {
             statusText.textContent = currentLang === "id"
               ? `Putaran ${turn} bernilai ${latestCritique.score.toFixed(1)} (>= ${targetScore.toFixed(1)}), lanjut ke putaran berikutnya (Mode paksa aktif)...`

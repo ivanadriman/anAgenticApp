@@ -269,6 +269,54 @@ class CritiqueResult(BaseModel):
 
 In the browser implementation (`index.html`), structured JSON is returned and parsed with regex fences stripped (`clean.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "")`).
 
+### 4. Publication Integrity Auditor Agent Architecture (`source-checking-guide.md`)
+
+Operating as the final gateway before document release, the **Publication Integrity Auditor Agent** evaluates the draft strictly against [`.agents/rules/source-checking-guide.md`](.agents/rules/source-checking-guide.md):
+
+```python
+class SourceAuditItem(BaseModel):
+    id: str = Field(description="Unique criterion ID from source-checking-guide.md")
+    layer: int = Field(description="Layer 1, 2, or 3")
+    title: str = Field(description="Short human-readable title")
+    question: str = Field(description="Audit question from guide")
+    answer: str = Field(description="'YES' or 'NO'")
+    reason: str = Field(description="Diagnostic justification and evidence")
+    offending_text: Optional[str] = Field(default="", description="Offending passage or citation snippet if NO, else empty")
+
+
+class SourceAuditResult(BaseModel):
+    all_yes: bool = Field(description="True ONLY if all 11 criteria are 'YES'")
+    overall_verdict: str = Field(description="'APPROVED_INTEGRITY_CLEARANCE' or 'DISCREPANCIES_DETECTED'")
+    score_percentage: float = Field(description="Percentage of passed criteria (0 to 100)")
+    failure_patterns_detected: list[str] = Field(default_factory=list, description="List of detected failure patterns from the 7 guide patterns")
+    discrepancies: list[str] = Field(default_factory=list, description="Actionable revision directives to achieve YES")
+    items: list[SourceAuditItem] = Field(description="11 individual audit results across the 3 layers")
+```
+
+#### The 11 Criteria Across 3 Layers:
+1. **Layer 1: What Is This Source?**
+   - `layer1_source_type_appropriate`: Does source type justify claim level? (Theory paper justifies hypothesis, preprint not peer reviewed).
+   - `layer1_metadata_matches`: Do authors, journal, year, and DOI strictly match actual published records?
+   - `layer1_independent_sources`: Are sources genuinely independent rather than citing the same study?
+2. **Layer 2: Does the Source Support This Specific Claim?**
+   - `layer2_exact_construct_match`: Exact target construct match without adjacent-construct substitution.
+   - `layer2_finding_not_framing`: Cited passages are empirical findings, not introductory framing or background assumptions.
+   - `layer2_verb_ladder_justified`: Research design justifies verb used (cross-sectional -> associative only, randomized experiment -> causal bounded).
+   - `layer2_sample_scope_accurate`: Scope strictly bounded to sample studied (no scope inflation to all humans).
+   - `layer2_context_and_quote_integrity`: Quotation does evidentiary work and matches surrounding context.
+3. **Layer 3: Does the Whole Argument Hold?**
+   - `layer3_no_uncited_author_leaps`: Argument links are evidence-backed with zero uncited author leaps.
+   - `layer3_rival_explanations_acknowledged`: Alternative hypotheses, caveats, and rival explanations acknowledged.
+   - `layer3_bounded_conclusion`: Conclusion does not claim more than the strongest single premise.
+
+### 5. Self-Correcting Rebuild Loop Mechanics
+
+When `all_yes == False`:
+1. The Auditor passes `discrepancies`, `failure_patterns_detected`, and the specific `offending_text` snippets to `runWriterIntegrityRevision()` (browser) or `run_audit_revision()` (CLI).
+2. The Writer Agent recalibrates causal verbs, bounds demographic scope, removes uncited leaps, and returns an updated full draft.
+3. The rebuilt draft is re-audited.
+4. The loop terminates when `all_yes == True` (achieving 100% publication clearance) or upon hitting the safety ceiling (`maxAuditTurns = 3`).
+
 ---
 
 ## 🚦 Client-Side Quota Probing System

@@ -47,6 +47,25 @@ class CritiqueResult(BaseModel):
     actionable_revisions: list[str] = Field(description="Clear, numbered instructions for the writer to improve the next draft")
 
 
+class SourceAuditItem(BaseModel):
+    id: str = Field(description="Unique criterion ID from source-checking-guide.md")
+    layer: int = Field(description="Layer 1, 2, or 3")
+    title: str = Field(description="Short human-readable title")
+    question: str = Field(description="Audit question from guide")
+    answer: str = Field(description="'YES' or 'NO'")
+    reason: str = Field(description="Diagnostic justification and evidence")
+    offending_text: Optional[str] = Field(default="", description="Offending passage or citation snippet if NO, else empty")
+
+
+class SourceAuditResult(BaseModel):
+    all_yes: bool = Field(description="True ONLY if all 11 criteria are 'YES'")
+    overall_verdict: str = Field(description="'APPROVED_INTEGRITY_CLEARANCE' or 'DISCREPANCIES_DETECTED'")
+    score_percentage: float = Field(description="Percentage of passed criteria (0 to 100)")
+    failure_patterns_detected: list[str] = Field(default_factory=list, description="List of detected failure patterns from the 7 guide patterns")
+    discrepancies: list[str] = Field(default_factory=list, description="Actionable revision directives to achieve YES")
+    items: list[SourceAuditItem] = Field(description="11 individual audit results across the 3 layers")
+
+
 # ==============================================================================
 # Scholarly Grounding & Document Reading Helpers
 # ==============================================================================
@@ -887,6 +906,198 @@ Analyze the draft thoroughly and output your evaluation as a valid JSON object o
     return CritiqueResult(**data)
 
 
+def run_source_audit(topic: str, draft: str, dossier_text: str = "", model: str = DEFAULT_MODEL, thinking_level: str = "medium", lang: str = "en") -> SourceAuditResult:
+    """Publication Integrity Auditor Agent based strictly on .agents/rules/source-checking-guide.md."""
+    is_id = (lang == "id")
+    system_prompt = (
+        "You are the Publication Integrity Auditor Agent operating under the strict, uncompromising rules of '.agents/rules/source-checking-guide.md'. "
+        "Your mission is to enforce 100% publication and understanding integrity across 3 layers and 11 binary criteria.\n\n"
+        "CRITICAL FAILURE PATTERNS TO ELIMINATE:\n"
+        "1. Adjacent-construct substitution: The source studies something related, but text treats it as the target construct.\n"
+        "2. Correlation-to-causation drift: Correlational/observational data described with causal verbs ('causes', 'drives', 'reduces') instead of associative verbs ('is associated with', 'relates to').\n"
+        "3. Framing-as-finding: An introduction's assumption or hypothesis cited as an empirical finding.\n"
+        "4. Scope inflation: A finding on a specific sample inflated into statements about 'all humans' or 'modern societies'.\n"
+        "5. Orphaned quotation: A quotation is accurate, but the sentence or claim it sits under is not supported by the paper.\n"
+        "6. Citation laundering: Weak, secondary sources placed among strong peer-reviewed sources borrowing credibility.\n"
+        "7. Mismatched or fabricated metadata: Authors, journal, year, or DOIs that do not match the real papers.\n\n"
+        "THE VERB LADDER RULES (Strictly enforce design vs verb match):\n"
+        "- Cross-sectional survey: ONLY 'is associated with', 'relates to'. NEVER 'causes', 'drives', 'reduces'.\n"
+        "- Longitudinal / cohort trend: 'precedes', 'coincides with', 'predicts'. NOT 'produces' without ruling out confounds.\n"
+        "- Statistical mediation on correlational data: 'is consistent with a pathway through'. NOT 'works through', 'directly mitigates'.\n"
+        "- Randomized experiment: 'causes', 'increases', 'reduces' (in that setting, bounded generalization).\n"
+        "- Meta-analysis: Average pooled associations or effects. NOT mechanism unless tested.\n"
+        "- Theory / conceptual paper: 'proposes', 'argues', 'hypothesizes'. NOT 'shows', 'demonstrates'.\n\n"
+        "THE 11 MANDATORY BINARY QUESTIONS (Each MUST be answered 'YES' or 'NO'):\n"
+        "Layer 1: What Is This Source?\n"
+        "1. layer1_source_type_appropriate: Does the source type (study, meta-analysis, review, theory, preprint) justify the claim level?\n"
+        "2. layer1_metadata_matches: Do authors, journal/venue, year, and DOI/URL match actual papers?\n"
+        "3. layer1_independent_sources: Are sources genuinely independent rather than citing or resting on the same underlying work?\n\n"
+        "Layer 2: Does the Source Support This Specific Claim?\n"
+        "4. layer2_exact_construct_match: Does each citation measure or discuss the exact target construct claimed, without adjacent-construct substitution?\n"
+        "5. layer2_finding_not_framing: Is the cited passage the paper's empirical finding/result, and NOT an introductory background assumption or motivating hypothesis?\n"
+        "6. layer2_verb_ladder_justified: Does the study design strictly justify the verb used under the Verb Ladder?\n"
+        "7. layer2_sample_scope_accurate: Is the claim strictly bounded by who or what was studied, with zero scope inflation?\n"
+        "8. layer2_context_and_quote_integrity: Does the source say the same thing in context, and are all quotations doing real evidentiary work rather than ornamental or orphaned?\n\n"
+        "Layer 3: Does the Whole Argument Hold?\n"
+        "9. layer3_no_uncited_author_leaps: Are all steps in the argument evidence-based, with zero author-supplied inferential leaps disguised as cited facts?\n"
+        "10. layer3_rival_explanations_acknowledged: Are alternative mechanisms, caveats, and rival explanations acknowledged rather than asserted as exclusive?\n"
+        "11. layer3_bounded_conclusion: Does the conclusion refrain from claiming more than the single best-supported premise or source?\n\n"
+        "You MUST respond ONLY with valid JSON conforming to this schema:\n"
+        "{\n"
+        '  "all_yes": boolean,\n'
+        '  "overall_verdict": "APPROVED_INTEGRITY_CLEARANCE" | "DISCREPANCIES_DETECTED",\n'
+        '  "score_percentage": float,\n'
+        '  "failure_patterns_detected": ["string", ...],\n'
+        '  "discrepancies": ["string", ...],\n'
+        '  "items": [\n'
+        '    {"id": "layer1_source_type_appropriate", "layer": 1, "title": "Source Type Ceiling", "question": "Does source type justify claim level?", "answer": "YES" | "NO", "reason": "...", "offending_text": "..."},\n'
+        "    ...\n"
+        "  ]\n"
+        "}"
+    )
+
+    prompt = f"Goal / Topic: {topic}\n\nDraft to Audit:\n\"\"\"\n{draft}\n\"\"\"\n"
+    if dossier_text:
+        prompt += f"\nGrounding Dossier Reference:\n{dossier_text}\n"
+    prompt += "\nPerform the rigorous 11-question 3-layer audit and output valid JSON ONLY."
+
+    response = client.interactions.create(
+        model=model,
+        system_instruction=system_prompt,
+        input=prompt,
+        generation_config={"thinking_level": thinking_level}
+    )
+
+    raw_text = response.output_text or ""
+    cleaned = raw_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    try:
+        data = json.loads(cleaned)
+    except Exception:
+        match = re.search(r"\{[\s\S]*\}", cleaned)
+        if match:
+            data = json.loads(match.group(0))
+        else:
+            data = {"all_yes": False, "overall_verdict": "DISCREPANCIES_DETECTED", "score_percentage": 0.0, "failure_patterns_detected": [], "discrepancies": ["JSON parsing failed"], "items": []}
+
+    default_defs = [
+        {"id": "layer1_source_type_appropriate", "layer": 1, "title": "Plafon Tipe Sumber" if is_id else "Source Type Ceiling", "question": "Apakah tipe sumber membenarkan klaim?" if is_id else "Does source type justify claim level?", "reason": "Tipe sumber membenarkan tingkat klaim ilmiah." if is_id else "Source types justify claim levels."},
+        {"id": "layer1_metadata_matches", "layer": 1, "title": "Verifikasi Metadata" if is_id else "Metadata Verification", "question": "Apakah penulis, jurnal, tahun, dan DOI cocok?" if is_id else "Do authors, journal, year, and DOI match actual publications?", "reason": "Metadata publikasi valid dan cocok." if is_id else "Metadata matches published papers."},
+        {"id": "layer1_independent_sources", "layer": 1, "title": "Independensi Sumber" if is_id else "Source Independence", "question": "Apakah sumber-sumber independen satu sama lain?" if is_id else "Are sources genuinely independent?", "reason": "Sumber-sumber berdiri secara independen." if is_id else "Independent lines of evidence cited."},
+        {"id": "layer2_exact_construct_match", "layer": 2, "title": "Kesesuaian Konstruk Persis" if is_id else "Exact Construct Match", "question": "Apakah studi mengukur konstruk yang diklaim persis?" if is_id else "Does study measure exact claimed construct?", "reason": "Konstruk yang dibahas persis dengan yang diuji." if is_id else "Exact construct match maintained without substitution."},
+        {"id": "layer2_finding_not_framing", "layer": 2, "title": "Temuan vs. Framing" if is_id else "Finding vs. Framing", "question": "Apakah kutipan merupakan temuan empiris, bukan asumsi pengantar?" if is_id else "Is cited passage empirical finding, not introductory framing?", "reason": "Kutipan merefleksikan temuan empiris hasil studi." if is_id else "Evidentiary claims rest on empirical findings."},
+        {"id": "layer2_verb_ladder_justified", "layer": 2, "title": "Tangga Kata Kerja (Verb Ladder)" if is_id else "Verb Ladder Compliance", "question": "Apakah desain riset membenarkan kata kerja klaim?" if is_id else "Does research design justify verb used?", "reason": "Kekuatan kata kerja selaras dengan desain riset." if is_id else "Verbs strictly calibrated to research design."},
+        {"id": "layer2_sample_scope_accurate", "layer": 2, "title": "Batasan Sampel & Cakupan" if is_id else "Sample & Scope Bounds", "question": "Apakah cakupan terikat pada sampel yang diteliti?" if is_id else "Is scope strictly bounded to studied sample?", "reason": "Cakupan klaim terikat pada sampel studi." if is_id else "Claims accurately bounded to studied populations."},
+        {"id": "layer2_context_and_quote_integrity", "layer": 2, "title": "Integritas Konteks & Kutipan" if is_id else "Quote & Context Integrity", "question": "Apakah kutipan sesuai konteks dan bermakna pembuktian?" if is_id else "Does quote match context and do evidentiary work?", "reason": "Kutipan berfungsi membuktikan klaim dalam konteks aslinya." if is_id else "Quotes do evidentiary work and preserve context."},
+        {"id": "layer3_no_uncited_author_leaps", "layer": 3, "title": "Tanpa Lompatan Tanpa Sitasi" if is_id else "No Uncited Author Leaps", "question": "Apakah seluruh mata rantai argumen berbasis bukti?" if is_id else "Are all argument steps evidence-based?", "reason": "Tidak ada inferensi tanpa bukti yang disamarkan sebagai fakta." if is_id else "All inferential steps are grounded in evidence."},
+        {"id": "layer3_rival_explanations_acknowledged", "layer": 3, "title": "Eksplanasi Saingan & Sanggahan" if is_id else "Rival Explanations & Caveats", "question": "Apakah penjelasan alternatif & keterbatasan diakui?" if is_id else "Are alternative mechanisms and caveats acknowledged?", "reason": "Mekanisme alternatif dan batasan riset diakui." if is_id else "Alternative hypotheses and caveats acknowledged."},
+        {"id": "layer3_bounded_conclusion", "layer": 3, "title": "Kesimpulan Terikat Batas" if is_id else "Bounded Conclusion", "question": "Apakah kesimpulan tidak melebihi premis terkuatnya?" if is_id else "Does conclusion refrain from exceeding strongest premise?", "reason": "Kesimpulan akhir seimbang dan tidak berlebihan." if is_id else "Conclusion stays within empirical boundaries."}
+    ]
+
+    items_list = []
+    for def_item in default_defs:
+        found = next((it for it in data.get("items", []) if it.get("id") == def_item["id"]), None)
+        if found:
+            ans = str(found.get("answer", "YES")).strip().upper()
+            answer_norm = "YES" if (ans == "YES" or ans == "YA") else "NO"
+            items_list.append(SourceAuditItem(
+                id=def_item["id"],
+                layer=def_item["layer"],
+                title=found.get("title", def_item["title"]),
+                question=found.get("question", def_item["question"]),
+                answer=answer_norm,
+                reason=found.get("reason", def_item["reason"]),
+                offending_text=found.get("offending_text", "")
+            ))
+        else:
+            items_list.append(SourceAuditItem(
+                id=def_item["id"],
+                layer=def_item["layer"],
+                title=def_item["title"],
+                question=def_item["question"],
+                answer="YES",
+                reason=def_item["reason"],
+                offending_text=""
+            ))
+
+    all_yes = all(it.answer == "YES" for it in items_list)
+    yes_count = sum(1 for it in items_list if it.answer == "YES")
+    score_pct = round((yes_count / len(items_list)) * 100.0, 1)
+
+    return SourceAuditResult(
+        all_yes=all_yes,
+        overall_verdict="APPROVED_INTEGRITY_CLEARANCE" if all_yes else "DISCREPANCIES_DETECTED",
+        score_percentage=score_pct,
+        failure_patterns_detected=data.get("failure_patterns_detected", []),
+        discrepancies=data.get("discrepancies", []),
+        items=items_list
+    )
+
+
+def run_audit_revision(topic: str, draft: str, audit: SourceAuditResult, round_num: int, dossier_text: str = "", model: str = DEFAULT_MODEL, thinking_level: str = "medium", lang: str = "en", difficulty: str = "undergraduate", reading_type: str = "literature_review") -> str:
+    """Writer Agent rebuilds the draft until all 11 source-checking-guide.md criteria achieve YES."""
+    system_prompt = (
+        "You are an expert Writer Agent tasked with an UNCOMPROMISING PUBLICATION INTEGRITY REBUILD under '.agents/rules/source-checking-guide.md'.\n"
+        "Your mission: Completely resolve every 'NO' evaluation from the Publication Integrity Auditor Agent, rewriting and refining the draft until ALL 11 questions achieve 'YES'.\n\n"
+        "CRITICAL RULES TO ACHIEVE 100% 'YES':\n"
+        "1. VERB LADDER COMPLIANCE: Downgrade causal verbs ('causes', 'drives', 'reduces') to associative verbs ('is associated with', 'relates to', 'correlates with') for cross-sectional data.\n"
+        "2. ELIMINATE SCOPE INFLATION: Bound claims to studied samples (e.g. 'among undergraduate cohorts', 'in adult clinical trials'); do not claim 'all humans' or 'modern societies'.\n"
+        "3. ELIMINATE FRAMING-AS-FINDING: Mark theoretical background or hypotheses as 'hypothesized by', NOT 'proven' or 'demonstrated'.\n"
+        "4. ELIMINATE ADJACENT-CONSTRUCT SUBSTITUTION: Ensure the target construct matches the measured construct exactly.\n"
+        "5. REMOVE UNCITED AUTHOR LEAPS: Provide scholarly grounding for every link or label inferences as theoretical discussion.\n"
+        "6. ACKNOWLEDGE RIVAL EXPLANATIONS: Add caveats and alternative mechanisms.\n"
+        "7. BOUNDED CONCLUSIONS: Ensure the conclusion does not exceed the strongest premise.\n"
+        "8. PRESERVE VERBATIM QUOTES & REFERENCES: Keep exact quotes \"... ...\" [n] and numbered reference list with clickable links [🔗 Open Paper / Buka Makalah](url)."
+    )
+    if lang == "id":
+        system_prompt += "\n\nPANDUAN BAHASA:\nSempurnakan dan susun ulang seluruh naskah dalam BAHASA INDONESIA yang ilmiah, presisi, dan sesuai aturan integritas di atas.\n"
+
+    diff_guide = DIFFICULTY_GUIDELINES.get(difficulty, DIFFICULTY_GUIDELINES["undergraduate"]).get(lang, "undergraduate")
+    type_guide = READING_TYPE_GUIDELINES.get(reading_type, READING_TYPE_GUIDELINES["literature_review"]).get(lang, "literature_review")
+    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}"
+
+    no_items = [it for it in audit.items if it.answer == "NO"]
+    no_desc = "\n".join(f"- [Layer {it.layer} - {it.title}]: {it.reason}" + (f' (Offending passage: "{it.offending_text}")' if it.offending_text else "") for it in no_items)
+    discrepancies_desc = "\n".join(f"- {d}" for d in audit.discrepancies)
+    failures_desc = "\n".join(f"- {f}" for f in audit.failure_patterns_detected)
+
+    prompt = f"""Original Goal / Topic: {topic}
+Integrity Audit Round: {round_num}
+
+DISCREPANCIES DETECTED BY AUDITOR AGENT (Must be resolved to achieve YES):
+{discrepancies_desc or no_desc}
+
+DETECTED FAILURE PATTERNS:
+{failures_desc or "None"}
+
+SPECIFIC FAILING CRITERIA:
+{no_desc}
+
+PREVIOUS DRAFT TO REBUILD:
+\"\"\"
+{draft}
+\"\"\"
+"""
+    if dossier_text:
+        prompt += f"\nResearch Dossier Reference:\n{dossier_text}\n"
+
+    if lang == "id":
+        prompt += "\nSilakan tulis ulang dan susun naskah lengkap (Full Rebuilt Draft) dalam Bahasa Indonesia. Perbaiki seluruh kelemahan di atas agar seluruh 11 kriteria terjawab 'YA' pada audit berikutnya, tetap pertahankan kutipan \"... ...\" [n] dan daftar referensi bernomor di akhir lengkap dengan tautan [🔗 Buka Makalah](url)."
+    else:
+        prompt += "\nPlease rebuild the complete draft in full Markdown. Resolve every single discrepancy above so that all 11 criteria achieve 'YES' on the next audit round. Maintain exact quotes \"... ...\" [n] and the clickable references list at the end [🔗 Open Paper](url)."
+
+    response = client.interactions.create(
+        model=model,
+        system_instruction=system_prompt,
+        input=prompt,
+        generation_config={"thinking_level": thinking_level}
+    )
+    return response.output_text or ""
+
+
 def enrich_references_with_links(draft_text: str, citations: List[Dict[str, Any]], lang: str = "en") -> str:
     """Ensure all entries in ## 📚 References & Cited Sources provide clean, clickable markdown links."""
     if not draft_text:
@@ -946,7 +1157,8 @@ def orchestrate_pipeline(
     doc_path: Optional[str] = None,
     lang: str = "en",
     difficulty: str = "undergraduate",
-    reading_type: str = "literature_review"
+    reading_type: str = "literature_review",
+    enforce_source_guide: bool = True
 ) -> dict:
     """Coordinates the interaction loop between Writer and Critic."""
     search_label = " (🌐 Web Search Enabled)" if web_search else ""
@@ -1029,6 +1241,60 @@ def orchestrate_pipeline(
         elif turn == max_turns:
             console.print(f"\n[bold yellow]Reached maximum limit of {max_turns} iterations.[/bold yellow]\n")
 
+    # Step 3: Publication Integrity Audit & Self-Correction Refinement Loop (source-checking-guide.md)
+    latest_audit: Optional[SourceAuditResult] = None
+    if enforce_source_guide:
+        console.rule("[bold cyan]🛡️ 3-Layer Publication Integrity Audit (source-checking-guide.md)[/bold cyan]")
+        audit_turn = 1
+        max_audit_turns = 3
+        while audit_turn <= max_audit_turns:
+            console.print(f"[cyan]>>> Running Publication Integrity Audit (Round {audit_turn}/{max_audit_turns})...[/cyan]")
+            latest_audit = run_source_audit(
+                topic=topic,
+                draft=current_draft,
+                dossier_text=dossier_text,
+                model=model,
+                thinking_level=thinking_level,
+                lang=lang
+            )
+
+            # Display Rich Audit Table
+            audit_table = Table(title=f"🛡️ Publication Integrity Audit Log (Round {audit_turn})", show_header=True, header_style="bold cyan")
+            audit_table.add_column("Layer", style="dim", width=8)
+            audit_table.add_column("Criterion", width=28)
+            audit_table.add_column("Status", width=12)
+            audit_table.add_column("Diagnostic Evidence", style="dim")
+
+            for it in latest_audit.items:
+                status_str = "[bold green]✓ YES[/bold green]" if it.answer == "YES" else "[bold red]⚠ NO[/bold red]"
+                audit_table.add_row(f"Layer {it.layer}", it.title, status_str, it.reason)
+            console.print(audit_table)
+
+            if latest_audit.all_yes:
+                console.print(Panel("[bold green]🛡️ 100% Publication & Understanding Integrity Clearance — All 11 Criteria Answered YES![/bold green]", border_style="bright_green"))
+                break
+            else:
+                if audit_turn < max_audit_turns:
+                    failing_count = len([it for it in latest_audit.items if it.answer == "NO"])
+                    console.print(f"[bold yellow]⚠ Integrity Discrepancies Detected ({failing_count} criteria answered NO). Rebuilding text with Writer Agent (Audit Round {audit_turn + 1})...[/bold yellow]")
+                    current_draft = run_audit_revision(
+                        topic=topic,
+                        draft=current_draft,
+                        audit=latest_audit,
+                        round_num=audit_turn,
+                        dossier_text=dossier_text,
+                        model=model,
+                        thinking_level=thinking_level,
+                        lang=lang,
+                        difficulty=difficulty,
+                        reading_type=reading_type
+                    )
+                    current_draft = enrich_references_with_links(current_draft, citations, lang=lang)
+                    audit_turn += 1
+                else:
+                    console.print(f"[bold yellow]Reached maximum audit limit ({max_audit_turns} rounds).[/bold yellow]")
+                    break
+
     # Save to output file
     os.makedirs("output", exist_ok=True)
     slug = re.sub(r"[^a-zA-Z0-9]+", "_", topic.strip().lower())[:40].strip("_")
@@ -1044,6 +1310,8 @@ def orchestrate_pipeline(
         f.write(f"**Web Search:** `{'Enabled' if web_search else 'Disabled'}`\n")
         if citations:
             f.write(f"**Academic Grounding Sources:** `{len(citations)} source(s) active`\n")
+        if latest_audit:
+            f.write(f"**Publication Integrity Clearance:** `{'100% Verified (11/11 YES)' if latest_audit.all_yes else f'{latest_audit.score_percentage}% YES'}`\n")
         f.write(f"**Final Score:** {latest_critique.score:.1f}/10.0\n")
         f.write(f"**Total Iterations:** {len(history)}\n\n")
         f.write("## Content\n\n")
@@ -1056,18 +1324,28 @@ def orchestrate_pipeline(
             for item in h["actionable_revisions"]:
                 f.write(f"- {item}\n")
             f.write("\n")
+        if latest_audit:
+            f.write("\n---\n## 🛡️ Publication Integrity Audit Report (source-checking-guide.md)\n\n")
+            f.write(f"**Overall Verdict:** `{latest_audit.overall_verdict}`  \n")
+            f.write(f"**Clearance Score:** `{latest_audit.score_percentage}%`  \n\n")
+            f.write("| Layer | Criterion | Status | Diagnostic Evidence |\n")
+            f.write("|---|---|---|---|\n")
+            for it in latest_audit.items:
+                f.write(f"| Layer {it.layer} | {it.title} | `{it.answer}` | {it.reason} |\n")
+            f.write("\n")
 
     console.print(Panel(f"[bold cyan]Artifact saved successfully:[/bold cyan] {filename}", border_style="cyan"))
     return {
         "final_draft": current_draft,
         "score": latest_critique.score,
         "history": history,
+        "audit": latest_audit.model_dump() if latest_audit else None,
         "saved_path": filename
     }
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Two-Agent Writer & Critic pipeline with Academic Grounding")
+    parser = argparse.ArgumentParser(description="Two-Agent Writer & Critic pipeline with Academic Grounding and Publication Integrity Audit")
     parser.add_argument("--topic", type=str, default="Speech perception", help="Prompt or topic for content")
     parser.add_argument("--lang", choices=["en", "id"], default="en", help="Language mode: en (English) or id (Bahasa Indonesia)")
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL, choices=["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview", "gemini-flash-latest"], help="Gemini model to use")
@@ -1084,6 +1362,8 @@ if __name__ == "__main__":
     parser.add_argument("--doc", type=str, default=None, help="Path to local PDF or text document to ground in")
     parser.add_argument("--max-turns", type=int, default=2, help="Maximum number of refinement iterations")
     parser.add_argument("--target-score", type=float, default=8.5, help="Score threshold for approval (1-10)")
+    parser.add_argument("--enforce-source-guide", action="store_true", default=True, help="Enforce 3-layer publication integrity check from source-checking-guide.md")
+    parser.add_argument("--no-enforce-source-guide", dest="enforce_source_guide", action="store_false", help="Disable publication integrity audit")
 
     args = parser.parse_args()
     orchestrate_pipeline(
@@ -1102,5 +1382,6 @@ if __name__ == "__main__":
         doc_path=args.doc,
         lang=args.lang,
         difficulty=args.difficulty,
-        reading_type=args.reading_type
+        reading_type=args.reading_type,
+        enforce_source_guide=args.enforce_source_guide
     )

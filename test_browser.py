@@ -588,6 +588,125 @@ def run_browser_tests():
         time.sleep(0.3)
         print("  ✓ Focus Reading Mode export buttons verified successfully!", flush=True)
 
+        # -------------------------------------------------------------
+        # Test Case 10: Publication Integrity Auditor Agent (source-checking-guide.md)
+        # -------------------------------------------------------------
+        print("\n--- Test Case 10: Publication Integrity Auditor Agent (source-checking-guide.md) ---", flush=True)
+
+        audit_checkbox = page.locator("#strictSourceAuditCheck")
+        audit_label = page.locator("#strictSourceAuditLabel")
+
+        assert audit_checkbox.count() > 0, "Missing #strictSourceAuditCheck checkbox"
+        assert audit_checkbox.is_checked(), "Expected #strictSourceAuditCheck to be checked by default"
+        print("  ✓ #strictSourceAuditCheck exists and is checked by default", flush=True)
+
+        # 1. Switch to EN and verify i18n label in EN
+        btn_en.click()
+        time.sleep(0.3)
+        en_audit_text = audit_label.text_content().strip()
+        print(f"  • Audit Label (EN): '{en_audit_text}'", flush=True)
+        assert "Strict Publication Integrity Audit" in en_audit_text
+        assert "source-checking-guide" in en_audit_text
+
+        # 2. Verify i18n switch to ID
+        btn_id.click()
+        time.sleep(0.3)
+        id_audit_text = audit_label.text_content().strip()
+        print(f"  • Audit Label (ID): '{id_audit_text}'", flush=True)
+        assert "Audit Ketat Integritas Publikasi" in id_audit_text
+        assert "source-checking-guide" in id_audit_text
+
+        # Switch back to EN
+        btn_en.click()
+        time.sleep(0.3)
+
+        # 3. Simulate and Verify Integrity Audit Discrepancy Round Rendering
+        print("  • Rendering Round 1 Audit Card with detected discrepancies...", flush=True)
+        page.evaluate("""() => {
+            const sampleDiscrepancyAudit = {
+                all_yes: false,
+                overall_verdict: "DISCREPANCIES_DETECTED",
+                score_percentage: 82.0,
+                failure_patterns_detected: [
+                    "Correlation-to-causation drift",
+                    "Scope inflation"
+                ],
+                discrepancies: [
+                    "Citation [2] uses causal verb 'drives' on cross-sectional data. Downgrade to 'is associated with' per Verb Ladder.",
+                    "Citation [3] claims findings apply to 'all modern societies' when sample was only 120 college undergraduates. Restrict claim scope."
+                ],
+                items: [
+                    { id: "layer1_source_type_appropriate", layer: 1, title: "Source Type Ceiling", question: "Does source type justify claim level?", answer: "YES", reason: "Peer-reviewed journal articles cite empirical findings appropriately.", offending_text: "" },
+                    { id: "layer1_metadata_matches", layer: 1, title: "Metadata Verification", question: "Do authors, journal, year, and DOI match actual publications?", answer: "YES", reason: "DOI and authors match published records.", offending_text: "" },
+                    { id: "layer1_independent_sources", layer: 1, title: "Source Independence", question: "Are sources genuinely independent?", answer: "YES", reason: "Sources trace to distinct independent lab groups.", offending_text: "" },
+                    { id: "layer2_exact_construct_match", layer: 2, title: "Exact Construct Match", question: "Does study measure the exact claimed construct?", answer: "YES", reason: "Construct of categorical speech perception tested directly.", offending_text: "" },
+                    { id: "layer2_finding_not_framing", layer: 2, title: "Finding vs. Framing", question: "Is cited passage empirical finding, not introductory framing?", answer: "YES", reason: "Quotations are drawn from results section.", offending_text: "" },
+                    { id: "layer2_verb_ladder_justified", layer: 2, title: "Verb Ladder Compliance", question: "Does research design justify the verb used?", answer: "NO", reason: "Cross-sectional survey described with causal verb 'drives' instead of associative 'is associated with'.", offending_text: "speech processing speed directly drives syntactic parsing efficiency" },
+                    { id: "layer2_sample_scope_accurate", layer: 2, title: "Sample & Scope Bounds", question: "Is scope strictly bounded to studied sample?", answer: "NO", reason: "Sample of 120 undergraduates generalized to 'all humans in modern societies'.", offending_text: "demonstrating that all humans process syntax identically" },
+                    { id: "layer2_context_and_quote_integrity", layer: 2, title: "Quote & Context Integrity", question: "Does quote match context and do evidentiary work?", answer: "YES", reason: "Quotations preserve author meaning.", offending_text: "" },
+                    { id: "layer3_no_uncited_author_leaps", layer: 3, title: "No Uncited Author Leaps", question: "Are all argument steps evidence-based?", answer: "YES", reason: "All inferential claims link to cited literature.", offending_text: "" },
+                    { id: "layer3_rival_explanations_acknowledged", layer: 3, title: "Rival Explanations & Caveats", question: "Are alternative mechanisms acknowledged?", answer: "YES", reason: "Motor theory vs auditory theory both cited.", offending_text: "" },
+                    { id: "layer3_bounded_conclusion", layer: 3, title: "Bounded Conclusion", question: "Does conclusion refrain from exceeding strongest premise?", answer: "YES", reason: "Conclusion stays within empirical premises.", offending_text: "" }
+                ]
+            };
+            window.renderSourceAuditCard(sampleDiscrepancyAudit, 1);
+        }""")
+        time.sleep(0.5)
+
+        round1_card = page.locator("#sourceAuditCard-turn-1").last
+        assert round1_card.count() > 0, "Missing #sourceAuditCard-turn-1 in DOM"
+        assert "Correlation-to-causation drift" in round1_card.text_content()
+        assert "Scope inflation" in round1_card.text_content()
+        assert "⚠ NO" in round1_card.text_content()
+        print("    ✓ Round 1 Discrepancy Audit Card rendered with failure pattern badges and NO items!", flush=True)
+
+        screenshot_r1 = os.path.join(SCREENSHOTS_DIR, "29_audit_discrepancy_round1.png")
+        round1_card.screenshot(path=screenshot_r1)
+        print(f"    ✓ Round 1 screenshot saved to {screenshot_r1}", flush=True)
+
+        # 4. Simulate and Verify 100% Clearance Round Rendering
+        print("  • Rendering Round 2 Audit Card with 100% Clearance (All YES)...", flush=True)
+        page.evaluate("""() => {
+            const sampleClearanceAudit = {
+                all_yes: true,
+                overall_verdict: "APPROVED_INTEGRITY_CLEARANCE",
+                score_percentage: 100.0,
+                failure_patterns_detected: [],
+                discrepancies: [],
+                items: [
+                    { id: "layer1_source_type_appropriate", layer: 1, title: "Source Type Ceiling", question: "Does source type justify claim level?", answer: "YES", reason: "Primary experimental studies and peer-reviewed syntheses justify all claim levels.", offending_text: "" },
+                    { id: "layer1_metadata_matches", layer: 1, title: "Metadata Verification", question: "Do authors, journal, year, and DOI match actual publications?", answer: "YES", reason: "All DOIs and citations verified against scholarly records.", offending_text: "" },
+                    { id: "layer1_independent_sources", layer: 1, title: "Source Independence", question: "Are sources genuinely independent?", answer: "YES", reason: "Six distinct empirical investigations across different institutions.", offending_text: "" },
+                    { id: "layer2_exact_construct_match", layer: 2, title: "Exact Construct Match", question: "Does study measure the exact claimed construct?", answer: "YES", reason: "Strict construct alignment with no adjacent substitutions.", offending_text: "" },
+                    { id: "layer2_finding_not_framing", layer: 2, title: "Finding vs. Framing", question: "Is cited passage empirical finding, not introductory framing?", answer: "YES", reason: "All evidentiary quotes stem from demonstrated empirical results.", offending_text: "" },
+                    { id: "layer2_verb_ladder_justified", layer: 2, title: "Verb Ladder Compliance", question: "Does research design justify the verb used?", answer: "YES", reason: "Verbs strictly follow Verb Ladder: correlational data uses 'is associated with', experimental uses 'causes'.", offending_text: "" },
+                    { id: "layer2_sample_scope_accurate", layer: 2, title: "Sample & Scope Bounds", question: "Is scope strictly bounded to studied sample?", answer: "YES", reason: "Scope strictly qualified to tested experimental cohort; no unwarranted human generalizations.", offending_text: "" },
+                    { id: "layer2_context_and_quote_integrity", layer: 2, title: "Quote & Context Integrity", question: "Does quote match context and do evidentiary work?", answer: "YES", reason: "Verbatim quotes do evidentiary work with context fully preserved.", offending_text: "" },
+                    { id: "layer3_no_uncited_author_leaps", layer: 3, title: "No Uncited Author Leaps", question: "Are all argument steps evidence-based?", answer: "YES", reason: "Every inferential claim is grounded in cited literature.", offending_text: "" },
+                    { id: "layer3_rival_explanations_acknowledged", layer: 3, title: "Rival Explanations & Caveats", question: "Are alternative mechanisms acknowledged?", answer: "YES", reason: "Alternative acoustic vs motor theories and study boundaries acknowledged.", offending_text: "" },
+                    { id: "layer3_bounded_conclusion", layer: 3, title: "Bounded Conclusion", question: "Does conclusion refrain from exceeding strongest premise?", answer: "YES", reason: "Conclusion refrains from claiming more than the empirical premises allow.", offending_text: "" }
+                ]
+            };
+            window.renderSourceAuditCard(sampleClearanceAudit, 2);
+            window.renderFinalApprovedCard("# Verified Speech Perception Synthesis\\n\\nSpeech perception is associated with superior temporal gyrus activation [1].\\n\\n## References\\n[1] Liberman (1967). [Open](https://doi.org/10.1121/1.1910402)", 9.6, 2, null, "undergraduate", "literature_review", sampleClearanceAudit);
+        }""")
+        time.sleep(0.5)
+
+        round2_card = page.locator("#sourceAuditCard-turn-2").last
+        assert round2_card.count() > 0, "Missing #sourceAuditCard-turn-2 in DOM"
+        assert "100% Publication & Understanding Integrity Clearance" in round2_card.text_content()
+        assert "11 / 11 YES" in round2_card.text_content()
+        print("    ✓ Round 2 Clearance Card rendered with 100% YES banner!", flush=True)
+
+        final_integrity_badge = page.locator("#finalIntegrityBadge").first
+        assert final_integrity_badge.count() > 0, "Missing #finalIntegrityBadge on final approved card"
+        assert "100% Publication Integrity Verified" in final_integrity_badge.text_content()
+        print("    ✓ Final Approved Card contains 100% Publication Integrity Verified Seal!", flush=True)
+
+        screenshot_r2 = os.path.join(SCREENSHOTS_DIR, "30_audit_100_percent_clearance.png")
+        round2_card.screenshot(path=screenshot_r2)
+        print(f"    ✓ Round 2 clearance screenshot saved to {screenshot_r2}", flush=True)
+
         final_screenshot = os.path.join(SCREENSHOTS_DIR, "28_full_reading_experience_session.png")
         page.screenshot(path=final_screenshot, full_page=True)
         print(f"\nAll reading mode & mobile test cases passed! Saved to {final_screenshot}", flush=True)

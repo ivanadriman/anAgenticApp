@@ -15,7 +15,8 @@ This guide outlines the primary use cases, target audiences, recommended pipelin
 6. [Use Case 5: Private Literature Grounding on Local PDFs](#-use-case-5-private-literature-grounding-on-local-pdfs)
 7. [Use Case 6: Cross-Lingual Knowledge Transfer (Global STEM ↔ Indonesian)](#-use-case-6-cross-lingual-knowledge-transfer-global-stem--indonesian)
 8. [Use Case 7: Publication-Ready Export (Markdown & Clean PDF)](#-use-case-7-publication-ready-export-markdown--clean-pdf)
-9. [Quick Reference: Configuration Matrix by Use Case](#-quick-reference-configuration-matrix-by-use-case)
+9. [Use Case 8: Publication & Epistemic Integrity Auditing (Peer Review Pre-Flight)](#-use-case-8-publication--epistemic-integrity-auditing-peer-review-pre-flight)
+10. [Quick Reference: Configuration Matrix by Use Case](#-quick-reference-configuration-matrix-by-use-case)
 
 ---
 
@@ -26,6 +27,7 @@ This guide outlines the primary use cases, target audiences, recommended pipelin
 | **Grounding Source** | Unpredictable internal weights or generic web search | 6 verified academic registries (arXiv, PubMed, Semantic Scholar, Crossref, OpenAlex, Wikipedia) + local PDFs |
 | **Citation Verification** | Hallucinated titles, broken DOIs, or unverifiable links | Verbatim quotes `"..." [n]` matching source abstracts for instant <kbd>Ctrl</kbd>+<kbd>F</kbd> verification |
 | **Editorial Standard** | Single-pass generation; repeats its own bias | Multi-round adversarial peer review with strict 1.0–10.0 rubric and revision enforcement |
+| **Publication Integrity** | No verification against epistemic leaps, scope inflation, or verb causality | 3-Layer Publication Integrity Auditor enforcing `source-checking-guide.md` with Verb Ladder calibration & auto-rebuild loop until 100% YES |
 | **Target Audience & Genre** | Generic conversational tone | Configurable difficulty (Layman to Expert) and 5 distinct structural genres |
 | **Export Quality** | Manual copy-paste with lost formatting | Slugified `.md` download and clean PDF export across A4, Letter, A5, and Legal sizes with zero UI clipping |
 
@@ -193,6 +195,32 @@ Authors submitting essays to CMS platforms (Ghost, Substack, GitHub, Notion), st
   - Eliminates all application navigation chrome, dark mode canvases, API key fields, and buttons.
   - Formats cleanly to **A4**, **Letter**, **A5**, **Legal**, or **Executive** paper sizes.
   - Page-break prevention keeps quotes and references intact across page boundaries.
+
+---
+
+## 🛡️ Use Case 8: Publication & Epistemic Integrity Auditing (Peer Review Pre-Flight)
+
+### 🎯 Who It's For
+Scholarly authors, journal editors, fact-checkers, policy advisors, and rigorous science communicators preparing drafts for high-impact peer-reviewed journals, policy institutes, or public release where epistemic integrity and claim accuracy cannot be compromised.
+
+### 💡 The Problem It Solves
+Even when citations exist, AI generated or hurried human drafts often suffer from subtle epistemic distortions:
+1. **Correlation-to-causation drift**: Claiming a cross-sectional survey "proves" or "drives" an outcome.
+2. **Scope inflation**: Generalizing a finding from 80 undergraduates to "all modern human societies".
+3. **Framing-as-finding**: Quoting an introduction's hypothesis as demonstrated empirical evidence.
+4. **Adjacent-construct substitution**: Substituting a neighboring construct (e.g. perfectionism for materialism).
+5. **Orphaned quotations**: Quoting an authoritative passage under a conclusion never reached by the authors.
+
+### ⚙️ Recommended Pipeline Configuration
+- **Advanced Options**: Enable `🛡️ Strict Publication Integrity Audit (source-checking-guide)` (checked by default).
+- **Target Audience / Difficulty**: `Expert / Specialist Researcher` or `Undergraduate / College`.
+- **Active Grounding Sources**: All relevant scientific registries (`arXiv`, `PubMed`, `Crossref`, `Semantic Scholar`, `OpenAlex`).
+- **Audit Refinement Behavior**: The system audits all 11 binary criteria across Layer 1 (Source Type & Metadata), Layer 2 (Claim Match & Verb Ladder), and Layer 3 (Argument Coherence). If any criterion evaluates to `"NO"`, the Writer Agent automatically rebuilds the draft until 100% `"YES"` clearance is achieved.
+
+### 📝 Key Safeguards Enforced
+- **The Verb Ladder**: Correlational designs support `"is associated with"` or `"relates to"` (never causal verbs). Randomized trials support bounded causality within the experimental setting.
+- **Demographic Bounding**: Samples are explicitly qualified (e.g. *"in adolescent clinical cohorts in the US"*).
+- **Evidentiary Quotations**: Quotes must do empirical work in their original context.
 
 ---
 
