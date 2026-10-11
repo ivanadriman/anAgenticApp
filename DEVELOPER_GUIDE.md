@@ -229,7 +229,33 @@ To ensure citations can be audited without friction, the agents follow strict fo
 
 ## 🤖 Two-Agent Prompt Engineering & Structured Outputs
 
-### Critic Result Schema (Pydantic / JSON)
+### 1. Target Audience & Conceptual Depth Calibration
+Both the web application (`index.html`) and CLI pipeline (`dev_pipeline.py`) support audience calibration to govern tone, technical density, and jargon level:
+
+```python
+DIFFICULTY_GUIDELINES = {
+    "layman": "Accessible, jargon-free explanations with intuitive real-world analogies.",
+    "undergraduate": "Formal academic rigor, clear foundational concepts, structured analysis, and technical terms.",
+    "expert": "High conceptual density, cutting-edge theoretical nuances, methodology critique, and edge cases.",
+    "executive": "Strategic implications, high-level architectural trade-offs, ROI, risks, and actionable recommendations."
+}
+```
+
+- In `index.html`, `getDifficultyGuidance(diffKey, isId)` dynamically returns localized bilingual prompt instructions injected into `runWriterDraft` and `runWriterRevision`.
+- The Critic Agent evaluates drafts against the requested tier, flagging inappropriately dense jargon in `layman` mode or oversimplified explanations in `expert` mode.
+
+### 2. Document Genre & Structural Blueprint Calibration
+The system enforces tailored document blueprints via genre guidance:
+
+| Genre Key | Target Blueprint | Structural Sections Enforced |
+| :--- | :--- | :--- |
+| `literature_review` | Academic Literature Review | Thematic paradigm synthesis, consensus vs. debate, research gaps. |
+| `deep_dive_essay` | Longform Analytical Essay | Engaging narrative prose, conceptual building, practical reflection. |
+| `textbook_chapter` | Educational / Textbook Chapter | Learning Objectives, Progressive Modules, Worked Examples, Key Takeaways. |
+| `technical_whitepaper` | Technical Whitepaper | Problem Statement, Architecture Blueprint, Trade-off Matrix, Feasibility. |
+| `executive_brief` | Executive / Policy Brief | Executive Summary, Core Strategic Findings, Risk Matrix, Action Plan. |
+
+### 3. Critic Result Schema (Pydantic / JSON)
 ```python
 class CritiqueResult(BaseModel):
     score: float = Field(description="Rating from 1.0 to 10.0")

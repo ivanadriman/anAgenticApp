@@ -89,6 +89,14 @@ def run_browser_tests():
         print(f"  • Indonesian Topic Label: '{topic_label}'", flush=True)
         assert "Topik atau Tujuan" in topic_label
 
+        diff_label_id = page.locator("label[for='readingDifficultySelect']").text_content().strip()
+        print(f"  • Indonesian Difficulty Label: '{diff_label_id}'", flush=True)
+        assert "Target Kesulitan" in diff_label_id or "Audiens" in diff_label_id
+
+        type_label_id = page.locator("label[for='readingTypeSelect']").text_content().strip()
+        print(f"  • Indonesian Reading Type Label: '{type_label_id}'", flush=True)
+        assert "Jenis Dokumen" in type_label_id or "Genre Bacaan" in type_label_id
+
         page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "15_lang_id_switched.png"))
 
         # Switch back to English
@@ -100,6 +108,15 @@ def run_browser_tests():
         assert "Run Agentic Pipeline" in en_btn_label
         en_reverted_powered = powered_badge.text_content().strip()
         assert "Powered by:" in en_reverted_powered
+
+        diff_label_en = page.locator("label[for='readingDifficultySelect']").text_content().strip()
+        print(f"  • English Difficulty Label: '{diff_label_en}'", flush=True)
+        assert "Target Difficulty" in diff_label_en or "Audience" in diff_label_en
+
+        type_label_en = page.locator("label[for='readingTypeSelect']").text_content().strip()
+        print(f"  • English Reading Type Label: '{type_label_en}'", flush=True)
+        assert "Document Type" in type_label_en or "Genre" in type_label_en
+
         page.screenshot(path=os.path.join(SCREENSHOTS_DIR, "16_lang_en_switched.png"))
 
         # Switch back to Indonesian for the remainder of the test
@@ -160,9 +177,28 @@ def run_browser_tests():
         if page.locator("#advancedOptionsDetails").count() > 0:
             page.evaluate("document.getElementById('advancedOptionsDetails').open = true")
 
+        # Test Reading Difficulty and Reading Type controls & Live Summary Badge
+        diff_select = page.locator("#readingDifficultySelect")
+        type_select = page.locator("#readingTypeSelect")
+        assert diff_select.count() > 0, "Missing #readingDifficultySelect"
+        assert type_select.count() > 0, "Missing #readingTypeSelect"
+
+        print("  • Testing Target Difficulty & Document Genre dropdown selection...", flush=True)
+        page.select_option("#readingDifficultySelect", "expert")
+        page.select_option("#readingTypeSelect", "technical_whitepaper")
         page.select_option("#thinkingLevelSelect", "medium")
         page.select_option("#maxTurnsSelect", "1")
         page.locator("#targetScoreInput").fill("8.5")
+
+        summary_badge = page.locator("#advancedOptionsSummaryBadge").text_content().strip()
+        print(f"  • Advanced Options Summary Badge: '{summary_badge}'", flush=True)
+        assert "Pakar" in summary_badge or "Expert" in summary_badge
+        assert "Whitepaper" in summary_badge
+        assert "1 Putaran" in summary_badge or "1 Turns" in summary_badge
+
+        # Re-select undergraduate & literature_review for the pipeline test run
+        page.select_option("#readingDifficultySelect", "undergraduate")
+        page.select_option("#readingTypeSelect", "literature_review")
 
         topic_input = page.locator("#topicInput")
         id_topic = "Persepsi wicara"

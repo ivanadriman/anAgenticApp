@@ -617,7 +617,30 @@
           </div>
           <span class="text-xs text-slate-400 group-open:rotate-180 transition-transform">▾</span>
         </summary>
-        <div class="p-3 pt-0 border-t border-slate-800/50 mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div class="p-3 pt-0 border-t border-slate-800/50 mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <div>
+            <label for="readingDifficultySelect" data-i18n="difficultyLabel" class="block text-xs font-medium text-slate-300 mb-1">
+              🎯 Target Difficulty / Audience:
+            </label>
+            <select id="readingDifficultySelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-cyan-500">
+              <option value="layman" id="optDiffLayman">General Audience / Layman</option>
+              <option value="undergraduate" id="optDiffUndergrad" selected>Undergraduate / College</option>
+              <option value="expert" id="optDiffExpert">Expert / Specialist Researcher</option>
+              <option value="executive" id="optDiffExec">Executive / Strategic Decision Maker</option>
+            </select>
+          </div>
+          <div>
+            <label for="readingTypeSelect" data-i18n="readingTypeLabel" class="block text-xs font-medium text-slate-300 mb-1">
+              📚 Document Type / Reading Genre:
+            </label>
+            <select id="readingTypeSelect" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-cyan-500">
+              <option value="literature_review" id="optTypeReview" selected>Academic Literature Review</option>
+              <option value="deep_dive_essay" id="optTypeEssay">Longform Analytical Essay</option>
+              <option value="textbook_chapter" id="optTypeTextbook">Educational / Textbook Chapter</option>
+              <option value="technical_whitepaper" id="optTypeWhitepaper">Technical Whitepaper</option>
+              <option value="executive_brief" id="optTypeBrief">Executive / Policy Brief</option>
+            </select>
+          </div>
           <div>
             <label for="thinkingLevelSelect" data-i18n="thinkingLabel" class="block text-xs font-medium text-slate-300 mb-1">
               🧠 Thinking Mode:
@@ -651,7 +674,7 @@
               class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:ring-2 focus:ring-cyan-500"
             />
           </div>
-          <div class="flex flex-col gap-2 justify-center pt-2 sm:pt-4">
+          <div class="flex flex-col gap-2 justify-center pt-1 sm:pt-4">
             <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-300 select-none">
               <input type="checkbox" id="forceAllTurnsCheck" class="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-cyan-500 w-4 h-4" />
               <span data-i18n="forceTurnsLabel">Force all turns</span>
@@ -1110,6 +1133,17 @@
         modelLabel: "Gemini Model:",
         checkQuotaBtn: "🔄 Check Quota",
         quotaReady: "Ready",
+        difficultyLabel: "🎯 Target Difficulty / Audience:",
+        readingTypeLabel: "📚 Document Type / Reading Genre:",
+        optDiffLayman: "General Audience / Layman",
+        optDiffUndergrad: "Undergraduate / College",
+        optDiffExpert: "Expert / Specialist Researcher",
+        optDiffExec: "Executive / Strategic Decision Maker",
+        optTypeReview: "Academic Literature Review",
+        optTypeEssay: "Longform Analytical Essay",
+        optTypeTextbook: "Educational / Textbook Chapter",
+        optTypeWhitepaper: "Technical Whitepaper",
+        optTypeBrief: "Executive / Policy Brief",
         thinkingLabel: "🧠 Thinking Mode:",
         optThinkingLow: "Low (Fast Response)",
         optThinkingMed: "Medium (Balanced Reasoning)",
@@ -1163,6 +1197,17 @@
         modelLabel: "Model Gemini:",
         checkQuotaBtn: "🔄 Cek Kuota",
         quotaReady: "Siap",
+        difficultyLabel: "🎯 Target Kesulitan / Audiens:",
+        readingTypeLabel: "📚 Jenis Dokumen / Genre Bacaan:",
+        optDiffLayman: "Masyarakat Umum / Awam",
+        optDiffUndergrad: "Mahasiswa / Sarjana",
+        optDiffExpert: "Pakar / Peneliti Spesialis",
+        optDiffExec: "Eksekutif / Pengambil Kebijakan Strategis",
+        optTypeReview: "Tinjauan Pustaka Akademis (Lit Review)",
+        optTypeEssay: "Esai Analitis Mendalam (Deep Dive)",
+        optTypeTextbook: "Bab Buku Teks / Materi Ajar Edukatif",
+        optTypeWhitepaper: "Buku Putih Teknis (Whitepaper)",
+        optTypeBrief: "Ringkasan Eksekutif / Brief Kebijakan",
         thinkingLabel: "🧠 Mode Berpikir (Thinking Mode):",
         optThinkingLow: "Rendah (Respon Cepat)",
         optThinkingMed: "Sedang (Penalaran Seimbang)",
@@ -1260,6 +1305,26 @@
         if (t[key]) el.placeholder = t[key];
       });
 
+      const optDiffLayman = document.getElementById("optDiffLayman");
+      const optDiffUndergrad = document.getElementById("optDiffUndergrad");
+      const optDiffExpert = document.getElementById("optDiffExpert");
+      const optDiffExec = document.getElementById("optDiffExec");
+      if (optDiffLayman) optDiffLayman.textContent = t.optDiffLayman;
+      if (optDiffUndergrad) optDiffUndergrad.textContent = t.optDiffUndergrad;
+      if (optDiffExpert) optDiffExpert.textContent = t.optDiffExpert;
+      if (optDiffExec) optDiffExec.textContent = t.optDiffExec;
+
+      const optTypeReview = document.getElementById("optTypeReview");
+      const optTypeEssay = document.getElementById("optTypeEssay");
+      const optTypeTextbook = document.getElementById("optTypeTextbook");
+      const optTypeWhitepaper = document.getElementById("optTypeWhitepaper");
+      const optTypeBrief = document.getElementById("optTypeBrief");
+      if (optTypeReview) optTypeReview.textContent = t.optTypeReview;
+      if (optTypeEssay) optTypeEssay.textContent = t.optTypeEssay;
+      if (optTypeTextbook) optTypeTextbook.textContent = t.optTypeTextbook;
+      if (optTypeWhitepaper) optTypeWhitepaper.textContent = t.optTypeWhitepaper;
+      if (optTypeBrief) optTypeBrief.textContent = t.optTypeBrief;
+
       const optLow = document.getElementById("optThinkingLow");
       const optMed = document.getElementById("optThinkingMed");
       const optHigh = document.getElementById("optThinkingHigh");
@@ -1283,6 +1348,9 @@
       }
 
       updateHeaderPoweredBadge();
+      if (typeof updateAdvancedOptionsSummary === "function") {
+        updateAdvancedOptionsSummary();
+      }
       applyTheme(currentTheme);
       applyFont(currentFont);
       applyFontSize(currentFontSize);
@@ -1699,15 +1767,27 @@
       const badge = document.getElementById("advancedOptionsSummaryBadge");
       if (!badge) return;
       const isId = currentLang === "id";
+      const diffEl = document.getElementById("readingDifficultySelect");
+      const typeEl = document.getElementById("readingTypeSelect");
       const thinkingEl = document.getElementById("thinkingLevelSelect");
       const turnsEl = document.getElementById("maxTurnsSelect");
       const scoreEl = document.getElementById("targetScoreInput");
       const searchEl = document.getElementById("webSearchCheck");
 
+      const diff = diffEl?.value || "undergraduate";
+      const type = typeEl?.value || "literature_review";
       const thinking = thinkingEl?.value || "medium";
       const turns = turnsEl?.value || "3";
       const score = scoreEl?.value || "9.5";
       const search = searchEl?.checked || false;
+
+      const diffMap = isId 
+        ? { layman: "Awam", undergraduate: "Sarjana", expert: "Pakar", executive: "Eksekutif" }
+        : { layman: "Layman", undergraduate: "Undergrad", expert: "Expert", executive: "Executive" };
+
+      const typeMap = isId 
+        ? { literature_review: "Lit Review", deep_dive_essay: "Esai", textbook_chapter: "Buku Teks", technical_whitepaper: "Whitepaper", executive_brief: "Brief" }
+        : { literature_review: "Lit Review", deep_dive_essay: "Essay", textbook_chapter: "Textbook", technical_whitepaper: "Whitepaper", executive_brief: "Brief" };
 
       const thinkingMap = isId 
         ? { low: "Cepat", medium: "Sedang", high: "Mendalam" }
@@ -1715,6 +1795,8 @@
       const turnsUnit = isId ? "Putaran" : "Turns";
       
       let parts = [
+        `🎯 ${diffMap[diff] || diff}`,
+        `📚 ${typeMap[type] || type}`,
         `🧠 ${thinkingMap[thinking] || thinking}`,
         `${turns} ${turnsUnit}`,
         `Target ${score}`
@@ -1723,7 +1805,7 @@
       badge.textContent = parts.join(" • ");
     }
 
-    ["thinkingLevelSelect", "maxTurnsSelect", "targetScoreInput", "webSearchCheck", "forceAllTurnsCheck"].forEach(id => {
+    ["readingDifficultySelect", "readingTypeSelect", "thinkingLevelSelect", "maxTurnsSelect", "targetScoreInput", "webSearchCheck", "forceAllTurnsCheck"].forEach(id => {
       const el = document.getElementById(id);
       el?.addEventListener("change", updateAdvancedOptionsSummary);
       el?.addEventListener("input", updateAdvancedOptionsSummary);
@@ -2611,14 +2693,71 @@ Respond ONLY with valid JSON:
       return text;
     }
 
+    // Difficulty and Reading Genre Guidance Helpers
+    function getDifficultyGuidance(diffKey, isId) {
+      const guides = {
+        layman: isId
+          ? "TARGET AUDIENS (Masyarakat Umum / Awam):\n- Gunakan bahasa yang mudah dipahami, lugas, bersahabat, dan bebas jargon yang berbelit-belit.\n- Jelaskan setiap konsep dengan analogi kehidupan nyata yang intuitif tanpa mengurangi kebenaran faktual.\n- Targetkan pembaca yang ingin memahami topik secara menyeluruh tanpa latar belakang teknis khusus."
+          : "TARGET AUDIENCE (General Audience / Layman):\n- Use clear, engaging, jargon-free explanations with intuitive real-world analogies.\n- Break down complex mechanisms into accessible concepts while maintaining factual integrity.\n- Target curious readers without specialized prior background in the field.",
+        undergraduate: isId
+          ? "TARGET AUDIENS (Mahasiswa / Kalangan Akademisi Sarjana):\n- Pertahankan ketelitian akademis, konsep dasar yang terdefinisi dengan jelas, eksposisi analitis yang terstruktur, dan terminologi teknis profesional.\n- Sajikan argumen dan sintesis berbasis literatur yang relevan untuk tingkat perkuliahan sarjana/universitas."
+          : "TARGET AUDIENCE (Undergraduate / College):\n- Maintain formal academic rigor, well-defined foundational concepts, structured analytical exposition, and professional technical terminology.\n- Deliver arguments and literature syntheses appropriate for undergraduate and college study.",
+        expert: isId
+          ? "TARGET AUDIENS (Pakar / Peneliti Spesialis):\n- Sajikan densitas konseptual tinggi, nuansa teoretis mutakhir, telaah metodologis kritis, analisis kasus batas (edge cases), dan mekanisme domain mendalam.\n- Jangan membuang ruang untuk mengulang dasar-dasar pemula; fokuskan pada batasan teknis dan kemajuan state-of-the-art."
+          : "TARGET AUDIENCE (Expert / Specialist Researcher):\n- Deliver high conceptual density, advanced theoretical nuance, methodology critique, state-of-the-art edge cases, and in-depth domain mechanisms.\n- Do not waste space over-explaining foundational basics; focus on technical boundaries and state-of-the-art developments.",
+        executive: isId
+          ? "TARGET AUDIENS (Eksekutif / Pengambil Kebijakan Strategis):\n- Fokus pada implikasi strategis, kompromi arsitektural/teknis tingkat tinggi, analisis dampak operasional & ROI, risiko, dan rekomendasi actionable.\n- Gunakan gaya penulisan ringkas, tegas, berbasis dampak, dan otoritatif."
+          : "TARGET AUDIENCE (Executive / Strategic Decision Maker):\n- Focus on strategic implications, high-level architectural tradeoffs, operational impact & ROI, risk assessments, and actionable recommendations.\n- Write with concise, authoritative clarity geared toward high-stakes decision-making."
+      };
+      return guides[diffKey] || guides.undergraduate;
+    }
+
+    function getReadingTypeGuidance(typeKey, isId) {
+      const guides = {
+        literature_review: isId
+          ? "GENRE DOKUMEN (Tinjauan Pustaka Akademis / Literature Review):\n- Susun secara sistematis berdasarkan tema konseptual atau paradigma teoretis.\n- Sintesiskan konsensus dan perdebatan antar-makalah/sumber rujukan ilmiah.\n- Soroti celah riset (research gaps) dan arah pengembangan masa depan."
+          : "DOCUMENT GENRE (Academic Literature Review):\n- Organize systematically by conceptual themes and theoretical paradigms.\n- Synthesize consensus versus active debates across cited scholarly literature.\n- Highlight research gaps and emerging directions.",
+        deep_dive_essay: isId
+          ? "GENRE DOKUMEN (Esai Analitis Mendalam / Longform Analytical Essay):\n- Terapkan prosa naratif yang memikat, alur argumen intelektual yang persuasif, pembangunan ide bertahap, dan perenungan kritis yang menghubungkan teori dengan penerapan nyata."
+          : "DOCUMENT GENRE (Longform Analytical Essay):\n- Employ engaging narrative prose, persuasive intellectual depth, progressive conceptual building, and thought-provoking synthesis connecting theory to practice.",
+        textbook_chapter: isId
+          ? "GENRE DOKUMEN (Bab Buku Teks / Materi Ajar Edukatif):\n- Terapkan struktur pedagogis: 1) Tujuan Pembelajaran (Learning Objectives), 2) Modul Konsep Bertahap dengan Penjelasan Mendalam, 3) Contoh Kasus / Studi Implementasi Nyata, dan 4) Rangkuman Inti Bab (Key Takeaways)."
+          : "DOCUMENT GENRE (Educational / Textbook Chapter):\n- Follow a pedagogical structure: 1) Learning Objectives, 2) Progressive Conceptual Modules with in-depth exposition, 3) Concrete Worked Examples / Case Studies, and 4) Chapter Key Takeaways.",
+        technical_whitepaper: isId
+          ? "GENRE DOKUMEN (Buku Putih Teknis / Technical Whitepaper):\n- Terapkan struktur publikasi teknis otoritatif: 1) Pernyataan Masalah & Konteks Industri/Sains, 2) Cetak Biru Arsitektur / Spesifikasi Teknis, 3) Analisis Komparatif / Matriks Kompromi, dan 4) Pertimbangan Implementasi & Skalabilitas."
+          : "DOCUMENT GENRE (Technical Whitepaper):\n- Adopt an authoritative technical publication style: 1) Problem Statement & Industry/Scientific Context, 2) Architectural Blueprint / Technical Specifications, 3) Comparative Benchmark / Tradeoff Matrix, and 4) Implementation Feasibility & Scalability.",
+        executive_brief: isId
+          ? "GENRE DOKUMEN (Ringkasan Eksekutif / Brief Kebijakan):\n- Terapkan struktur brief ringkas: 1) Ringkasan Eksekutif (Executive Summary), 2) Temuan Strategis Inti & Wawasan Utama, 3) Matriks Risiko & Peluang, dan 4) Rekomendasi Tindakan Terprioritisasi."
+          : "DOCUMENT GENRE (Executive / Policy Brief):\n- Format with: 1) Executive Summary, 2) Core Strategic Findings & Key Insights, 3) Risk & Opportunity Assessment, and 4) Prioritized Action Plan / Strategic Recommendations."
+      };
+      return guides[typeKey] || guides.literature_review;
+    }
+
+    function getDifficultyLabel(diffKey, isId) {
+      const map = isId 
+        ? { layman: "Masyarakat Umum / Awam", undergraduate: "Mahasiswa / Sarjana", expert: "Pakar / Peneliti", executive: "Eksekutif" }
+        : { layman: "General / Layman", undergraduate: "Undergraduate", expert: "Expert Researcher", executive: "Executive" };
+      return map[diffKey] || map.undergraduate;
+    }
+
+    function getReadingTypeLabel(typeKey, isId) {
+      const map = isId
+        ? { literature_review: "Tinjauan Pustaka", deep_dive_essay: "Esai Analitis", textbook_chapter: "Bab Buku Teks", technical_whitepaper: "Buku Putih Teknis", executive_brief: "Ringkasan Eksekutif" }
+        : { literature_review: "Literature Review", deep_dive_essay: "Analytical Essay", textbook_chapter: "Textbook Chapter", technical_whitepaper: "Technical Whitepaper", executive_brief: "Executive Brief" };
+      return map[typeKey] || map.literature_review;
+    }
+
     // Agent Functions with Full Bilingual & Multilingual Capabilities and Verbatim Quotation Protocols
-    async function runWriterDraft(apiKey, topic, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null) {
+    async function runWriterDraft(apiKey, topic, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null, difficulty = "undergraduate", readingType = "literature_review") {
       let sys = "You are an expert, engaging, and articulate Writer Agent. Produce well-structured, clear, and compelling content using Markdown with clear headings and bullet points.";
       if (currentLang === "id") {
         sys += "\n\nPANDUAN BAHASA & SINTESIS:\n" +
                "Anda WAJIB menulis seluruh naskah dan draf secara komprehensif dalam BAHASA INDONESIA yang baku, ilmiah, mengalir, dan profesional.\n" +
                "Sintesiskan semua temuan dari literatur ilmiah internasional dan regional (arXiv, Semantic Scholar, PubMed, OpenAlex, Crossref, Wikipedia) ke dalam Bahasa Indonesia dengan runtut.\n";
       }
+
+      sys += "\n\n" + getDifficultyGuidance(difficulty, currentLang === "id") +
+             "\n\n" + getReadingTypeGuidance(readingType, currentLang === "id");
 
       sys += "\n\n" +
         "ATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n" +
@@ -2657,13 +2796,20 @@ Respond ONLY with valid JSON:
       return await callGemini(apiKey, sys, prompt, model, enableSearch, thinkingLevel);
     }
 
-    async function runCriticReview(apiKey, topic, draft, turn, model, thinkingLevel = "medium", scholarlyDossier = null) {
+    async function runCriticReview(apiKey, topic, draft, turn, model, thinkingLevel = "medium", scholarlyDossier = null, difficulty = "undergraduate", readingType = "literature_review") {
       let sys = `You are a meticulous Senior Editor and Critic Agent. 
 Evaluate drafts strictly on clarity, depth, coherence, tone, and practical examples.
 Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.`;
       if (currentLang === "id") {
         sys += `\nPANDUAN BAHASA:\nBerikan seluruh evaluasi, analisis kekuatan, kelemahan, dan tindakan revisi dalam BAHASA INDONESIA yang objektif dan konstruktif.`;
       }
+
+      sys += `\n\n` +
+        `AUDIT TARGET AUDIENS & GENRE DOKUMEN (AUDIENCE & GENRE ALIGNMENT AUDIT):\n` +
+        `1. Kesesuaian Audiens (${getDifficultyLabel(difficulty, currentLang === "id")}): Periksa apakah nada, tingkat kedalaman teknis, dan istilah sesuai untuk sasaran pembaca ini.\n` +
+        `2. Kesesuaian Genre (${getReadingTypeLabel(readingType, currentLang === "id")}): Periksa apakah struktur dan gaya penulisan mengikuti format dokumen yang diminta.\n` +
+        `Jika draf melenceng dari tingkat kesulitan sasaran atau struktur genre dokumen, tandai sebagai KELEMAHAN (Weakness) dan beri petunjuk perbaikan konkret.\n`;
+
       sys += `
 AUDIT KUTIPAN KATA-DEMI-KATA & REFERENSI (VERBATIM QUOTATION & CITATION AUDIT):
 1. Format Kutipan: Periksa apakah setiap kutipan fakta/bukti diapit tanda petik "... bla bla bla ..." dan diikuti nomor sitasi dalam kurung siku seperti [1], [2].
@@ -2684,7 +2830,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
   "actionable_revisions": ["string", ...]
 }`;
 
-      let prompt = `Goal: ${topic}\nIteration Turn: ${turn}\n`;
+      let prompt = `Goal: ${topic}\nIteration Turn: ${turn}\nTarget Audience: ${getDifficultyLabel(difficulty, currentLang === "id")}\nDocument Genre: ${getReadingTypeLabel(readingType, currentLang === "id")}\n`;
       if (scholarlyDossier) {
         prompt += `\nGrounding Dossier Available: Yes (${scholarlyDossier.citations.length} academic & reference sources)\n`;
       }
@@ -2698,12 +2844,15 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       return JSON.parse(clean);
     }
 
-    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null) {
+    async function runWriterRevision(apiKey, topic, prevDraft, critique, turn, model, enableSearch = false, thinkingLevel = "medium", scholarlyDossier = null, difficulty = "undergraduate", readingType = "literature_review") {
       let sys = "You are an expert Writer Agent in an iterative feedback loop. Carefully study the Critic's feedback, weaknesses, and required action items, and address each one thoroughly while retaining previous strengths. Deliver the updated draft in full Markdown.";
       if (currentLang === "id") {
         sys += "\n\nPANDUAN BAHASA & REVISI:\n" +
                "Perbaiki dan sempurnakan draf secara menyeluruh dalam BAHASA INDONESIA. Tangani setiap kelemahan dan rekomendasi perbaikan dari Pengkritik, serta pertahankan rujukan akademis dan sitasi DOIs.\n";
       }
+
+      sys += "\n\n" + getDifficultyGuidance(difficulty, currentLang === "id") +
+             "\n\n" + getReadingTypeGuidance(readingType, currentLang === "id");
 
       sys += "\n\n" +
         "ATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n" +
@@ -2717,7 +2866,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       if (scholarlyDossier) {
         sys += " Ensure all academic references, DOIs, and citations from the research dossier are retained, properly cited, and expanded as necessary.";
       }
-      let prompt = `Original Topic: ${topic}\n\nPrevious Draft (Draft ${turn}):\n\"\"\"\n${prevDraft}\n\"\"\"\n\nCritic Score: ${critique.score}/10\nWeaknesses:\n${critique.weaknesses.map(w => `- ${w}`).join("\n")}\n\nRequired Improvements:\n${critique.actionable_revisions.map(r => `- ${r}`).join("\n")}\n`;
+      let prompt = `Original Topic: ${topic}\n\nTarget Audience: ${getDifficultyLabel(difficulty, currentLang === "id")}\nDocument Genre: ${getReadingTypeLabel(readingType, currentLang === "id")}\n\nPrevious Draft (Draft ${turn}):\n\"\"\"\n${prevDraft}\n\"\"\"\n\nCritic Score: ${critique.score}/10\nWeaknesses:\n${critique.weaknesses.map(w => `- ${w}`).join("\n")}\n\nRequired Improvements:\n${critique.actionable_revisions.map(r => `- ${r}`).join("\n")}\n`;
       if (scholarlyDossier) {
         prompt += `\nResearch Dossier Reference:\n${scholarlyDossier.text}\n`;
       }
@@ -2904,7 +3053,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
       outputContainer.appendChild(card);
     }
 
-    function renderFinalApprovedCard(finalDraft, score, turns, dossier = null) {
+    function renderFinalApprovedCard(finalDraft, score, turns, dossier = null, difficulty = "undergraduate", readingType = "literature_review") {
       const card = document.createElement("div");
       card.className = "bg-gradient-to-b from-cyan-950/40 to-slate-900 border-2 border-cyan-400/80 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl transition";
       const title = currentLang === "id" ? "Hasil Akhir Disetujui" : "Final Polish Approved";
@@ -2924,9 +3073,11 @@ You MUST respond ONLY with valid JSON conforming to this schema:
             ${copyBtnText}
           </button>
         </div>
-        <div class="text-xs text-slate-400 mb-2 flex gap-4">
+        <div class="text-xs text-slate-400 mb-2 flex items-center flex-wrap gap-2 sm:gap-4">
           <span>${scoreLabel} <strong class="text-emerald-400 font-mono">${score.toFixed(1)}/10</strong></span>
           <span>${turnsLabel} <strong class="text-slate-200 font-mono">${turns} ${turnsUnit}</strong></span>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">🎯 ${getDifficultyLabel(difficulty, currentLang === "id")}</span>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800">📚 ${getReadingTypeLabel(readingType, currentLang === "id")}</span>
         </div>
         ${createReadingToolbarHtml("final-approved")}
         <div class="markdown-body text-slate-100 text-sm">
@@ -2978,6 +3129,10 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 
       const selectedModel = modelSelect.value || "gemini-3.8-flash";
       updateHeaderPoweredBadge(selectedModel);
+      const selectedDifficulty = document.getElementById("readingDifficultySelect")?.value || "undergraduate";
+      const selectedReadingType = document.getElementById("readingTypeSelect")?.value || "literature_review";
+      const diffLabel = getDifficultyLabel(selectedDifficulty, currentLang === "id");
+      const typeLabel = getReadingTypeLabel(selectedReadingType, currentLang === "id");
       const selectedThinking = document.getElementById("thinkingLevelSelect")?.value || "medium";
       const maxTurns = parseInt(maxTurnsSelect.value, 10) || 3;
       
@@ -3025,13 +3180,13 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 
           // Step 1: Writer
           statusText.textContent = currentLang === "id"
-            ? `Putaran ${turn}: Agen Penulis (${selectedModel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Web Search" : ""}${scholarlyDossier ? " | 📚 Rujukan Ilmiah" : ""}) sedang menyusun draf...`
-            : `Turn ${turn}: Writer Agent (${selectedModel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Search" : ""}${scholarlyDossier ? " | 📚 Scholarly Grounded" : ""}) is composing...`;
+            ? `Putaran ${turn}: Agen Penulis (${selectedModel} | 🎯 ${diffLabel} | 📚 ${typeLabel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Web Search" : ""}${scholarlyDossier ? " | 📚 Rujukan Ilmiah" : ""}) sedang menyusun draf...`
+            : `Turn ${turn}: Writer Agent (${selectedModel} | 🎯 ${diffLabel} | 📚 ${typeLabel} | 🧠 ${selectedThinking}${enableWebSearch ? " | 🌐 Search" : ""}${scholarlyDossier ? " | 📚 Scholarly Grounded" : ""}) is composing...`;
           
           if (turn === 1) {
-            currentDraft = await runWriterDraft(apiKey, topic, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier);
+            currentDraft = await runWriterDraft(apiKey, topic, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier, selectedDifficulty, selectedReadingType);
           } else {
-            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier);
+            currentDraft = await runWriterRevision(apiKey, topic, currentDraft, latestCritique, turn - 1, selectedModel, enableWebSearch, selectedThinking, scholarlyDossier, selectedDifficulty, selectedReadingType);
           }
           renderWriterCard(turn, currentDraft, scholarlyDossier);
 
@@ -3040,7 +3195,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
             ? `Putaran ${turn}: Agen Pengkritik (${selectedModel} | 🧠 ${selectedThinking}) sedang mengevaluasi draf...`
             : `Turn ${turn}: Critic Agent (${selectedModel} | 🧠 ${selectedThinking}) is evaluating...`;
           
-          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel, selectedThinking, scholarlyDossier);
+          latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel, selectedThinking, scholarlyDossier, selectedDifficulty, selectedReadingType);
           renderCriticCard(turn, latestCritique, targetScore);
 
           const isApproved = latestCritique.score >= targetScore;
@@ -3050,13 +3205,13 @@ You MUST respond ONLY with valid JSON conforming to this schema:
             statusText.textContent = currentLang === "id"
               ? `Disetujui! Skor Pengkritik ${latestCritique.score.toFixed(1)} mencapai target ${targetScore.toFixed(1)}.`
               : `Approved! Critic score ${latestCritique.score.toFixed(1)} reached target ${targetScore.toFixed(1)}.`;
-            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier);
+            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier, selectedDifficulty, selectedReadingType);
             break;
           } else if (turn === maxTurns) {
             statusText.textContent = currentLang === "id"
               ? `Menyelesaikan seluruh ${maxTurns} putaran (Skor akhir: ${latestCritique.score.toFixed(1)}).`
               : `Completed all ${maxTurns} iterations (Final score: ${latestCritique.score.toFixed(1)}).`;
-            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier);
+            renderFinalApprovedCard(currentDraft, latestCritique.score, turn, scholarlyDossier, selectedDifficulty, selectedReadingType);
           } else if (isApproved && forceAllTurns) {
             statusText.textContent = currentLang === "id"
               ? `Putaran ${turn} bernilai ${latestCritique.score.toFixed(1)} (>= ${targetScore.toFixed(1)}), lanjut ke putaran berikutnya (Mode paksa aktif)...`

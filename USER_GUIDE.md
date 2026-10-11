@@ -19,19 +19,24 @@ This guide provides end-users, students, researchers, technical writers, and con
    - [Grounding Repositories](#supported-academic-sources)
    - [Multilingual Scientific Lookup](#multilingual-scientific-lookup)
    - [Local Document Upload (PDF / TXT)](#local-document-upload)
-7. [Verbatim Quotations & CTRL+F Verifiability](#-verbatim-quotations--ctrlf-verifiability)
-8. [The Two-Agent Collaboration Workflow](#-the-two-agent-collaboration-workflow)
+7. [Advanced Pipeline Options (Target Audience & Document Genre)](#-advanced-pipeline-options-target-audience--document-genre)
+   - [Target Difficulty & Audience Tiers](#target-difficulty--audience-tiers)
+   - [Document Type & Reading Genres](#document-type--reading-genres)
+   - [Thinking Depth & Turn Budget](#thinking-depth--turn-budget)
+   - [Live Summary Badge & Mobile Layout](#live-summary-badge--mobile-layout)
+8. [Verbatim Quotations & CTRL+F Verifiability](#-verbatim-quotations--ctrlf-verifiability)
+9. [The Two-Agent Collaboration Workflow](#-the-two-agent-collaboration-workflow)
    - [Writer Agent](#writer-agent)
    - [Critic Agent](#critic-agent)
    - [Iterative Loop & Approval Threshold](#iterative-refinement-loop)
-9. [Reading Ergonomics, Palettes & Focus Mode](#-reading-ergonomics-palettes--focus-mode)
+10. [Reading Ergonomics, Palettes & Focus Mode](#-reading-ergonomics-palettes--focus-mode)
    - [Four Reading Color Palettes](#1-four-reading-color-palettes)
    - [Typographic Ergonomics & Reader Toolbar](#2-typographic-ergonomics--reader-toolbar)
    - [Interactive Citation Micro-Previews & Mobile Bottom Sheet Drawer](#3-interactive-citation-micro-previews--mobile-bottom-sheet-drawer)
    - [Zen Mode Focus Reading Overlay](#4-zen-mode-focus-reading-overlay)
    - [Mobile Phone Streamlined Experience & Decluttering](#5-mobile-phone-streamlined-experience--decluttering)
-10. [CLI Usage & Command Reference](#-cli-usage--command-reference)
-11. [Troubleshooting & FAQs](#-troubleshooting--faqs)
+11. [CLI Usage & Command Reference](#-cli-usage--command-reference)
+12. [Troubleshooting & FAQs](#-troubleshooting--faqs)
 
 ---
 
@@ -144,6 +149,57 @@ You can also ground the agent in your own documents:
 - Click **"Upload PDF / Text"** and select any `.pdf` or `.txt` file.
 - The document is parsed directly in your browser using PDF.js.
 - Text content is extracted and injected into the dossier alongside academic papers.
+
+---
+
+## ⚙️ Advanced Pipeline Options (Target Audience & Document Genre)
+
+Under the collapsible **Advanced Pipeline Options** (`⚙️`) panel, you can tailor both the conceptual depth and structural format of the generated draft to your specific audience and publication needs.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│ ⚙️ Advanced Pipeline Options   [🎯 Undergrad • 📚 Lit Review • 🧠 Medium • 3 Turns] ▾ │
+├────────────────────────────────────────────────────────────────────────┤
+│ 🎯 Target Difficulty / Audience:     📚 Document Type / Genre:        │
+│    [ Undergraduate / College      ▾]    [ Academic Literature Review ▾]│
+│                                                                        │
+│ 🧠 Thinking Mode:                     Iteration Mode:                  │
+│    [ Medium (Balanced Reasoning)  ▾]    [ 3 Turns (Multi-Round Polish)▾]│
+│                                                                        │
+│ Approval Target Score (1-10):         Execution Toggles:               │
+│    [ 9.5                          ]     [✓] Force all turns            │
+│                                         [ ] 🌐 Google Web Search       │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Target Difficulty & Audience Tiers
+
+| Tier (`--difficulty`) | Label (EN / ID) | Prompt Tone & Conceptual Calibration |
+| :--- | :--- | :--- |
+| `layman` | **General Audience / Layman**<br>*(Masyarakat Umum / Awam)* | Jargon-free, engaging language with intuitive real-world analogies. Breaks down complex mechanisms into accessible concepts without sacrificing factual integrity. |
+| `undergraduate` *(Default)* | **Undergraduate / College**<br>*(Mahasiswa / Sarjana)* | Rigorous academic exposition with well-defined foundational concepts, systematic methodology, and formal technical terminology suited for college coursework. |
+| `expert` | **Expert / Specialist Researcher**<br>*(Pakar / Peneliti Spesialis)* | High conceptual density, cutting-edge theoretical nuances, methodology critique, edge cases, and in-depth domain mechanics without spending space on elementary basics. |
+| `executive` | **Executive / Strategic Decision Maker**<br>*(Eksekutif / Pengambil Kebijakan)* | High-level architectural trade-offs, operational impact, ROI, risks, and actionable strategic recommendations with concise, authoritative clarity. |
+
+### Document Type & Reading Genres
+
+| Genre (`--reading-type`) | Label (EN / ID) | Document Structure & Flow |
+| :--- | :--- | :--- |
+| `literature_review` *(Default)* | **Academic Literature Review**<br>*(Tinjauan Pustaka Akademis)* | Systematic thematic organization, consensus versus debate synthesis across peer-reviewed sources, research gaps, and exhaustive grounding in cited works. |
+| `deep_dive_essay` | **Longform Analytical Essay**<br>*(Esai Analitis Mendalam)* | Narrative prose, persuasive intellectual momentum, progressive conceptual building, and thought-provoking connections between theory and practice. |
+| `textbook_chapter` | **Educational / Textbook Chapter**<br>*(Bab Buku Teks / Materi Ajar)* | Pedagogical progression: 1) Learning Objectives, 2) Progressive Conceptual Modules, 3) Concrete Worked Examples / Case Studies, and 4) Chapter Key Takeaways. |
+| `technical_whitepaper` | **Technical Whitepaper**<br>*(Buku Putih Teknis)* | Authoritative industry blueprint: 1) Problem Statement, 2) Architecture / Technical Specifications, 3) Comparative Trade-off Matrix, and 4) Implementation Feasibility. |
+| `executive_brief` | **Executive / Policy Brief**<br>*(Ringkasan Eksekutif / Brief)* | Decision-oriented briefing: 1) Executive Summary, 2) Core Strategic Findings & Insights, 3) Risk & Opportunity Matrix, and 4) Prioritized Action Plan. |
+
+### Thinking Depth & Turn Budget
+- **🧠 Thinking Mode**: Choose between `Low` (fast response, minimal reasoning latency), `Medium` (balanced thinking tokens), or `High` (extended strategic reasoning for complex multi-faceted topics).
+- **Iteration Mode**: Select `1 Turn` (single draft), `2 Turns` (Draft → Critique → Revision), or `3 Turns` (maximum iterative polish).
+- **Approval Target Score (1.0–10.0)**: If the Critic Agent awards a score equal to or exceeding this threshold (default `9.5`), the pipeline finishes early with an approved draft.
+- **Force All Turns**: Check this box to prevent early stopping and force the agents to complete all refinement iterations.
+
+### Live Summary Badge & Mobile Layout
+- The collapsible header features a **real-time summary badge** (e.g. `🎯 Undergrad • 📚 Lit Review • 🧠 Medium • 3 Turns • Target 9.5`) that instantly updates as you adjust settings.
+- On desktop, the controls arrange in an uncluttered 3-column grid. On mobile phones, options stack responsively into clean single-column cards with touch-friendly select controls.
 
 ---
 
@@ -278,6 +334,8 @@ python dev_pipeline.py \
   --topic "Persepsi wicara" \
   --lang id \
   --model gemini-3.8-flash \
+  --difficulty expert \
+  --reading-type technical_whitepaper \
   --thinking-level medium \
   --max-turns 2 \
   --target-score 8.5 \
@@ -296,6 +354,8 @@ python dev_pipeline.py \
 | `--topic "<string>"` | Topic, research prompt, or essay goal | `"Speech perception"` |
 | `--lang {en,id}` | Language mode: `en` (English) or `id` (Bahasa Indonesia) | `en` |
 | `--model <name>` | `gemini-3.8-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-pro-preview` | `gemini-3.5-flash-lite` |
+| `--difficulty {layman,undergraduate,expert,executive}` | Reading difficulty and target audience tier | `undergraduate` |
+| `--reading-type {literature_review,deep_dive_essay,textbook_chapter,technical_whitepaper,executive_brief}` | Document format and reading genre | `literature_review` |
 | `--thinking-level {low,medium,high}` | Depth of Gemini internal reasoning | `medium` |
 | `--web-search` | Enable Google Search grounding | `False` |
 | `--arxiv` | Enable arXiv preprints index | `False` |

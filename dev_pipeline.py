@@ -632,7 +632,50 @@ def build_scholarly_dossier(
 # Agent Functions
 # ==============================================================================
 
-def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str = DEFAULT_MODEL, enable_search: bool = False, thinking_level: str = "medium", scholarly_dossier: str = "", lang: str = "en") -> str:
+DIFFICULTY_GUIDELINES = {
+    "layman": {
+        "en": "TARGET AUDIENCE (General Audience / Layman):\n- Use clear, engaging, jargon-free explanations with intuitive real-world analogies.\n- Break down complex mechanisms into accessible concepts while maintaining factual integrity.\n- Target curious readers without specialized prior background in the field.",
+        "id": "TARGET AUDIENS (Masyarakat Umum / Awam):\n- Gunakan bahasa yang mudah dipahami, lugas, bersahabat, dan bebas jargon yang berbelit-belit.\n- Jelaskan setiap konsep dengan analogi kehidupan nyata yang intuitif tanpa mengurangi kebenaran faktual.\n- Targetkan pembaca yang ingin memahami topik secara menyeluruh tanpa latar belakang teknis khusus."
+    },
+    "undergraduate": {
+        "en": "TARGET AUDIENCE (Undergraduate / College):\n- Maintain formal academic rigor, well-defined foundational concepts, structured analytical exposition, and professional technical terminology.\n- Deliver arguments and literature syntheses appropriate for undergraduate and college study.",
+        "id": "TARGET AUDIENS (Mahasiswa / Kalangan Akademisi Sarjana):\n- Pertahankan ketelitian akademis, konsep dasar yang terdefinisi dengan jelas, eksposisi analitis yang terstruktur, dan terminologi teknis profesional.\n- Sajikan argumen dan sintesis berbasis literatur yang relevan untuk tingkat perkuliahan sarjana/universitas."
+    },
+    "expert": {
+        "en": "TARGET AUDIENCE (Expert / Specialist Researcher):\n- Deliver high conceptual density, advanced theoretical nuance, methodology critique, state-of-the-art edge cases, and in-depth domain mechanisms.\n- Do not waste space over-explaining foundational basics; focus on technical boundaries and state-of-the-art developments.",
+        "id": "TARGET AUDIENS (Pakar / Peneliti Spesialis):\n- Sajikan densitas konseptual tinggi, nuansa teoretis mutakhir, telaah metodologis kritis, analisis kasus batas (edge cases), dan mekanisme domain mendalam.\n- Jangan membuang ruang untuk mengulang dasar-dasar pemula; fokuskan pada batasan teknis dan kemajuan state-of-the-art."
+    },
+    "executive": {
+        "en": "TARGET AUDIENCE (Executive / Strategic Decision Maker):\n- Focus on strategic implications, high-level architectural tradeoffs, operational impact & ROI, risk assessments, and actionable recommendations.\n- Write with concise, authoritative clarity geared toward high-stakes decision-making.",
+        "id": "TARGET AUDIENS (Eksekutif / Pengambil Kebijakan Strategis):\n- Fokus pada implikasi strategis, kompromi arsitektural/teknis tingkat tinggi, analisis dampak operasional & ROI, risiko, dan rekomendasi actionable.\n- Gunakan gaya penulisan ringkas, tegas, berbasis dampak, dan otoritatif."
+    }
+}
+
+READING_TYPE_GUIDELINES = {
+    "literature_review": {
+        "en": "DOCUMENT GENRE (Academic Literature Review):\n- Organize systematically by conceptual themes and theoretical paradigms.\n- Synthesize consensus versus active debates across cited scholarly literature.\n- Highlight research gaps and emerging directions.",
+        "id": "GENRE DOKUMEN (Tinjauan Pustaka Akademis / Literature Review):\n- Susun secara sistematis berdasarkan tema konseptual atau paradigma teoretis.\n- Sintesiskan konsensus dan perdebatan antar-makalah/sumber rujukan ilmiah.\n- Soroti celah riset (research gaps) dan arah pengembangan masa depan."
+    },
+    "deep_dive_essay": {
+        "en": "DOCUMENT GENRE (Longform Analytical Essay):\n- Employ engaging narrative prose, persuasive intellectual depth, progressive conceptual building, and thought-provoking synthesis connecting theory to practice.",
+        "id": "GENRE DOKUMEN (Esai Analitis Mendalam / Longform Analytical Essay):\n- Terapkan prosa naratif yang memikat, alur argumen intelektual yang persuasif, pembangunan ide bertahap, dan perenungan kritis yang menghubungkan teori dengan penerapan nyata."
+    },
+    "textbook_chapter": {
+        "en": "DOCUMENT GENRE (Educational / Textbook Chapter):\n- Follow a pedagogical structure: 1) Learning Objectives, 2) Progressive Conceptual Modules with in-depth exposition, 3) Concrete Worked Examples / Case Studies, and 4) Chapter Key Takeaways.",
+        "id": "GENRE DOKUMEN (Bab Buku Teks / Materi Ajar Edukatif):\n- Terapkan struktur pedagogis: 1) Tujuan Pembelajaran (Learning Objectives), 2) Modul Konsep Bertahap dengan Penjelasan Mendalam, 3) Contoh Kasus / Studi Implementasi Nyata, dan 4) Rangkuman Inti Bab (Key Takeaways)."
+    },
+    "technical_whitepaper": {
+        "en": "DOCUMENT GENRE (Technical Whitepaper):\n- Adopt an authoritative technical publication style: 1) Problem Statement & Industry/Scientific Context, 2) Architectural Blueprint / Technical Specifications, 3) Comparative Benchmark / Tradeoff Matrix, and 4) Implementation Feasibility & Scalability.",
+        "id": "GENRE DOKUMEN (Buku Putih Teknis / Technical Whitepaper):\n- Terapkan struktur publikasi teknis otoritatif: 1) Pernyataan Masalah & Konteks Industri/Sains, 2) Cetak Biru Arsitektur / Spesifikasi Teknis, 3) Analisis Komparatif / Matriks Kompromi, dan 4) Pertimbangan Implementasi & Skalabilitas."
+    },
+    "executive_brief": {
+        "en": "DOCUMENT GENRE (Executive / Policy Brief):\n- Format with: 1) Executive Summary, 2) Core Strategic Findings & Key Insights, 3) Risk & Opportunity Assessment, and 4) Prioritized Action Plan / Strategic Recommendations.",
+        "id": "GENRE DOKUMEN (Ringkasan Eksekutif / Brief Kebijakan):\n- Terapkan struktur brief ringkas: 1) Ringkasan Eksekutif (Executive Summary), 2) Temuan Strategis Inti & Wawasan Utama, 3) Matriks Risiko & Peluang, dan 4) Rekomendasi Tindakan Terprioritisasi."
+    }
+}
+
+
+def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str = DEFAULT_MODEL, enable_search: bool = False, thinking_level: str = "medium", scholarly_dossier: str = "", lang: str = "en", difficulty: str = "undergraduate", reading_type: str = "literature_review") -> str:
     """Writer agent creates the first draft."""
     system_prompt = (
         "You are an expert, engaging, and articulate Writer Agent. "
@@ -645,6 +688,10 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
             "Anda WAJIB menulis seluruh naskah dan draf secara komprehensif dalam BAHASA INDONESIA yang baku, ilmiah, mengalir, dan profesional.\n"
             "Sintesiskan semua temuan dari literatur ilmiah internasional dan regional (arXiv, Semantic Scholar, PubMed, OpenAlex, Crossref, Wikipedia) ke dalam Bahasa Indonesia dengan runtut.\n"
         )
+
+    diff_guide = DIFFICULTY_GUIDELINES.get(difficulty, DIFFICULTY_GUIDELINES["undergraduate"]).get(lang, "undergraduate")
+    type_guide = READING_TYPE_GUIDELINES.get(reading_type, READING_TYPE_GUIDELINES["literature_review"]).get(lang, "literature_review")
+    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}"
 
     quotation_rules = (
         "\n\nATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n"
@@ -677,7 +724,7 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
             "Strictly follow the Verbatim Quotation & Citation Rules above."
         )
 
-    user_prompt = f"Topic/Goal: {topic}\n"
+    user_prompt = f"Topic/Goal: {topic}\nTarget Audience: {difficulty}\nDocument Genre: {reading_type}\n"
     if scholarly_dossier:
         user_prompt += f"\n{scholarly_dossier}\n"
     if instructions:
@@ -698,7 +745,7 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
     return response.output_text or ""
 
 
-def run_writer_revision(original_topic: str, previous_draft: str, critique: CritiqueResult, turn: int, model: str = DEFAULT_MODEL, enable_search: bool = False, thinking_level: str = "medium", scholarly_dossier: str = "", lang: str = "en") -> str:
+def run_writer_revision(original_topic: str, previous_draft: str, critique: CritiqueResult, turn: int, model: str = DEFAULT_MODEL, enable_search: bool = False, thinking_level: str = "medium", scholarly_dossier: str = "", lang: str = "en", difficulty: str = "undergraduate", reading_type: str = "literature_review") -> str:
     """Writer agent revises the draft incorporating the critic's points."""
     system_prompt = (
         "You are an expert Writer Agent in an iterative feedback loop. "
@@ -707,10 +754,14 @@ def run_writer_revision(original_topic: str, previous_draft: str, critique: Crit
     )
     if lang == "id":
         system_prompt += (
-            "\n\nPANDUAN BAHASA & REVISI:\n"
+            "\nPANDUAN BAHASA & REVISI:\n"
             "Perbaiki dan sempurnakan draf secara menyeluruh dalam BAHASA INDONESIA. "
             "Tangani setiap kelemahan dan rekomendasi perbaikan dari Pengkritik, serta pertahankan rujukan akademis dan sitasi DOIs."
         )
+
+    diff_guide = DIFFICULTY_GUIDELINES.get(difficulty, DIFFICULTY_GUIDELINES["undergraduate"]).get(lang, "undergraduate")
+    type_guide = READING_TYPE_GUIDELINES.get(reading_type, READING_TYPE_GUIDELINES["literature_review"]).get(lang, "literature_review")
+    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}"
 
     quotation_rules = (
         "\n\nATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n"
@@ -728,6 +779,8 @@ def run_writer_revision(original_topic: str, previous_draft: str, critique: Crit
     revisions_formatted = "\n".join(f"- {item}" for item in critique.actionable_revisions)
     prompt = f"""
 Original Topic: {original_topic}
+Target Audience: {difficulty}
+Document Genre: {reading_type}
 
 Your Previous Draft (Draft {turn}):
 \"\"\"
@@ -760,7 +813,7 @@ Required Improvements:
     return response.output_text or ""
 
 
-def run_critic_review(topic: str, draft: str, turn: int, model: str = DEFAULT_MODEL, thinking_level: str = "medium", has_dossier: bool = False, lang: str = "en") -> CritiqueResult:
+def run_critic_review(topic: str, draft: str, turn: int, model: str = DEFAULT_MODEL, thinking_level: str = "medium", has_dossier: bool = False, lang: str = "en", difficulty: str = "undergraduate", reading_type: str = "literature_review") -> CritiqueResult:
     """Critic agent rigorously reviews the draft and returns structured feedback."""
     system_prompt = (
         "You are a meticulous, discerning Senior Editor and Critic Agent. "
@@ -772,6 +825,13 @@ def run_critic_review(topic: str, draft: str, turn: int, model: str = DEFAULT_MO
             "\nPANDUAN BAHASA:\n"
             "Berikan seluruh evaluasi, analisis kekuatan, kelemahan, dan tindakan revisi dalam BAHASA INDONESIA yang objektif dan konstruktif.\n"
         )
+
+    system_prompt += (
+        f"\nAUDIT TARGET AUDIENS & GENRE DOKUMEN:\n"
+        f"1. Target Audiens ({difficulty}): Periksa kesesuaian gaya bahasa, densitas teknis, dan istilah untuk target pembaca ini.\n"
+        f"2. Genre Dokumen ({reading_type}): Periksa apakah struktur dan alur penyampaian mencerminkan format dokumen yang ditargetkan.\n"
+        "Jika draf tidak sesuai dengan target audiens atau genre yang diminta, tandai sebagai KELEMAHAN (Weakness) dan berikan saran perbaikan.\n"
+    )
 
     system_prompt += (
         "\nAUDIT KUTIPAN KATA-DEMI-KATA & REFERENSI (VERBATIM QUOTATION & CITATION AUDIT):\n"
@@ -798,6 +858,8 @@ def run_critic_review(topic: str, draft: str, turn: int, model: str = DEFAULT_MO
     prompt = f"""
 Goal / Prompt: {topic}
 Iteration Turn: {turn}
+Target Audience: {difficulty}
+Document Genre: {reading_type}
 Grounding Dossier Present: {'Yes' if has_dossier else 'No'}
 
 Draft to Review:
@@ -882,7 +944,9 @@ def orchestrate_pipeline(
     use_pubmed: bool = False,
     use_wiki: bool = False,
     doc_path: Optional[str] = None,
-    lang: str = "en"
+    lang: str = "en",
+    difficulty: str = "undergraduate",
+    reading_type: str = "literature_review"
 ) -> dict:
     """Coordinates the interaction loop between Writer and Critic."""
     search_label = " (🌐 Web Search Enabled)" if web_search else ""
@@ -890,7 +954,7 @@ def orchestrate_pipeline(
     console.print(Panel(
         f"[bold cyan]Two-Agent Pipeline Initialized{lang_label}[/bold cyan]\n"
         f"[white]Topic:[/white] {topic}\n"
-        f"[white]Model:[/white] {model} | [white]🧠 Thinking:[/white] {thinking_level}{search_label}",
+        f"[white]Model:[/white] {model} | [white]🎯 Target Audience:[/white] {difficulty} | [white]📚 Genre:[/white] {reading_type} | [white]🧠 Thinking:[/white] {thinking_level}{search_label}",
         border_style="cyan"
     ))
 
@@ -924,12 +988,12 @@ def orchestrate_pipeline(
         console.rule(f"[bold yellow]Iteration {turn} / {max_turns}[/bold yellow]")
 
         # 1. Writer Turn
-        console.print("[bold green]>>> Writer Agent is thinking & composing...[/bold green]")
+        console.print(f"[bold green]>>> Writer Agent is thinking & composing ({difficulty} • {reading_type})...[/bold green]")
         if turn == 1:
-            current_draft = run_writer_draft(topic, model=model, enable_search=web_search, thinking_level=thinking_level, scholarly_dossier=dossier_text, lang=lang)
+            current_draft = run_writer_draft(topic, model=model, enable_search=web_search, thinking_level=thinking_level, scholarly_dossier=dossier_text, lang=lang, difficulty=difficulty, reading_type=reading_type)
         else:
             assert latest_critique is not None
-            current_draft = run_writer_revision(topic, current_draft, latest_critique, turn - 1, model=model, enable_search=web_search, thinking_level=thinking_level, scholarly_dossier=dossier_text, lang=lang)
+            current_draft = run_writer_revision(topic, current_draft, latest_critique, turn - 1, model=model, enable_search=web_search, thinking_level=thinking_level, scholarly_dossier=dossier_text, lang=lang, difficulty=difficulty, reading_type=reading_type)
 
         current_draft = enrich_references_with_links(current_draft, citations, lang=lang)
 
@@ -937,7 +1001,7 @@ def orchestrate_pipeline(
 
         # 2. Critic Turn
         console.print("[bold magenta]>>> Critic Agent is evaluating draft...[/bold magenta]")
-        latest_critique = run_critic_review(topic, current_draft, turn, model=model, thinking_level=thinking_level, has_dossier=bool(citations), lang=lang)
+        latest_critique = run_critic_review(topic, current_draft, turn, model=model, thinking_level=thinking_level, has_dossier=bool(citations), lang=lang, difficulty=difficulty, reading_type=reading_type)
 
         critique_md = (
             f"**Score:** {latest_critique.score:.1f}/10.0  \n"
@@ -974,6 +1038,8 @@ def orchestrate_pipeline(
         f.write(f"# Final Draft: {topic}\n\n")
         f.write(f"**Language:** `{lang.upper()}`\n")
         f.write(f"**Model:** `{model}`\n")
+        f.write(f"**Target Difficulty / Audience:** `{difficulty}`\n")
+        f.write(f"**Document Type / Genre:** `{reading_type}`\n")
         f.write(f"**Thinking Mode:** `{thinking_level}`\n")
         f.write(f"**Web Search:** `{'Enabled' if web_search else 'Disabled'}`\n")
         if citations:
@@ -1005,6 +1071,8 @@ if __name__ == "__main__":
     parser.add_argument("--topic", type=str, default="Speech perception", help="Prompt or topic for content")
     parser.add_argument("--lang", choices=["en", "id"], default="en", help="Language mode: en (English) or id (Bahasa Indonesia)")
     parser.add_argument("--model", type=str, default=DEFAULT_MODEL, choices=["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-pro-preview", "gemini-flash-latest"], help="Gemini model to use")
+    parser.add_argument("--difficulty", choices=["layman", "undergraduate", "expert", "executive"], default="undergraduate", help="Reading difficulty / target audience")
+    parser.add_argument("--reading-type", choices=["literature_review", "deep_dive_essay", "textbook_chapter", "technical_whitepaper", "executive_brief"], default="literature_review", help="Document type / reading genre")
     parser.add_argument("--thinking-level", type=str, default="medium", choices=["low", "medium", "high"], help="Thinking depth: low, medium, or high")
     parser.add_argument("--web-search", action="store_true", help="Enable Google Search grounding for research")
     parser.add_argument("--arxiv", action="store_true", help="Ground in arXiv preprints")
@@ -1032,5 +1100,7 @@ if __name__ == "__main__":
         use_pubmed=args.pubmed,
         use_wiki=args.wikipedia,
         doc_path=args.doc,
-        lang=args.lang
+        lang=args.lang,
+        difficulty=args.difficulty,
+        reading_type=args.reading_type
     )
