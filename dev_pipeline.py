@@ -930,8 +930,8 @@ def run_deterministic_checks(draft: str, dossier_text: str = "") -> Dict[str, An
     if dossier_text:
         dossier_lower = dossier_text.lower()
         for q in quotes:
-            clean_q = re.sub(r'^["“\'”]+|["“\'”]+$', '', q)
-            clean_q = re.sub(r'\[\d+\]', '', clean_q).strip().lower()
+            clean_q = re.sub(r'\[\d+\]', '', q).strip()
+            clean_q = re.sub(r'^["“\'”]+|["“\'”]+$', '', clean_q).strip().lower()
             if clean_q and len(clean_q) > 15 and clean_q in dossier_lower:
                 verified_quotes_count += 1
 
