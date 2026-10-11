@@ -955,7 +955,7 @@ if (startPipelineBtn) {
             : `Turn ${turn}: Critic Agent (${selectedModel} | 🧠 ${selectedThinking}) is evaluating...`;
         }
         
-        latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel, selectedThinking, scholarlyDossier, selectedDifficulty, selectedReadingType, currentLang);
+        latestCritique = await runCriticReview(apiKey, topic, currentDraft, turn, selectedModel, selectedThinking, scholarlyDossier, selectedDifficulty, selectedReadingType, currentLang, targetScore);
         renderCriticCard(turn, latestCritique, targetScore, currentLang);
 
         const isApproved = latestCritique.score >= targetScore;

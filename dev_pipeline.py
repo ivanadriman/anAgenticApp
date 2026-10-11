@@ -1204,12 +1204,12 @@ Required Improvements:
     return response.output_text or ""
 
 
-def run_critic_review(topic: str, draft: str, turn: int, model: str = DEFAULT_MODEL, thinking_level: str = "medium", has_dossier: bool = False, lang: str = "en", difficulty: str = "undergraduate", reading_type: str = "literature_review") -> CritiqueResult:
+def run_critic_review(topic: str, draft: str, turn: int, model: str = DEFAULT_MODEL, thinking_level: str = "medium", has_dossier: bool = False, lang: str = "en", difficulty: str = "undergraduate", reading_type: str = "literature_review", target_score: float = 8.5) -> CritiqueResult:
     """Critic agent rigorously reviews the draft and returns structured feedback."""
     system_prompt = (
         "You are a meticulous, discerning Senior Editor and Critic Agent. "
         "Evaluate drafts strictly on clarity, depth, coherence, factual grounding, tone, and engagement. "
-        "Be constructive but hold a high bar. Scores above 8.5 qualify for 'APPROVED'. "
+        f"Be constructive but hold a high bar. Scores of {target_score:.1f} and above qualify for 'APPROVED'. "
     )
     if lang == "id":
         system_prompt += (
@@ -1251,6 +1251,7 @@ Goal / Prompt: {topic}
 Iteration Turn: {turn}
 Target Audience: {difficulty}
 Document Genre: {reading_type}
+Approval Target Score Threshold: {target_score:.1f}/10
 Grounding Dossier Present: {'Yes' if has_dossier else 'No'}
 
 Draft to Review:
@@ -1609,7 +1610,7 @@ def orchestrate_pipeline(
 
         # 2. Critic Turn
         console.print("[bold magenta]>>> Critic Agent is evaluating draft...[/bold magenta]")
-        latest_critique = run_critic_review(topic, current_draft, turn, model=model, thinking_level=thinking_level, has_dossier=bool(citations), lang=lang, difficulty=difficulty, reading_type=reading_type)
+        latest_critique = run_critic_review(topic, current_draft, turn, model=model, thinking_level=thinking_level, has_dossier=bool(citations), lang=lang, difficulty=difficulty, reading_type=reading_type, target_score=target_score)
 
         critique_md = (
             f"**Score:** {latest_critique.score:.1f}/10.0  \n"

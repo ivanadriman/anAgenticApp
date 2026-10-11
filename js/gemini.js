@@ -331,10 +331,11 @@ ${revisionsList}
 /**
  * Critic Agent: Evaluates draft on depth, tone, audience alignment, and citation integrity.
  */
-export async function runCriticReview(apiKey, topic, draft, turn, model, thinkingLevel = "medium", scholarlyDossier = null, difficulty = "undergraduate", readingType = "literature_review", currentLang = "en") {
+export async function runCriticReview(apiKey, topic, draft, turn, model, thinkingLevel = "medium", scholarlyDossier = null, difficulty = "undergraduate", readingType = "literature_review", currentLang = "en", targetScore = 8.5) {
+  const minTarget = typeof targetScore === "number" && !isNaN(targetScore) ? Math.max(1.0, Math.min(10.0, targetScore)) : 8.5;
   let sys = `You are a meticulous Senior Editor and Critic Agent. 
 Evaluate drafts strictly on clarity, depth, coherence, tone, and practical examples.
-Hold a high bar. Scores above 8.5 qualify for 'APPROVED'.`;
+Hold a high bar. Scores of ${minTarget.toFixed(1)} and above qualify for 'APPROVED'.`;
   if (currentLang === "id") {
     sys += `\nPANDUAN BAHASA:\nBerikan seluruh evaluasi, analisis kekuatan, kelemahan, dan tindakan revisi dalam BAHASA INDONESIA yang objektif dan konstruktif.`;
   }
@@ -362,7 +363,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
   "actionable_revisions": ["string"]
 }`;
 
-  let prompt = `Topic/Goal: ${topic}\n\nDraft (Turn ${turn}):\n"""\n${draft}\n"""\n`;
+  let prompt = `Topic/Goal: ${topic}\n\nDraft (Turn ${turn}):\n"""\n${draft}\n"""\nApproval Target Score Threshold: ${minTarget.toFixed(1)}/10\n`;
   if (scholarlyDossier) {
     prompt += `\nGrounding Dossier Reference:\n${scholarlyDossier.text}\n`;
   }
@@ -389,7 +390,7 @@ You MUST respond ONLY with valid JSON conforming to this schema:
 
   // Tolerant normalization
   parsed.score = typeof parsed.score === "number" ? Math.max(1.0, Math.min(10.0, parsed.score)) : 7.0;
-  parsed.status = (parsed.status === "APPROVED" || parsed.status === "NEEDS_REVISION") ? parsed.status : (parsed.score >= 8.5 ? "APPROVED" : "NEEDS_REVISION");
+  parsed.status = (parsed.status === "APPROVED" || parsed.status === "NEEDS_REVISION") ? parsed.status : (parsed.score >= minTarget ? "APPROVED" : "NEEDS_REVISION");
   return parsed;
 }
 
