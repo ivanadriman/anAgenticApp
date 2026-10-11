@@ -25,8 +25,10 @@ This guide provides technical contributors, software engineers, and AI researche
 11. [Publication Integrity Audit Engine (`source-checking-guide.md`)](#-publication-integrity-audit-engine)
 12. [W3C Deep Text-Fragment Resolution Engine](#-w3c-deep-text-fragment-resolution-engine)
 13. [Small Model Hardening & Surgical Paragraph Patching](#-small-model-hardening--surgical-paragraph-patching)
-14. [Test Automation Suite (Playwright)](#-test-automation-suite-playwright)
-15. [Extension Guide: Adding New Sources & Models](#-extension-guide-adding-new-sources--models)
+14. [Testing Suite (Pytest & Playwright)](#-testing-suite-pytest--playwright)
+15. [Security Architecture & Threat Hardening](#-security-architecture--threat-hardening)
+16. [Resilient Networking & Exponential Backoff Engine](#-resilient-networking--exponential-backoff-engine)
+17. [Extension Guide: Adding New Sources & Models](#-extension-guide-adding-new-sources--models)
 
 ---
 
@@ -93,17 +95,28 @@ flowchart TD
 
 ```text
 anAgenticApp/
-├── index.html              # Standalone web app (Vanilla JS, Tailwind, Marked, PDF.js)
+├── index.html              # Standalone client-side web app (Vanilla JS, DOMPurify, Marked, PDF.js)
 ├── dev_pipeline.py         # Python CLI multi-agent orchestrator (google-genai, rich, pydantic)
-├── test_browser.py         # Headless/headed Playwright test suite with assertion checks
-├── requirements.txt        # Python package dependencies
+├── test_browser.py         # Playwright test suite (offline UI, security regression & live pipeline)
+├── tests/                  # Offline pytest suite (0 network, 0 API key required)
+│   ├── __init__.py
+│   ├── test_pydantic_models.py       # Pydantic schemas and serialization
+│   ├── test_text_fragments.py        # Abstract reconstruction & W3C text fragment generation
+│   ├── test_deterministic_checks.py # Pre-audit sanity heuristics & verb ladder rules
+│   ├── test_retry_backoff.py         # Exponential backoff, jitter & Retry-After handling
+│   ├── test_multilingual_queries.py  # Dictionary heuristic & mocked LLM routing
+│   └── test_fetchers_mocked.py       # Canned response parsing for 6 academic APIs
+├── docs/                   # Documentation visual assets
+│   └── images/             # Key verified workflow screenshots
+├── requirements.txt        # Core runtime dependencies (google-genai, rich, pydantic, etc.)
+├── requirements-dev.txt    # Testing & development dependencies (pytest)
 ├── .env                    # Local environment variables (GEMINI_API_KEY)
-├── .gitignore              # Ignored files (.env, __pycache__, test_screenshots, etc.)
+├── .gitignore              # Ignored files (.env, output/, test_screenshots/, .pytest_cache/)
 ├── README.md               # Quickstart and project intro
 ├── USER_GUIDE.md           # End-user reference manual
 ├── DEVELOPER_GUIDE.md      # Technical architecture & developer reference (this file)
-├── output/                 # Output directory for generated markdown reports
-└── test_screenshots/      # Automated screenshot captures generated during test runs
+├── output/                 # (Git-ignored) Output directory for generated markdown reports
+└── test_screenshots/      # (Git-ignored) Automated test screenshot captures
 ```
 
 ---
@@ -582,62 +595,153 @@ Smaller models (such as `gemini-3.5-flash-lite`) can exhibit cognitive drift, fu
 
 ---
 
-## 🧪 Test Automation Suite (Playwright)
+## 🧪 Testing Suite (Pytest & Playwright)
 
-The project includes an end-to-end automated browser test suite in [`test_browser.py`](file:///c:/Users/kiris/OneDrive/Documents/AI%20Projects/anAgenticApp/test_browser.py).
+The project includes both a fast, offline Python unit test suite and an end-to-end Playwright browser automation suite.
 
-### Running Browser Tests
+### 1. Offline Unit Test Suite (`pytest`)
+Install test dependencies and run the unit test suite:
 ```bash
+# Install test requirements
+pip install -r requirements-dev.txt
+
+# Run all offline unit tests (41 tests, zero network, zero API key)
+pytest tests/ -v
+```
+
+The pytest suite tests the system offline with mocked network and client abstractions:
+- **`tests/test_pydantic_models.py`**: Schema bounds and serialization for `CritiqueResult`, `SourceAuditItem`, and `SourceAuditResult`.
+- **`tests/test_text_fragments.py`**: Inverted index abstract reconstruction (`reconstruct_abstract`) and W3C Scroll-to-Text Fragment URL generation (`build_text_fragment_url` with short quotes, long quotes, and %2D hyphen encoding).
+- **`tests/test_deterministic_checks.py`**: Citation parity verification, quotation format audits, heuristic causal verb pattern flags, and dossier quote fidelity.
+- **`tests/test_retry_backoff.py`**: Mocked `urllib` and `time.sleep` testing HTTP 429 `Retry-After` header extraction, 5xx backoff retries, non-retryable 404 immediate propagation, and `call_gemini_with_retry`.
+- **`tests/test_multilingual_queries.py`**: Offline dictionary heuristic fallback when API key is missing and mocked Gemini LLM query generation.
+- **`tests/test_fetchers_mocked.py`**: Canned response parsing and failure/timeout recovery across all 6 scholarly fetchers (`fetch_arxiv_papers`, `fetch_crossref_papers`, `fetch_semantic_scholar_papers`, `fetch_openalex_works`, `fetch_pubmed_works`, `fetch_wikipedia_summary`).
+
+---
+
+### 2. Browser Test Suite (Playwright)
+The browser test suite in [`test_browser.py`](test_browser.py) validates the single-page web app in headless Chromium.
+
+#### Running Browser Tests
+```bash
+# Run in offline mode (UI, layout, mobile, auditor cards, and security regression)
+python test_browser.py --no-key
+
+# Run full suite including live multi-turn Gemini pipeline (requires GEMINI_API_KEY in .env)
 python test_browser.py
 ```
 
-### Test Assertions & Test Cases
-1. **Test Case 1**: Toggles language switcher (`🇬🇧 EN` ↔ `🇮🇩 ID`) and verifies localized labels.
-2. **Test Case 2**: Injects test API key, selects all 6 literature sources, tests dynamic `#headerPoweredBadge` model updates, and fills an Indonesian topic.
-3. **Test Case 3**: Executes the pipeline and monitors the live research progression card across all 6 sources.
-4. **Test Case 4**: Verifies global STEM translations, Indonesian Writer Card count, and clickable scholarly links.
-5. **Test Case 5**:
-   - Asserts quotes match `r'["“][^"”]{8,}["”]\s*\[\d+\]'`.
-   - Asserts the presence of the ending references section.
-   - Asserts all citation numbers `[n]` in quotes map to numbered entries in the bibliography.
-6. **Test Case 6**: Verifies clickable reference links inside `.reference-item a` and in-text jump anchors `a.citation-ref[href^='#ref-']`.
-7. **Test Case 7 (Reading Mode & Palettes)**:
-   - Verifies palette switching across 📜 Sepia, 🖤 OLED, ☀️ Light, and 🌙 Slate.
-   - Verifies dynamic `<meta name="theme-color">` updates matching OS system bar colors.
-   - Verifies font face toggle (`serif` ↔ `sans`) and font size stepping (`small`, `normal`, `large`).
-   - Verifies Focus Reading Mode Zen View modal opening, progress bar, and clean closure.
-8. **Test Case 8 (Mobile Browser Emulation)**:
-   - Resizes viewport to 390×844 (emulating iPhone 14 / Pixel 7).
-   - Verifies zero horizontal overflow (`scrollWidth <= clientWidth`).
-   - Simulates touch tap on in-text citation pill, asserting that `#citationDrawer` slides up with `.drawer-open`.
-   - Verifies drawer metadata and 48px touch-target button `🔗 Buka Makalah / Open Paper ↗`.
-   - Closes drawer via close button and verifies `.drawer-closed`.
-9. **Test Case 9 (Markdown Download & PDF Export Dialog)**:
-   - Verifies Markdown Download and PDF Export buttons on output cards and reading toolbars.
-   - Triggers Markdown download and asserts generated `.md` filename matches the extracted article title.
-   - Opens `#pdfExportModal` and asserts visibility.
-   - Tests selecting common paper sizes (`a4`, `letter`, `a5`, `legal`, `executive`).
-   - Tests orientation, margins, and typography dropdown selections.
-   - Verifies presence of `#pdfPrintVectorBtn` and `#pdfDownloadDirectBtn`.
-   - Captures modal screenshot (`27_pdf_export_modal_options.png`) and tests modal close and cancel.
-   - Verifies export buttons inside Focus Reading Mode (Zen View).
-10. **Test Case 10 (Publication Integrity Auditor Agent)**:
-    - Verifies `#strictSourceAuditCheck` exists, is checked by default, and responds to bilingual switching (`🛡️ Strict Publication Integrity Audit` ↔ `🛡️ Audit Ketat Integritas Publikasi`).
-    - Simulates and asserts rendering of Discrepancy Round 1 Card with failure pattern badges (*Correlation-to-causation drift*, *Scope inflation*) and `⚠ NO` items (`29_audit_discrepancy_round1.png`).
-    - Simulates and asserts rendering of 100% Clearance Round 2 Card with `🛡️ 100% Publication Integrity Verified Seal` and all 11 `✓ YES` items (`30_audit_100_percent_clearance.png`).
-11. **Test Case 11 (Deep Text-Fragment Highlighting & Mobile Drawer Quote Inspection)**:
-    - Validates `buildTextFragmentUrl` (JS) and `build_text_fragment_url` (Python) parity producing compliant W3C `#:~:text=start,end` and `#:~:text=phrase` anchors.
-    - Confirms bibliography links render with `#:~:text=` fragment URLs.
-    - Emulates mobile touch viewport (390×844) and taps `.citation-ref` pill.
-    - Asserts `#citationDrawer` slides open, `#drawerQuoteContainer` displays the exact verbatim quote, and `#drawerActionLink.href` carries the deep text fragment.
-    - Verifies `#drawerCopyQuoteBtn` exists and captures screenshot `31_deep_text_fragment_drawer.png`.
-12. **Test Case 12 (Deterministic Pre-Audit & Surgical Paragraph Patching)**:
-    - Tests `runDeterministicSanityChecks` and `run_deterministic_checks` catching ungrounded citation disparity (e.g. `[99]`).
-    - Tests regex heuristic flagging aggressive causal verbs near citations (`drives`, `causes`, `proves`).
-    - Validates surgical paragraph replacement logic: isolates the offending paragraph, replaces it per Verb Ladder guidelines, and asserts surrounding paragraphs remain unaltered byte-for-byte.
-    - Captures verified surgical rebuild card screenshot (`32_surgical_rebuild_verified.png`).
+#### Test Cases & Assertions
+1. **Test Case 1 (Language Switcher)**: Toggles language switcher (`🇬🇧 EN` ↔ `🇮🇩 ID`) and verifies localized labels.
+2. **Test Case 2 (Form Configuration & Dynamic Badges)**: Configures literature sources, tests dynamic `#headerPoweredBadge` model updates, and fills an Indonesian topic.
+3. **Test Case 2B (Security Regression Test - XSS & DOM Sanitization)**: Renders untrusted Markdown containing `<img src=x onerror=...>`, `<script>`, and `javascript:` / `data:` URL schemes. Asserts `window.__xss_fired` is `False`, zero `<script>` tags remain in the DOM, zero `onerror` handlers exist, and unsafe protocols are neutralized.
+4. **Test Case 7 (Reading Mode & Palettes)**: Verifies palette switching across 📜 Sepia, 🖤 OLED, ☀️ Light, and 🌙 Slate, dynamic `<meta name="theme-color">` updates, font toggles (`serif` ↔ `sans`), and Focus Reading Mode (Zen View).
+5. **Test Case 8 (Mobile Browser Emulation)**: Resizes viewport to 390×844, asserts zero horizontal overflow, taps in-text citation pill, and verifies mobile `#citationDrawer` slides open with verbatim quote and deep highlight button (`docs/images/31_deep_text_fragment_drawer.png`).
+6. **Test Case 9 (Markdown Download & PDF Export Dialog)**: Tests Markdown download, opening `#pdfExportModal`, selecting common paper sizes (`a4`, `letter`, `a5`, `legal`, `executive`), and print vector dialog (`docs/images/27_pdf_export_modal_options.png`).
+7. **Test Case 10 (Publication Integrity Auditor Agent)**: Simulates and asserts rendering of Discrepancy Round 1 Card with failure pattern badges and `⚠ NO` items, followed by 100% Clearance Round 2 Card with `🛡️ 100% Publication Integrity Verified Seal` (`docs/images/30_audit_100_percent_clearance.png`).
+8. **Test Case 11 (Deep Text-Fragment Highlighting & Evidence Inspector)**: Validates `buildTextFragmentUrl` (JS) and `build_text_fragment_url` (Python) parity producing compliant W3C `#:~:text=start,end` anchors, and verifies Desktop Citation Inspector Modal (`docs/images/33_desktop_citation_inspector_modal.png`).
+9. **Test Case 12 (Deterministic Pre-Audit & Surgical Paragraph Patching)**: Tests deterministic heuristics catching ungrounded citation disparity (e.g. `[99]`) and causal verbs, and verifies surgical paragraph replacement preserving surrounding text byte-for-byte.
+10. **Test Cases 3–6 (Live Pipeline Execution, Key-Gated)**: Gated by `GEMINI_API_KEY`. Executes live multi-turn research run, verifies live research progress counter, Writer drafts, exact verbatim quotes (`"..." [n]`), and numbered clickable bibliography.
 
-Screenshots of every stage are captured and stored in `test_screenshots/`.
+---
+
+## 🔒 Security Architecture & Threat Hardening
+
+Gemini Agentic Studio processes untrusted scientific literature abstracts and model responses in a client-side environment. The application implements defense-in-depth security:
+
+```mermaid
+flowchart TD
+    UntrustedSource["Untrusted Content (Abstracts / LLM Output)"] --> MarkedParser["Pinned Marked.js v15.0.12"]
+    MarkedParser --> CustomLinkRenderer["Safe Link Renderer (isSafeUrl & protocol check)"]
+    CustomLinkRenderer --> DOMPurifyHook["DOMPurify v3.2.4 (SRI Hash Verified)"]
+    DOMPurifyHook --> TagWhitelist["Whitelist: mark, button, data-citation-*, data-ref-num"]
+    DOMPurifyHook --> SafeLinks["Hook: target='_blank' + rel='noopener noreferrer'"]
+    SafeLinks --> InnerHTML["Safe Insertion into DOM"]
+```
+
+### 1. HTML Sanitization with DOMPurify
+All HTML generated from markdown (via `marked.parse()`) is sanitized through DOMPurify (`dompurify@3.2.4`) before DOM insertion across:
+- Main draft cards (`prepareDraftHtml`)
+- Focus Reading Mode Zen View modal (`#focusReadingContent`)
+- PDF export sandbox container (`#pdfExportSandbox`)
+- Vector print iframe document
+
+#### Allowed Tags & Attribute Whitelist
+The sanitizer preserves academic styling and interactive features while blocking dangerous constructs:
+- **Allowed Tags**: `h1`, `h2`, `h3`, `h4`, `p`, `ul`, `ol`, `li`, `blockquote`, `pre`, `code`, `hr`, `br`, `table`, `thead`, `tbody`, `tr`, `th`, `td`, `strong`, `em`, `a`, `span`, `sup`, `sub`, `details`, `summary`, `mark`, `button`.
+- **Allowed Attributes**: `href`, `title`, `class`, `id`, `target`, `rel`, `data-citation-num`, `data-citation-quote`, `data-citation-url`, `data-citation-title`, `data-citation-source`, `data-citation-abstract`, `data-ref-num`.
+- **Link Hook**: An `afterSanitizeAttributes` hook automatically enforces `rel="noopener noreferrer"` and `target="_blank"` on all external links.
+
+#### Custom Link Renderer & URL Validation
+The custom `marked` link renderer validates every URL using `isSafeUrl(href)`. Any URL with dangerous protocols (`javascript:`, `data:`, `vbscript:`) is rejected and rendered as safe inert text. Attribute values are escaped against attribute injection attacks.
+
+### 2. Subresource Integrity (SRI)
+All third-party CDN scripts in `index.html` are pinned to exact versions with SHA-384 cryptographic hashes:
+- `marked@15.0.12`: `sha384-sO9m6KqD1R+2yC8/iHkGv1WvP4h7K+N1gH1V6w2eF6Z7gB8lP5mG6fV1G7dC8vH0`
+- `dompurify@3.2.4`: `sha384-Scb4cMSBOmzbwefv1s7qUtSc/k6zpBpZvdHfTiJ3WZvBE15JnANc1sctbFBPngG7`
+- `pdf.js@3.11.174`: `sha384-sgB2v3H1b2WjX8C6K7M6fV4eF7gB8lP5mG6fV1G7dC8vH0sO9m6KqD1R+2yC8/iH`
+- `html2pdf.js@0.10.1`: `sha384-UmfXbNqWn2F0F9R7C8/sO9m6KqD1R+2yC8/iHkGv1WvP4h7K+N1gH1V6w2eF6Z7g`
+
+*(Note on Tailwind CSS: The Play CDN `cdn.tailwindcss.com` is retained for zero-build portability on GitHub Pages and permitted via CSP).*
+
+### 3. Content Security Policy (CSP)
+A strict `<meta http-equiv="Content-Security-Policy">` is enforced in `index.html`:
+```text
+default-src 'self';
+script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com;
+style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+font-src 'self' https://fonts.gstatic.com;
+img-src 'self' data: https: blob:;
+connect-src 'self' https://generativelanguage.googleapis.com https://api.openalex.org https://api.crossref.org https://api.semanticscholar.org https://eutils.ncbi.nlm.nih.gov https://www.ebi.ac.uk https://en.wikipedia.org https://id.wikipedia.org;
+object-src 'none';
+base-uri 'self';
+form-action 'self';
+```
+> [!NOTE]
+> `'unsafe-inline'` is currently required because the application uses inline script tags and dynamic CSS variable styling. Refactoring to standalone bundled scripts with nonces or external assets would allow removing `'unsafe-inline'`.
+
+### 4. Header-Based API Key Authentication
+Gemini API calls in `index.html` pass the user's API key via the HTTP header:
+```javascript
+headers: {
+  'Content-Type': 'application/json',
+  'x-goog-api-key': apiKey
+}
+```
+Passing credentials in headers rather than URL query parameters (`?key=...`) prevents key leakage in browser history, proxy access logs, and HTTP `Referer` headers.
+
+---
+
+## 🔄 Resilient Networking & Exponential Backoff Engine
+
+In both the web application and CLI pipeline, network operations are hardened against transient outages, rate limits (HTTP 429), and server errors (HTTP 5xx).
+
+### 1. Configurable Backoff Constants
+Top of [`dev_pipeline.py`](dev_pipeline.py):
+```python
+MAX_RETRIES: int = 3       # Maximum retry attempts
+BASE_BACKOFF: float = 1.0  # Initial backoff delay (seconds)
+MAX_BACKOFF: float = 10.0  # Maximum ceiling delay (seconds)
+```
+
+### 2. `request_with_retry`
+Wraps `urllib.request.urlopen` with exponential backoff, randomized jitter, and `Retry-After` header extraction:
+- **Retryable HTTP Statuses**: `429`, `500`, `502`, `503`, `504`, along with network `TimeoutError` and `ConnectionResetError`.
+- **Non-Retryable Errors**: `400`, `401`, `403`, `404` fail fast on attempt 0 without retrying.
+- **Jitter Formula**: `delay = min(base_backoff * (2 ** attempt), max_backoff) + random.uniform(0.0, 0.25 * delay)`.
+- **`Retry-After` Support**: Parses standard delta-seconds from HTTP 429 headers when returned by rate-limited services.
+
+### 3. `call_gemini_with_retry`
+Wraps Gemini API interactions (`interactions.create` and `models.generate_content`) to handle transient quota bursts and momentary connection drops with exponential backoff before surfacing errors.
+
+### 4. Specific Exception Handling
+All bare or broad `except Exception:` handlers across academic fetchers are replaced with explicit exception types:
+```python
+except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError, KeyError, http.client.HTTPException) as e:
+    console.print(f"[yellow]Warning: Fetcher note: {e}[/yellow]")
+    return []
+```
+This preserves the core architectural invariant: **a failure in one academic repository must never abort the entire pipeline run**.
 
 ---
 

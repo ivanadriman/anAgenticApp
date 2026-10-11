@@ -83,16 +83,25 @@ Reports with full revision history and Critic audits are saved automatically to 
 
 ## 🧪 Automated Testing
 
-Run the automated browser test suite (Playwright):
+### 1. Offline Unit Tests (Pytest)
+Run the 41 offline unit tests (zero network, zero API key required):
 ```bash
-# Install Chromium browser binary
-playwright install chromium
-
-# Run test suite
-python test_browser.py
+pip install -r requirements-dev.txt
+pytest tests/ -v
 ```
 
-The test validates language switching, query translation, live progression updates, exact quotation regex formatting (`"..." [n]`), and numbered bibliography integrity.
+### 2. Browser Integration Tests (Playwright)
+Run the browser test suite in headless Chromium:
+```bash
+# Install Chromium browser binary (first time only)
+playwright install chromium
+
+# Run in offline mode (UI, layout, mobile, and security regression)
+python test_browser.py --no-key
+
+# Run full live pipeline (requires GEMINI_API_KEY in environment or .env)
+python test_browser.py
+```
 
 ---
 
