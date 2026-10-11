@@ -377,6 +377,69 @@ When accessed on narrow smartphone screens (such as 390×844 iPhone 14/Pixel 7, 
 
 ---
 
+## 🛡️ Publication & Understanding Integrity Auditor Agent (`source-checking-guide.md`)
+
+To guarantee absolute factual rigor and academic publication standards, the platform includes a dedicated **Publication Integrity Auditor Agent** executing at the end of the multi-agent pipeline. This agent operates strictly under the rules defined in `.agents/rules/source-checking-guide.md`.
+
+### 1. The 3-Layer Integrity Audit Architecture
+The Auditor evaluates the synthesized draft against **11 binary criteria** organized across 3 distinct epistemic layers:
+
+| Layer | Criterion | Core Integrity Question |
+| :--- | :--- | :--- |
+| **Layer 1: What is this source?** | **Source Type Ceiling** | Does the source type (e.g., peer-reviewed experiment vs. secondary press report) justify the strength of the claim made? |
+| | **Metadata Verification** | Do authors, publication venue, publication year, and DOI match verified scholarly records? |
+| | **Source Independence** | Are cited sources genuinely independent lines of evidence rather than derivatives or citations of the same lab group? |
+| **Layer 2: Does source say what text claims?** | **Exact Construct Match** | Does the study measure the exact psychological, biological, or computational construct claimed, without adjacent substitution? |
+| | **Finding vs. Framing** | Is the cited passage an actual demonstrated empirical finding, rather than background introductory framing or hypotheses? |
+| | **Verb Ladder Compliance** | Does the research design justify the verb used? (e.g., cross-sectional data must not use causal verbs like *causes*, *drives*, or *membuktikan*). |
+| | **Sample & Scope Bounds** | Is the claim scope strictly bounded to the studied sample (e.g. undergraduate cohort in one nation) rather than universalized to "all humans"? |
+| | **Quote & Context Integrity** | Does the verbatim quote do actual evidentiary work with surrounding context preserved? |
+| **Layer 3: Whole Argument Integrity** | **No Uncited Author Leaps** | Are all steps in the inferential chain evidence-based, without uncited claims disguised as cited empirical facts? |
+| | **Rival Explanations & Caveats** | Are alternative mechanisms, rival interpretations, and author-acknowledged limitations transparently stated? |
+| | **Bounded Conclusion** | Does the final concluding synthesis refrain from exceeding the strength of the single strongest premise? |
+
+### 2. The Verb Ladder Standard (*Tangga Kata Kerja*)
+The Auditor strictly enforces verb calibration to eliminate "correlation-to-causation drift":
+- **Level 1 (Associative / Correlational)**: *"is associated with"*, *"relates to"*, *"co-occurs with"*, *"berkorelasi dengan"*, *"berhubungan dengan"*. *(Mandatory for cross-sectional surveys and observational data)*.
+- **Level 2 (Predictive / Longitudinal)**: *"predicts"*, *"precedes"*, *"forecasts"*, *"memprediksi"*. *(For temporal sequencing without randomized intervention)*.
+- **Level 3 (Causal / Experimental)**: *"causes"*, *"drives"*, *"induces"*, *"menghasilkan"*, *"memicu"*. *(Permitted **only** for randomized controlled experiments within tested cohort boundaries)*.
+
+### 3. Automatic Rebuilding Loop until 100% YES
+Whenever any question evaluates to `"NO"`:
+1. The Auditor generates a structured report identifying the specific failure pattern (e.g., *Correlation-to-causation drift*, *Scope inflation*), the exact offending passage, and the remediation guidance.
+2. The Writer Agent automatically receives this diagnostic report and **rebuilds the draft** to resolve the discrepancy.
+3. The process repeats until **all 11 criteria evaluate to YES (100% Clearance)**, culminating in the **100% Publication Integrity Verified Seal** on the final card.
+
+### 4. Hardening for Smaller Models (Gemini 3.5 Flash Lite)
+Smaller, high-throughput models (such as `gemini-3.5-flash-lite`) can experience instruction dilution, quote drop-off, or regressions in already-approved paragraphs when rewriting large documents. To ensure robust performance on all model tiers:
+- **Verb Ladder Few-Shot Anchors**: Prompts include concrete before/after demonstration pairs showing exact associative verb substitution and sample qualification.
+- **Deterministic Pre-Audit Sanity Checks**: Code runs regex and graph checks detecting missing citation parity and causal triggers before dispatching to the LLM.
+- **Surgical Paragraph Rebuilding**: When only a single isolated passage fails, the Writer Agent isolates and rewrites **only that specific paragraph**, leaving the remaining approved paragraphs byte-for-byte unaltered.
+
+---
+
+## 🔗 Deep Text-Fragment Highlighting & Verbatim Quote Verification
+
+Gemini Agentic Studio bridges the gap between AI synthesis and primary literature through deep link resolution adhering to the **W3C Scroll-to-Text Fragment standard** (`#:~:text=start,end`).
+
+### 1. How Deep Highlighting Works
+When you click **"🔗 Buka Makalah / Open Paper"** (or click a paper link in the references bibliography):
+1. The app takes the verbatim quote cited in the text and encodes a resilient W3C text fragment URL:
+   - For long quotes (> 8 words): `https://doi.org/...#:~:text=${encode(startWords)},${encode(endWords)}`
+   - For short quotes: `https://doi.org/...#:~:text=${encode(phrase)}`
+2. When the link opens in modern Chromium, Edge, or Safari browsers, the browser automatically **scrolls directly to the exact sentence** inside the original journal article and **highlights it in bright yellow**.
+3. Readers can immediately confirm that the cited evidence is authentic without having to manually search the PDF or webpage.
+
+### 2. Verbatim Quote Inspection on Mobile & Desktop
+- **Mobile Bottom Sheet Drawer**: Tapping any in-text citation pill (e.g., `[1]`, `[24]`) slides up an ergonomic bottom sheet containing:
+  - Source venue badge and complete paper title.
+  - The exact verbatim quotation highlighted in a dark amber quote card.
+  - A 48px touch button **"🔗 Buka Makalah / Open Paper ↗"** with the deep text-fragment URL.
+  - A **"📋 Salin Kutipan / Copy Quote"** button with instantaneous `"✓ Tersalin! / ✓ Copied!"` feedback.
+- **Desktop Tooltip**: Hovering over citation anchors displays a rich floating card with the quote snippet, verified authors, and a 1-click clipboard copy button.
+
+---
+
 ## 📤 Exporting Documents (Markdown & Clean PDF)
 
 Gemini Agentic Studio provides two dedicated document export engines designed to preserve academic formatting, verbatim quotes, and bibliographic citations without website interface components clipping into your exported documents.

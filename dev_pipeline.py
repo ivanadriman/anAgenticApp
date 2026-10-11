@@ -694,6 +694,165 @@ READING_TYPE_GUIDELINES = {
 }
 
 
+def build_text_fragment_url(raw_url: str, quote_text: str) -> str:
+    """Build W3C Scroll-to-Text Fragment URL for automatic scroll & yellow highlight."""
+    if not raw_url or raw_url == "#" or not quote_text:
+        return raw_url
+    clean = re.sub(r'^["“\'”]+|["“\'”]+$', '', quote_text)
+    clean = re.sub(r'\[\d+\]', '', clean)
+    clean = re.sub(r'\s+', ' ', clean).strip()
+    clean = re.sub(r'^[.,;:!?\'"“”—-]+\s*', '', clean)
+    clean = re.sub(r'\s*[.,;:!?\'"“”—-]+$', '', clean)
+    words = [w for w in clean.split() if w]
+    if not words:
+        return raw_url
+
+    if len(words) > 8:
+        start_words = " ".join(words[:4])
+        end_words = " ".join(words[-4:])
+        param = f"{urllib.parse.quote(start_words)},{urllib.parse.quote(end_words)}"
+    else:
+        param = urllib.parse.quote(" ".join(words))
+
+    base_url = raw_url.split("#")[0]
+    return f"{base_url}#:~:text={param}"
+
+
+def get_verb_ladder_few_shot_prompt(lang: str = "en") -> str:
+    """Few-shot demonstration pairs for Verb Ladder and scope bounding."""
+    if lang == "id":
+        return """
+CONTOH KALIBRASI ILMIAH & TANGGA KATA KERJA (FEW-SHOT VERB LADDER & BOUNDED SCOPE):
+Contoh 1 (Data Korelasional / Observasional vs. Kausalitas):
+❌ SALAH: "Smith (2020) membuktikan bahwa kecepatan wicara memicu efisiensi pemahaman [1]."
+✓ BENAR: "Smith (2020) menemukan bahwa kecepatan pemrosesan wicara berasosiasi positif dengan skor pemahaman dalam uji pendengaran [1]."
+
+Contoh 2 (Batasan Cakupan & Sampel vs. Inflasi Universal):
+❌ SALAH: "Temuan ini membuktikan bahwa seluruh manusia memproses sintaksis secara identik [2]."
+✓ BENAR: "Dalam uji laboratorium terhadap 48 mahasiswa sarjana, kecepatan pemrosesan sintaksis berkorelasi dengan latensi respons auditori [2]."
+
+Contoh 3 (Temuan Nyata vs. Asumsi Pengantar/Framing):
+❌ SALAH: "Doe (2019) membuktikan bahwa osilasi kortikal mendasari seluruh pemahaman bahasa [3]."
+✓ BENAR: "Doe (2019) mengajukan hipotesis bahwa osilasi kortikal dapat mendukung segmentasi bahasa, serta mengamati pola aktivitas saraf yang bersesuaian [3]."
+"""
+    return """
+FEW-SHOT EXAMPLES OF PROPER EPISTEMIC CALIBRATION (VERB LADDER & BOUNDED SCOPE):
+Example 1 (Cross-Sectional / Observational Data vs. Causal Verbs):
+❌ INCORRECT: "Smith (2020) proved that speech rate drives comprehension efficiency [1]."
+✓ CORRECT: "Smith (2020) observed that speech processing rate is positively associated with comprehension scores in auditory tests [1]."
+
+Example 2 (Sample / Scope Generalization vs. Bounded Cohort):
+❌ INCORRECT: "These findings demonstrate that all humans process syntax identically [2]."
+✓ CORRECT: "In a laboratory experiment with 48 undergraduate participants, syntactic processing speed tracked auditory response latency [2]."
+
+Example 3 (Introductory Framing vs. Empirical Finding):
+❌ INCORRECT: "Doe (2019) proved that cortical oscillations underlie all human language understanding [3]."
+✓ CORRECT: "Doe (2019) hypothesized that cortical oscillations could support language segmentation, observing corresponding neural activity patterns [3]."
+"""
+
+
+def run_deterministic_checks(draft: str, dossier_text: str = "") -> Dict[str, Any]:
+    """Run fast heuristic checks for citation parity, quote presence, and causal triggers."""
+    issues = []
+    in_text = set(int(m) for m in re.findall(r'\[(\d+)\]', draft))
+    ref_entries = set(int(m) for m in re.findall(r'(?:^|\n)(?:[-*]\s*)?\[(\d+)\]', draft))
+    missing = in_text - ref_entries
+    if missing:
+        issues.append(f"In-text citation numbers missing in references bibliography: [{', '.join(str(n) for n in sorted(missing))}]")
+
+    quotes = re.findall(r'(?:["“])[^"”\r\n]{8,}(?:["”])\s*\[\d+\]', draft)
+    if not quotes:
+        issues.append("No verbatim quotes matching '\"...\" [n]' format found in draft.")
+
+    causal_patterns = [
+        r'\b(?:drives|causes|induces|proves)\b[^.\n]{0,80}\[\d+\]',
+        r'\[\d+\][^.\n]{0,80}\b(?:drives|causes|induces|proves)\b',
+        r'\b(?:membuktikan|memicu|menyebabkan)\b[^.\n]{0,80}\[\d+\]',
+        r'\[\d+\][^.\n]{0,80}\b(?:membuktikan|memicu|menyebabkan)\b'
+    ]
+    for pat in causal_patterns:
+        match = re.search(pat, draft, re.IGNORECASE)
+        if match:
+            issues.append(f"Heuristic causal verb pattern detected near citation: '{match.group(0).strip()}' - Verify on Verb Ladder.")
+            break
+
+    return {
+        "passed": not bool(issues),
+        "has_issues": bool(issues),
+        "issues": issues,
+        "in_text_count": len(in_text),
+        "ref_count": len(ref_entries),
+        "quote_count": len(quotes)
+    }
+
+
+def run_writer_surgical_patch(topic: str, draft: str, item_to_fix: SourceAuditItem, model: str = DEFAULT_MODEL, thinking_level: str = "medium", lang: str = "en") -> Optional[str]:
+    """Surgically rewrite only the offending paragraph to prevent full draft regression."""
+    if not item_to_fix or not item_to_fix.offending_text:
+        return None
+    offending = item_to_fix.offending_text.strip()
+    if len(offending) < 8:
+        return None
+
+    paragraphs = draft.split("\n\n")
+    target_idx = -1
+    for i, p in enumerate(paragraphs):
+        if offending in p:
+            target_idx = i
+            break
+    if target_idx == -1:
+        first_words = " ".join(offending.split()[:4])
+        if len(first_words) > 10:
+            for i, p in enumerate(paragraphs):
+                if first_words in p:
+                    target_idx = i
+                    break
+
+    if target_idx == -1 or re.match(r'^##+\s*(?:📚\s*)?(?:Referensi|References)', paragraphs[target_idx], re.IGNORECASE):
+        return None
+
+    target_para = paragraphs[target_idx]
+    is_id = (lang == "id")
+    sys_prompt = (
+        "Anda adalah Agen Penulis Ahli dalam mode REVISI BEDAH (SURGICAL PARAGRAPH REPAIR).\n"
+        "Tugas Anda HANYA menyusun ulang SATU paragraf ini untuk memperbaiki ketidaksesuaian integritas publikasi.\n"
+        "Kembalikan HANYA paragraf pengganti yang telah disempurnakan."
+        if is_id else
+        "You are an expert Writer Agent in SURGICAL PARAGRAPH REPAIR mode.\n"
+        "Your task is ONLY to rewrite this SINGLE paragraph to resolve a publication integrity discrepancy.\n"
+        "Return ONLY the replacement revised paragraph."
+    )
+
+    prompt = f"""Topic: {topic}
+Failing Criterion: {item_to_fix.title} ({item_to_fix.reason})
+Offending Passage: "{item_to_fix.offending_text}"
+
+PARAGRAPH TO SURGICALLY REVISE:
+\"\"\"
+{target_para}
+\"\"\"
+
+Rewrite ONLY this paragraph to resolve the discrepancy while keeping all valid facts and citations intact. Return ONLY the replacement paragraph in Markdown.
+"""
+
+    try:
+        response = client.interactions.create(
+            model=model,
+            system_instruction=sys_prompt,
+            input=prompt,
+            generation_config={"thinking_level": thinking_level}
+        )
+        revised = (response.output_text or "").strip()
+        revised = re.sub(r"^```(?:markdown)?\s*", "", revised)
+        revised = re.sub(r"\s*```$", "", revised).strip()
+        if revised and len(revised) > 20:
+            paragraphs[target_idx] = revised
+            return "\n\n".join(paragraphs)
+    except Exception as e:
+        console.print(f"[dim]Surgical patch note: {e}, falling back to full rebuild[/dim]")
+    return None
+
+
 def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str = DEFAULT_MODEL, enable_search: bool = False, thinking_level: str = "medium", scholarly_dossier: str = "", lang: str = "en", difficulty: str = "undergraduate", reading_type: str = "literature_review") -> str:
     """Writer agent creates the first draft."""
     system_prompt = (
@@ -710,7 +869,7 @@ def run_writer_draft(topic: str, instructions: Optional[str] = None, model: str 
 
     diff_guide = DIFFICULTY_GUIDELINES.get(difficulty, DIFFICULTY_GUIDELINES["undergraduate"]).get(lang, "undergraduate")
     type_guide = READING_TYPE_GUIDELINES.get(reading_type, READING_TYPE_GUIDELINES["literature_review"]).get(lang, "literature_review")
-    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}"
+    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}\n\n{get_verb_ladder_few_shot_prompt(lang)}"
 
     quotation_rules = (
         "\n\nATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n"
@@ -780,7 +939,7 @@ def run_writer_revision(original_topic: str, previous_draft: str, critique: Crit
 
     diff_guide = DIFFICULTY_GUIDELINES.get(difficulty, DIFFICULTY_GUIDELINES["undergraduate"]).get(lang, "undergraduate")
     type_guide = READING_TYPE_GUIDELINES.get(reading_type, READING_TYPE_GUIDELINES["literature_review"]).get(lang, "literature_review")
-    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}"
+    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}\n\n{get_verb_ladder_few_shot_prompt(lang)}"
 
     quotation_rules = (
         "\n\nATURAN SITASI & KUTIPAN KATA-DEMI-KATA (EXACT VERBATIM QUOTATION & CITATION RULES - CRITICAL MANDATORY):\n"
@@ -956,7 +1115,10 @@ def run_source_audit(topic: str, draft: str, dossier_text: str = "", model: str 
         "}"
     )
 
+    sanity = run_deterministic_checks(draft, dossier_text)
     prompt = f"Goal / Topic: {topic}\n\nDraft to Audit:\n\"\"\"\n{draft}\n\"\"\"\n"
+    if sanity["has_issues"]:
+        prompt += "\nDETERMINISTIC CODE PRE-AUDIT SIGNALS:\n" + "\n".join(f"! {i}" for i in sanity["issues"]) + "\n"
     if dossier_text:
         prompt += f"\nGrounding Dossier Reference:\n{dossier_text}\n"
     prompt += "\nPerform the rigorous 11-question 3-layer audit and output valid JSON ONLY."
@@ -1039,6 +1201,14 @@ def run_source_audit(topic: str, draft: str, dossier_text: str = "", model: str 
 
 def run_audit_revision(topic: str, draft: str, audit: SourceAuditResult, round_num: int, dossier_text: str = "", model: str = DEFAULT_MODEL, thinking_level: str = "medium", lang: str = "en", difficulty: str = "undergraduate", reading_type: str = "literature_review") -> str:
     """Writer Agent rebuilds the draft until all 11 source-checking-guide.md criteria achieve YES."""
+    # 1. Attempt surgical paragraph rebuild if there is an isolated discrepancy to prevent regression
+    no_items_with_text = [it for it in audit.items if it.answer == "NO" and it.offending_text and len(it.offending_text.strip()) > 6]
+    if len(no_items_with_text) == 1:
+        patched = run_writer_surgical_patch(topic, draft, no_items_with_text[0], model=model, thinking_level=thinking_level, lang=lang)
+        if patched:
+            console.print("[green]✓ Applied fast surgical paragraph patch for publication integrity rebuild![/green]")
+            return patched
+
     system_prompt = (
         "You are an expert Writer Agent tasked with an UNCOMPROMISING PUBLICATION INTEGRITY REBUILD under '.agents/rules/source-checking-guide.md'.\n"
         "Your mission: Completely resolve every 'NO' evaluation from the Publication Integrity Auditor Agent, rewriting and refining the draft until ALL 11 questions achieve 'YES'.\n\n"
@@ -1057,7 +1227,7 @@ def run_audit_revision(topic: str, draft: str, audit: SourceAuditResult, round_n
 
     diff_guide = DIFFICULTY_GUIDELINES.get(difficulty, DIFFICULTY_GUIDELINES["undergraduate"]).get(lang, "undergraduate")
     type_guide = READING_TYPE_GUIDELINES.get(reading_type, READING_TYPE_GUIDELINES["literature_review"]).get(lang, "literature_review")
-    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}"
+    system_prompt += f"\n\n{diff_guide}\n\n{type_guide}\n\n{get_verb_ladder_few_shot_prompt(lang)}"
 
     no_items = [it for it in audit.items if it.answer == "NO"]
     no_desc = "\n".join(f"- [Layer {it.layer} - {it.title}]: {it.reason}" + (f' (Offending passage: "{it.offending_text}")' if it.offending_text else "") for it in no_items)

@@ -22,8 +22,11 @@ This guide provides technical contributors, software engineers, and AI researche
 9. [Development Setup & Local Environment](#-development-setup--local-environment)
 10. [Reading System, Color Palettes & Mobile Ergonomics Architecture](#-reading-system-color-palettes--mobile-ergonomics-architecture)
     - [Document Export Engine & Clipping Prevention Architecture](#7-document-export-engine--clipping-prevention-architecture)
-11. [Test Automation Suite (Playwright)](#-test-automation-suite-playwright)
-12. [Extension Guide: Adding New Sources & Models](#-extension-guide-adding-new-sources--models)
+11. [Publication Integrity Audit Engine (`source-checking-guide.md`)](#-publication-integrity-audit-engine)
+12. [W3C Deep Text-Fragment Resolution Engine](#-w3c-deep-text-fragment-resolution-engine)
+13. [Small Model Hardening & Surgical Paragraph Patching](#-small-model-hardening--surgical-paragraph-patching)
+14. [Test Automation Suite (Playwright)](#-test-automation-suite-playwright)
+15. [Extension Guide: Adding New Sources & Models](#-extension-guide-adding-new-sources--models)
 
 ---
 
@@ -472,6 +475,101 @@ To ensure exported documents are free from clipped web headers, API key boxes, n
 
 ---
 
+## 🛡️ Publication Integrity Audit Engine
+
+The Publication Integrity Audit system implements the complete epistemic verification criteria specified in `.agents/rules/source-checking-guide.md`:
+
+```mermaid
+flowchart TD
+    Draft[Synthesized Draft] --> AuditPreCheck[Deterministic Code Pre-Check]
+    AuditPreCheck --> AuditorAgent[Auditor Agent: 3-Layer Evaluation]
+    
+    subgraph Layers ["11 Evaluation Questions Across 3 Layers"]
+        L1["Layer 1: Source Ceiling, Metadata Match, Independence"]
+        L2["Layer 2: Exact Construct, Finding vs Framing, Verb Ladder, Scope, Quote Integrity"]
+        L3["Layer 3: No Uncited Leaps, Rival Explanations, Bounded Conclusion"]
+    end
+    
+    AuditorAgent --> Layers
+    Layers --> Verdict{"All 11 Answers = YES?"}
+    Verdict -- "YES (100%)" --> Clearance["Approved with 100% Publication Integrity Verified Seal"]
+    Verdict -- "NO (Discrepancy)" --> Strategy{"Isolated Paragraph Discrepancy?"}
+    Strategy -- "Yes (Single off-passage)" --> SurgicalPatch["Writer Surgical Paragraph Patch (Fast, No Regressions)"]
+    Strategy -- "No (Multi-point failure)" --> FullRebuild["Full Writer Integrity Rebuild Loop"]
+    SurgicalPatch --> Draft
+    FullRebuild --> Draft
+```
+
+1. **3-Layer Schema**:
+   - `Layer 1`: Evaluates source pedigree, DOI alignment, and genuine independence.
+   - `Layer 2`: Enforces construct alignment, finding-vs-framing separation, sample bounds, and the Verb Ladder.
+   - `Layer 3`: Audits whole-argument validity, acknowledging rival explanations and bounding final conclusions.
+2. **Deterministic Pre-Audit Signals (`runDeterministicSanityChecks` / `run_deterministic_checks`)**:
+   - Scans in-text citations against the ending reference list (`missingRefs = inText - refEntries`).
+   - Asserts exact quote formatting presence (`"..." [n]`).
+   - Uses regex to detect aggressive causal verbs (`drives`, `causes`, `proves`, `membuktikan`, `memicu`) in the vicinity of citations to advisory-flag them for LLM evaluation.
+
+---
+
+## 🔗 W3C Deep Text-Fragment Resolution Engine
+
+To enable 1-click verification of cited passages in primary literature, the engine generates deep links adhering to the W3C Scroll-to-Text Fragment standard (`#:~:text=start,end`):
+
+```typescript
+function buildTextFragmentUrl(rawUrl: string, quoteText: string): string {
+  if (!rawUrl || rawUrl === "#" || rawUrl.startsWith("#ref-")) return rawUrl;
+  if (!quoteText || typeof quoteText !== "string") return rawUrl;
+
+  let clean = quoteText
+    .replace(/^["“'”]+|["“'”]+$/g, "")
+    .replace(/\[\d+\]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/^[.,;:!?'"“”—-]+\s*/, "")
+    .replace(/\s*[.,;:!?'"“”—-]+$/, "")
+    .trim();
+
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return rawUrl;
+
+  let textParam = "";
+  if (words.length > 8) {
+    // Range syntax for long quotes: startWords,endWords
+    const startWords = words.slice(0, 4).join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
+    const endWords = words.slice(-4).join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
+    textParam = encodeURIComponent(startWords) + "," + encodeURIComponent(endWords);
+  } else {
+    // Exact syntax for short phrases
+    const phrase = words.join(" ").replace(/[-[\]{}()*+?.,\\^$|#]/g, " ").trim();
+    textParam = encodeURIComponent(phrase);
+  }
+
+  const baseUrl = rawUrl.split("#")[0];
+  return `${baseUrl}#:~:text=${textParam}`;
+}
+```
+
+- **Dual-Engine Parity**: Implemented identically in JavaScript (`index.html`) and Python (`dev_pipeline.py`).
+- **Resilient Range Matching**: Long quotes (> 8 words) use the `startWords,endWords` comma range syntax. This circumvents formatting differences (e.g. linebreaks, hyphens, italic tags) inside the original publisher PDF/HTML.
+- **Micro-Preview & Clipboard Integration**: Bound directly to desktop hovering cards (`#tooltipQuoteContainer`) and mobile bottom sheets (`#drawerQuoteContainer`), with 1-click clipboard copy (`#drawerCopyQuoteBtn`).
+
+---
+
+## ⚡ Small Model Hardening & Surgical Paragraph Patching
+
+Smaller models (such as `gemini-3.5-flash-lite`) can exhibit cognitive drift, full-document degradation, or loss of citations during whole-document rewrites. Three architectural patterns harden performance across all model tiers:
+
+1. **Verb Ladder Few-Shot Anchors (`getVerbLadderFewShotPrompt`)**:
+   Provides explicit before/after demonstration pairs showing how to downgrade causal claims to associative claims and bound sample scopes.
+2. **Surgical Paragraph Rebuilding (`runWriterSurgicalPatch`)**:
+   - Locates the single paragraph containing the failing criterion's `offending_text`.
+   - Dispatches a prompt focused strictly on that single paragraph.
+   - Slices and splices the revised paragraph back into the document array (`paragraphs[targetIndex] = cleanRevised`).
+   - Guarantees that 100% of the surrounding, already-approved paragraphs remain byte-for-byte intact.
+3. **Resilient JSON Parsing with Regex Fallback**:
+   Extracts JSON payloads from conversational wrappers (`clean.match(/\{[\s\S]*\}/)`) to prevent syntax failures when lightweight models output pleasantries before JSON blocks.
+
+---
+
 ## 🧪 Test Automation Suite (Playwright)
 
 The project includes an end-to-end automated browser test suite in [`test_browser.py`](file:///c:/Users/kiris/OneDrive/Documents/AI%20Projects/anAgenticApp/test_browser.py).
@@ -511,6 +609,21 @@ python test_browser.py
    - Verifies presence of `#pdfPrintVectorBtn` and `#pdfDownloadDirectBtn`.
    - Captures modal screenshot (`27_pdf_export_modal_options.png`) and tests modal close and cancel.
    - Verifies export buttons inside Focus Reading Mode (Zen View).
+10. **Test Case 10 (Publication Integrity Auditor Agent)**:
+    - Verifies `#strictSourceAuditCheck` exists, is checked by default, and responds to bilingual switching (`🛡️ Strict Publication Integrity Audit` ↔ `🛡️ Audit Ketat Integritas Publikasi`).
+    - Simulates and asserts rendering of Discrepancy Round 1 Card with failure pattern badges (*Correlation-to-causation drift*, *Scope inflation*) and `⚠ NO` items (`29_audit_discrepancy_round1.png`).
+    - Simulates and asserts rendering of 100% Clearance Round 2 Card with `🛡️ 100% Publication Integrity Verified Seal` and all 11 `✓ YES` items (`30_audit_100_percent_clearance.png`).
+11. **Test Case 11 (Deep Text-Fragment Highlighting & Mobile Drawer Quote Inspection)**:
+    - Validates `buildTextFragmentUrl` (JS) and `build_text_fragment_url` (Python) parity producing compliant W3C `#:~:text=start,end` and `#:~:text=phrase` anchors.
+    - Confirms bibliography links render with `#:~:text=` fragment URLs.
+    - Emulates mobile touch viewport (390×844) and taps `.citation-ref` pill.
+    - Asserts `#citationDrawer` slides open, `#drawerQuoteContainer` displays the exact verbatim quote, and `#drawerActionLink.href` carries the deep text fragment.
+    - Verifies `#drawerCopyQuoteBtn` exists and captures screenshot `31_deep_text_fragment_drawer.png`.
+12. **Test Case 12 (Deterministic Pre-Audit & Surgical Paragraph Patching)**:
+    - Tests `runDeterministicSanityChecks` and `run_deterministic_checks` catching ungrounded citation disparity (e.g. `[99]`).
+    - Tests regex heuristic flagging aggressive causal verbs near citations (`drives`, `causes`, `proves`).
+    - Validates surgical paragraph replacement logic: isolates the offending paragraph, replaces it per Verb Ladder guidelines, and asserts surrounding paragraphs remain unaltered byte-for-byte.
+    - Captures verified surgical rebuild card screenshot (`32_surgical_rebuild_verified.png`).
 
 Screenshots of every stage are captured and stored in `test_screenshots/`.
 

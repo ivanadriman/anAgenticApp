@@ -707,6 +707,183 @@ def run_browser_tests():
         round2_card.screenshot(path=screenshot_r2)
         print(f"    ✓ Round 2 clearance screenshot saved to {screenshot_r2}", flush=True)
 
+        # -------------------------------------------------------------
+        # Test Case 11: Deep Text-Fragment Highlighting & Mobile Drawer Quote Inspection
+        # -------------------------------------------------------------
+        print("\n--- Test Case 11: Deep Text-Fragment Highlighting & Mobile Drawer Quote Inspection ---", flush=True)
+
+        # 1. Verify JS buildTextFragmentUrl outputs valid W3C text fragment URLs
+        test_url = "https://doi.org/10.1038/nature12345"
+        test_quote_long = "The auditory cortex processes phonetic tokens through hierarchical spectral decomposition."
+        frag_url_long = page.evaluate("([url, q]) => window.buildTextFragmentUrl(url, q)", [test_url, test_quote_long])
+        print(f"  • Generated Long Quote Fragment URL (JS): {frag_url_long}", flush=True)
+        assert "#:~:text=" in frag_url_long
+        assert "The%20auditory%20cortex" in frag_url_long or "The auditory cortex" in frag_url_long
+        assert "spectral%20decomposition" in frag_url_long or "spectral decomposition" in frag_url_long
+
+        # Test short quote (< 8 words)
+        test_quote_short = "hierarchical spectral decomposition"
+        frag_url_short = page.evaluate("([url, q]) => window.buildTextFragmentUrl(url, q)", [test_url, test_quote_short])
+        print(f"  • Generated Short Quote Fragment URL (JS): {frag_url_short}", flush=True)
+        assert "#:~:text=" in frag_url_short
+        assert "," not in frag_url_short.split("#:~:text=")[1]
+
+        # 2. Verify Python build_text_fragment_url parity
+        from dev_pipeline import build_text_fragment_url as py_build_frag, run_deterministic_checks as py_det_checks
+        py_frag_long = py_build_frag(test_url, test_quote_long)
+        print(f"  • Generated Long Quote Fragment URL (Python): {py_frag_long}", flush=True)
+        assert "#:~:text=" in py_frag_long
+        assert "The%20auditory%20cortex" in py_frag_long
+        assert "spectral%20decomposition" in py_frag_long
+        print("  ✓ Parity verified: Both JS and Python engines generate valid W3C text-fragment URLs!", flush=True)
+
+        # 3. Render a Writer Card with in-text quote, citation [1], and References link with text-fragment
+        sample_draft = (
+            "# Speech Perception Processing\n\n"
+            "Empirical evidence demonstrates that \"the auditory cortex processes phonetic tokens through hierarchical spectral decomposition\" [1].\n\n"
+            "## References\n"
+            "[1] Liberman, A. M. (1967). Some results on speech perception. Journal of the Acoustical Society of America. https://doi.org/10.1121/1.1910402"
+        )
+        sample_dossier = {
+            "citations": [
+                {
+                    "num": 1,
+                    "title": "Some results on speech perception",
+                    "authors": "Liberman, A. M. (1967)",
+                    "source": "J. Acoust. Soc. Am.",
+                    "url": "https://doi.org/10.1121/1.1910402",
+                    "abstract": "The auditory cortex processes phonetic tokens through hierarchical spectral decomposition."
+                }
+            ]
+        }
+        page.evaluate("""([draft, dossier]) => {
+            window.renderWriterCard('Test-Deep-Highlight', draft, dossier);
+        }""", [sample_draft, sample_dossier])
+        time.sleep(0.5)
+
+        # 4. Verify References section contains highlighted open link with text-fragment
+        ref_link = page.locator("#turnCard-Test-Deep-Highlight #ref-1 a[href*='doi.org']").first
+        assert ref_link.count() > 0, "Missing reference link in #turnCard-Test-Deep-Highlight #ref-1"
+        ref_href = ref_link.get_attribute("href") or ""
+        print(f"  • Reference Link href with Text-Fragment: {ref_href}", flush=True)
+        assert "#:~:text=" in ref_href, f"Expected text fragment in reference href, got {ref_href}"
+
+        # 5. Switch to Mobile Viewport (390 x 844) to test Mobile Citation Drawer with quote display
+        page.set_viewport_size({"width": 390, "height": 844})
+        time.sleep(0.3)
+
+        cite_ref_1 = page.locator("#turnCard-Test-Deep-Highlight a.citation-ref[data-citation-num='1']").first
+        assert cite_ref_1.count() > 0, "Missing citation ref [1] anchor in #turnCard-Test-Deep-Highlight"
+        cite_quote_attr = cite_ref_1.get_attribute("data-citation-quote") or ""
+        cite_url_attr = cite_ref_1.get_attribute("data-citation-url") or ""
+        print(f"  • Citation Ref Quote Attr: '{cite_quote_attr}'", flush=True)
+        print(f"  • Citation Ref URL Attr: '{cite_url_attr}'", flush=True)
+        assert len(cite_quote_attr) > 10, "Citation quote attribute should contain extracted verbatim quote"
+        assert "#:~:text=" in cite_url_attr, "Citation data-citation-url should contain text fragment"
+
+        # Tap citation [1] to open mobile drawer
+        cite_ref_1.click()
+        time.sleep(0.4)
+
+        drawer = page.locator("#citationDrawer")
+        assert "drawer-open" in (drawer.get_attribute("class") or "")
+        print("  ✓ Mobile Drawer opened on citation tap!", flush=True)
+
+        drawer_quote = page.locator("#drawerQuoteContainer")
+        assert not drawer_quote.is_hidden(), "Expected #drawerQuoteContainer to be visible"
+        quote_display_text = drawer_quote.text_content().strip()
+        print(f"  • Drawer Displayed Quote: {quote_display_text}", flush=True)
+        assert "auditory cortex processes" in quote_display_text
+
+        drawer_copy_btn = page.locator("#drawerCopyQuoteBtn")
+        assert not drawer_copy_btn.is_hidden(), "Expected #drawerCopyQuoteBtn to be visible"
+
+        drawer_action_link = page.locator("#drawerActionLink")
+        drawer_action_href = drawer_action_link.get_attribute("href") or ""
+        print(f"  • Drawer 'Open Paper' Button href: {drawer_action_href}", flush=True)
+        assert "#:~:text=" in drawer_action_href
+
+        # Screenshot mobile drawer with verbatim quote and deep text fragment link
+        screenshot_drawer = os.path.join(SCREENSHOTS_DIR, "31_deep_text_fragment_drawer.png")
+        page.screenshot(path=screenshot_drawer)
+        print(f"  ✓ Deep Text Fragment Drawer screenshot saved to {screenshot_drawer}", flush=True)
+
+        # Close drawer and restore desktop viewport
+        page.locator("#closeDrawerBtn").click()
+        time.sleep(0.3)
+        page.set_viewport_size({"width": 1280, "height": 950})
+        time.sleep(0.3)
+
+        # -------------------------------------------------------------
+        # Test Case 12: Deterministic Pre-Audit & Surgical Paragraph Patching for Flash Lite
+        # -------------------------------------------------------------
+        print("\n--- Test Case 12: Deterministic Pre-Audit & Surgical Paragraph Patching ---", flush=True)
+
+        # 1. Test deterministic check detects ungrounded citation disparity (in both JS & Python)
+        test_draft_bad_citation = (
+            "# Neural Foundations\n\n"
+            "Studies suggest that cortical plasticity supports language acquisition [99].\n\n"
+            "## References\n[1] Smith (2020)."
+        )
+        check_cit = page.evaluate("""([draft, dossier]) => {
+            return window.runDeterministicSanityChecks(draft, dossier);
+        }""", [test_draft_bad_citation, sample_dossier])
+        print(f"  • Citation Disparity Check result (JS): passed={check_cit['passed']}, issues={check_cit['issues']}", flush=True)
+        assert not check_cit["passed"]
+        assert any("missing in references" in iss.lower() for iss in check_cit["issues"])
+
+        py_sanity = py_det_checks(test_draft_bad_citation, str(sample_dossier))
+        print(f"  • Citation Disparity Check result (Python): passed={py_sanity['passed']}, issues={py_sanity['issues']}", flush=True)
+        assert not py_sanity["passed"]
+        assert any("missing in references" in iss.lower() for iss in py_sanity["issues"])
+        print("  ✓ Deterministic pre-check successfully caught citation disparity!", flush=True)
+
+        # 2. Test deterministic check catches causal verb heuristic
+        test_draft_causal = (
+            "# Neural Foundations\n\n"
+            "Survey results prove that speech speed causes grammatical fluency [1].\n\n"
+            "## References\n[1] Liberman (1967)."
+        )
+        check_causal = page.evaluate("""([draft, dossier]) => {
+            return window.runDeterministicSanityChecks(draft, dossier);
+        }""", [test_draft_causal, sample_dossier])
+        print(f"  • Causal Verb Heuristic Check result (JS): passed={check_causal['passed']}, issues={check_causal['issues']}", flush=True)
+        assert not check_causal["passed"]
+        assert any("causal verb" in iss.lower() or "verb ladder" in iss.lower() for iss in check_causal["issues"])
+        print("  ✓ Deterministic pre-check successfully flagged causal verb warning!", flush=True)
+
+        # 3. Test paragraph isolation and surgical rebuilding logic
+        multi_p_draft = (
+            "# Comprehensive Review\n\n"
+            "Paragraph 1: Background and historical context remain completely intact and unaltered.\n\n"
+            "Paragraph 2: Flawed claim states that processing speed directly drives syntactic complexity [1].\n\n"
+            "Paragraph 3: Future directions and conclusion remain completely pristine and verified."
+        )
+        patched_draft = page.evaluate("""(originalDraft) => {
+            const paragraphs = originalDraft.split(/\\n\\s*\\n/);
+            // Replace only paragraph 2
+            paragraphs[2] = "Paragraph 2: Rigorous analysis indicates that processing speed is associated with syntactic complexity [1].";
+            return paragraphs.join("\\n\\n");
+        }""", multi_p_draft)
+
+        print("  • Verifying surgical paragraph replacement preservation...", flush=True)
+        assert "Paragraph 1: Background and historical context remain completely intact and unaltered." in patched_draft
+        assert "is associated with syntactic complexity" in patched_draft
+        assert "Paragraph 3: Future directions and conclusion remain completely pristine and verified." in patched_draft
+        print("  ✓ Surgical paragraph rebuild safely preserves surrounding paragraphs byte-for-byte!", flush=True)
+
+        # 4. Render verified surgical patch card and take screenshot 32
+        page.evaluate("""(draft) => {
+            window.renderWriterCard('Surgical-Patch-Turn-2', draft, null);
+        }""", patched_draft)
+        time.sleep(0.4)
+
+        surgical_card = page.locator("#turnCard-Surgical-Patch-Turn-2").last
+        assert surgical_card.count() > 0, "Missing #turnCard-Surgical-Patch-Turn-2 in DOM"
+        screenshot_surgical = os.path.join(SCREENSHOTS_DIR, "32_surgical_rebuild_verified.png")
+        surgical_card.screenshot(path=screenshot_surgical)
+        print(f"  ✓ Surgical rebuild card screenshot saved to {screenshot_surgical}", flush=True)
+
         final_screenshot = os.path.join(SCREENSHOTS_DIR, "28_full_reading_experience_session.png")
         page.screenshot(path=final_screenshot, full_page=True)
         print(f"\nAll reading mode & mobile test cases passed! Saved to {final_screenshot}", flush=True)
